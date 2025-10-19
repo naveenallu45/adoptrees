@@ -13,6 +13,10 @@ export default function Navbar() {
     { name: 'About Us', href: '/about' }
   ];
 
+  const adminItems = [
+    { name: 'Admin', href: '/admin' }
+  ];
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
       <div className="container mx-auto px-1 py-1">
@@ -47,8 +51,18 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Login and Cart Buttons */}
+          {/* Admin and Action Buttons */}
           <div className="hidden md:flex items-center gap-8">
+            {/* Admin Link */}
+            {adminItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="text-gray-600 hover:text-red-600 transition-colors duration-300 font-medium text-sm"
+              >
+                {item.name}
+              </Link>
+            ))}
             {/* Login Button */}
             <button className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:from-green-700 active:to-emerald-800 text-white px-6 py-2.5 rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 border border-green-400/20 backdrop-blur-sm">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
