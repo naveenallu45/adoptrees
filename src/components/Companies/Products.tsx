@@ -1,82 +1,120 @@
+"use client";
+
 export default function Products() {
-  const programs = [
+  const corporateTrees = [
     {
       id: 1,
-      name: "Corporate Forest Program",
-      price: "₹50,000",
-      description: "Plant a dedicated forest for your company with 100+ trees",
-      image: "Large corporate forest with multiple tree species",
-      features: ["100+ trees", "Dedicated forest", "CSR certification", "Impact reports"]
+      name: "Corporate Mango Grove",
+      price: "₹2,999",
+      image: "Large mango plantation for corporate adoption",
+      oxygenContribution: "2,200 kg/year"
     },
     {
       id: 2,
-      name: "Employee Tree Adoption",
-      price: "₹15,000",
-      description: "Let your employees adopt trees as part of their benefits",
-      image: "Employees planting trees together",
-      features: ["Employee engagement", "Team building", "Personal adoption", "Progress tracking"]
+      name: "Executive Neem Forest",
+      price: "₹1,999",
+      image: "Premium neem tree forest for offices",
+      oxygenContribution: "1,800 kg/year"
     },
     {
       id: 3,
-      name: "Carbon Offset Program",
-      price: "₹25,000",
-      description: "Offset your company's carbon footprint with our tree planting program",
-      image: "Carbon offset visualization with trees and CO2 symbols",
-      features: ["Carbon calculation", "Offset certification", "Environmental impact", "Sustainability goals"]
+      name: "Banyan Heritage Grove",
+      price: "₹4,999",
+      image: "Majestic banyan trees for corporate campuses",
+      oxygenContribution: "3,500 kg/year"
     },
     {
       id: 4,
-      name: "Green Office Initiative",
-      price: "₹10,000",
-      description: "Transform your office space with indoor and outdoor green initiatives",
-      image: "Modern office with green plants and trees",
-      features: ["Indoor plants", "Outdoor landscaping", "Air quality improvement", "Employee wellness"]
+      name: "Flowering Corporate Garden",
+      price: "₹3,499",
+      image: "Beautiful flowering trees for office landscapes",
+      oxygenContribution: "2,500 kg/year"
+    },
+    {
+      id: 5,
+      name: "Oak Executive Forest",
+      price: "₹3,999",
+      image: "Premium oak trees for corporate sustainability",
+      oxygenContribution: "3,000 kg/year"
+    },
+    {
+      id: 6,
+      name: "Pine Corporate Woodland",
+      price: "₹2,499",
+      image: "Evergreen pine forest for year-round impact",
+      oxygenContribution: "2,000 kg/year"
+    },
+    {
+      id: 7,
+      name: "Coconut Corporate Oasis",
+      price: "₹1,799",
+      image: "Tropical coconut grove for corporate campuses",
+      oxygenContribution: "1,500 kg/year"
+    },
+    {
+      id: 8,
+      name: "Rosewood Premium Forest",
+      price: "₹5,999",
+      image: "Luxury rosewood forest for premium corporate programs",
+      oxygenContribution: "4,000 kg/year"
     }
   ];
 
-  return (
-    <section className="py-20 bg-white">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Corporate Programs
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Choose from our range of corporate sustainability programs designed for businesses of all sizes
-          </p>
-        </div>
+  const handleInfoClick = (treeName: string) => {
+    alert(`Corporate Program: ${treeName}\n\nThis premium corporate tree adoption program includes:\n• Dedicated tree maintenance\n• Monthly progress reports\n• CSR certification\n• Environmental impact tracking\n• Corporate sustainability branding\n\nPerfect for companies committed to environmental responsibility.`);
+  };
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {programs.map((program) => (
-            <div key={program.id} className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-gray-100 overflow-hidden">
-              <div className="aspect-square bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white text-2xl font-bold">🏢</span>
+  const handleAddToCart = (treeName: string, price: string) => {
+    alert(`Corporate Program: ${treeName} (${price})\n\nAdded to your corporate cart! Our team will contact you within 24 hours to discuss implementation and customization options for your corporate sustainability program.`);
+  };
+
+  return (
+    <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {corporateTrees.map((tree) => (
+            <div key={tree.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
+              {/* Tree Image */}
+              <div className="relative aspect-square bg-gradient-to-br from-blue-50 to-indigo-100">
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="text-center">
+                    <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
+                      <span className="text-white text-3xl font-bold">🌳</span>
+                    </div>
+                    <p className="text-xs text-gray-600 font-medium leading-tight">{tree.image}</p>
                   </div>
-                  <p className="text-sm text-gray-600">{program.image}</p>
                 </div>
               </div>
-              
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{program.name}</h3>
-                <p className="text-gray-600 mb-4 text-sm">{program.description}</p>
-                
-                <div className="mb-4">
-                  <ul className="space-y-1">
-                    {program.features.map((feature, index) => (
-                      <li key={index} className="text-sm text-gray-500 flex items-center">
-                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
+
+              {/* Product Information */}
+              <div className="p-4">
+                {/* Tree Name */}
+                <h3 className="text-lg font-bold text-gray-900 mb-3">
+                  {tree.name}
+                </h3>
+
+                {/* Price and Oxygen Contribution */}
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-2xl font-bold text-blue-600">{tree.price}</span>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Oxygen</p>
+                    <p className="text-sm font-semibold text-green-600">{tree.oxygenContribution}</p>
+                  </div>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-blue-600">{program.price}</span>
-                  <button className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 hover:scale-105">
-                    Learn More
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleInfoClick(tree.name)}
+                    className="flex-1 bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded text-sm font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center"
+                  >
+                    Info
+                  </button>
+                  <button
+                    onClick={() => handleAddToCart(tree.name, tree.price)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
+                  >
+                    Add to Cart
                   </button>
                 </div>
               </div>

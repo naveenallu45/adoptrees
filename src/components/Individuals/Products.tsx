@@ -1,82 +1,120 @@
+"use client";
+
 export default function Products() {
-  const products = [
+  const trees = [
     {
       id: 1,
       name: "Mango Tree",
       price: "₹299",
-      description: "Adopt a mango tree and enjoy fresh mangoes every season",
       image: "Mango tree with green leaves and fruits",
-      features: ["Fresh mangoes", "Annual harvest", "Care updates"]
+      oxygenContribution: "22 kg/year"
     },
     {
       id: 2,
       name: "Neem Tree",
       price: "₹199",
-      description: "Plant a neem tree for its medicinal properties and air purification",
       image: "Neem tree with small green leaves",
-      features: ["Medicinal benefits", "Air purification", "Low maintenance"]
+      oxygenContribution: "18 kg/year"
     },
     {
       id: 3,
       name: "Banyan Tree",
       price: "₹499",
-      description: "Adopt a majestic banyan tree for generations to come",
       image: "Large banyan tree with aerial roots",
-      features: ["Long lifespan", "Cultural significance", "Wildlife habitat"]
+      oxygenContribution: "35 kg/year"
     },
     {
       id: 4,
       name: "Flowering Tree",
       price: "₹349",
-      description: "Beautiful flowering tree that blooms throughout the year",
       image: "Colorful flowering tree with pink and white flowers",
-      features: ["Year-round blooms", "Beautiful flowers", "Pollinator friendly"]
+      oxygenContribution: "25 kg/year"
+    },
+    {
+      id: 5,
+      name: "Oak Tree",
+      price: "₹399",
+      image: "Majestic oak tree with broad leaves",
+      oxygenContribution: "30 kg/year"
+    },
+    {
+      id: 6,
+      name: "Pine Tree",
+      price: "₹249",
+      image: "Evergreen pine tree with needle leaves",
+      oxygenContribution: "20 kg/year"
+    },
+    {
+      id: 7,
+      name: "Coconut Tree",
+      price: "₹179",
+      image: "Tall coconut tree with coconuts",
+      oxygenContribution: "15 kg/year"
+    },
+    {
+      id: 8,
+      name: "Rosewood Tree",
+      price: "₹599",
+      image: "Premium rosewood tree with dark bark",
+      oxygenContribution: "40 kg/year"
     }
   ];
 
-  return (
-    <section className="py-20 bg-white">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Choose Your Tree
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Select from our variety of trees and start your journey towards a greener future
-          </p>
-        </div>
+  const handleInfoClick = (treeName: string) => {
+    alert(`Information about ${treeName}:\n\nThis tree contributes significantly to oxygen production and environmental sustainability. Click "Add to Cart" to adopt this tree and make a positive impact on our planet.`);
+  };
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {products.map((product) => (
-            <div key={product.id} className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-gray-100 overflow-hidden">
-              <div className="aspect-square bg-gradient-to-br from-green-100 to-emerald-200 flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white text-2xl font-bold">🌳</span>
+  const handleAddToCart = (treeName: string, price: string) => {
+    alert(`${treeName} (${price}) has been added to your cart! Thank you for contributing to a greener future.`);
+  };
+
+  return (
+    <section className="py-20 bg-gradient-to-br from-gray-50 to-green-50">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {trees.map((tree) => (
+            <div key={tree.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
+              {/* Tree Image */}
+              <div className="relative aspect-square bg-gradient-to-br from-green-50 to-emerald-100">
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="text-center">
+                    <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
+                      <span className="text-white text-3xl font-bold">🌳</span>
+                    </div>
+                    <p className="text-xs text-gray-600 font-medium leading-tight">{tree.image}</p>
                   </div>
-                  <p className="text-sm text-gray-600">{product.image}</p>
                 </div>
               </div>
-              
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{product.name}</h3>
-                <p className="text-gray-600 mb-4 text-sm">{product.description}</p>
-                
-                <div className="mb-4">
-                  <ul className="space-y-1">
-                    {product.features.map((feature, index) => (
-                      <li key={index} className="text-sm text-gray-500 flex items-center">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
+
+              {/* Product Information */}
+              <div className="p-4">
+                {/* Tree Name */}
+                <h3 className="text-lg font-bold text-gray-900 mb-3">
+                  {tree.name}
+                </h3>
+
+                {/* Price and Oxygen Contribution */}
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-2xl font-bold text-blue-600">{tree.price}</span>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Oxygen</p>
+                    <p className="text-sm font-semibold text-green-600">{tree.oxygenContribution}</p>
+                  </div>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-green-600">{product.price}</span>
-                  <button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 hover:scale-105">
-                    Adopt Now
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleInfoClick(tree.name)}
+                    className="flex-1 bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded text-sm font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center"
+                  >
+                    Info
+                  </button>
+                  <button
+                    onClick={() => handleAddToCart(tree.name, tree.price)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
+                  >
+                    Add to Cart
                   </button>
                 </div>
               </div>
