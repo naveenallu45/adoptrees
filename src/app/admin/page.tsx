@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 import AuthGuard from '@/components/Admin/AuthGuard';
 
 interface Tree {
@@ -333,11 +334,12 @@ export default function AdminDashboard() {
                   transition={{ delay: index * 0.1 }}
                   className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
                 >
-                  <div className="aspect-w-16 aspect-h-12">
-                    <img
+                  <div className="relative w-full h-48">
+                    <Image
                       src={tree.imageUrl}
                       alt={tree.name}
-                      className="w-full h-48 object-cover"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                   

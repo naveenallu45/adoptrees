@@ -21,7 +21,7 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
             { format: 'auto' }
           ]
         },
-        (error: Error | null, result: any) => {
+        (error: Error | null, result: unknown) => {
           if (error) reject(error);
           else resolve(result);
         }
