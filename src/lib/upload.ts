@@ -1,4 +1,3 @@
-import { IncomingForm } from 'formidable';
 import { promises as fs } from 'fs';
 import cloudinary from './cloudinary';
 
@@ -8,7 +7,7 @@ export const config = {
   },
 };
 
-export async function uploadToCloudinary(file: any): Promise<{ url: string; publicId: string }> {
+export async function uploadToCloudinary(file: File): Promise<{ url: string; publicId: string }> {
   try {
     const data = await fs.readFile(file.filepath);
     
@@ -22,7 +21,7 @@ export async function uploadToCloudinary(file: any): Promise<{ url: string; publ
             { format: 'auto' }
           ]
         },
-        (error, result) => {
+        (error: Error | null, result: any) => {
           if (error) reject(error);
           else resolve(result);
         }
@@ -30,8 +29,8 @@ export async function uploadToCloudinary(file: any): Promise<{ url: string; publ
     });
 
     return {
-      url: (result as any).secure_url,
-      publicId: (result as any).public_id
+      url: (result as { secure_url: string; public_id: string }).secure_url,
+      publicId: (result as { secure_url: string; public_id: string }).public_id
     };
   } catch (error) {
     console.error('Upload error:', error);

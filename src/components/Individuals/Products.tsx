@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 interface Tree {
   _id: string;
@@ -92,10 +93,11 @@ export default function Products() {
             <div key={tree._id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
               {/* Tree Image */}
               <div className="relative aspect-square">
-                <img
+                <Image
                   src={tree.imageUrl}
                   alt={tree.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
               </div>
 
