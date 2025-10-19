@@ -1,36 +1,27 @@
-import { promises as fs } from 'fs';
 import cloudinary from './cloudinary';
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
 export async function uploadToCloudinary(file: File): Promise<{ url: string; publicId: string }> {
   try {
-    const data = await fs.readFile(file.filepath);
+    // Convert File to buffer
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
     
-    const result = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        {
-          resource_type: 'image',
-          folder: 'adoptrees/trees',
-          transformation: [
-            { width: 800, height: 600, crop: 'fill', quality: 'auto' },
-            { format: 'auto' }
-          ]
-        },
-        (error: Error | null, result: unknown) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      ).end(data);
+    // Convert to base64 for Cloudinary
+    const base64String = buffer.toString('base64');
+    const dataUri = `data:${file.type};base64,${base64String}`;
+    
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder: 'adoptrees/trees',
+      resource_type: 'image',
+      transformation: [
+        { width: 800, height: 600, crop: 'fill', quality: 'auto' },
+        { format: 'auto' }
+      ]
     });
 
     return {
-      url: (result as { secure_url: string; public_id: string }).secure_url,
-      publicId: (result as { secure_url: string; public_id: string }).public_id
+      url: result.secure_url,
+      publicId: result.public_id
     };
   } catch (error) {
     console.error('Upload error:', error);
