@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems = [
-    { name: 'For Individuals', href: '#individuals' },
-    { name: 'For Companies', href: '#companies' },
-    { name: 'About Us', href: '#about' }
+    { name: 'For Individuals', href: '/individuals' },
+    { name: 'For Companies', href: '/companies' },
+    { name: 'About Us', href: '/about' }
   ];
 
   return (
@@ -20,26 +21,28 @@ export default function Navbar() {
           <div className="flex items-center space-x-12">
             {/* Logo */}
             <div className="flex items-center">
-              <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760778346/WhatsApp_Image_2025-10-18_at_2.35.31_PM_ndgk70.jpg"
-                alt="Adoptrees Logo"
-                width={150}
-                height={150}
-                priority
-              />
+              <Link href="/">
+                <Image
+                  src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760778346/WhatsApp_Image_2025-10-18_at_2.35.31_PM_ndgk70.jpg"
+                  alt="Adoptrees Logo"
+                  width={150}
+                  height={150}
+                  priority
+                />
+              </Link>
             </div>
 
             {/* Desktop Navigation Items */}
             <div className="hidden lg:flex items-center space-x-10">
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
                   href={item.href}
                   className="text-gray-800 hover:text-green-600 transition-all duration-300 font-semibold text-lg tracking-tight relative group"
                 >
                   {item.name}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 transition-all duration-300 group-hover:w-full"></span>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -69,14 +72,14 @@ export default function Navbar() {
         <div className={`lg:hidden overflow-hidden bg-white border-t border-gray-100 mt-4 transition-all duration-300 ${isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="pt-6 pb-4 space-y-4">
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.name}
                 href={item.href}
                 className="block text-gray-800 hover:text-green-600 transition-colors duration-300 py-3 font-semibold text-lg border-b border-gray-50 last:border-b-0"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {item.name}
-              </a>
+              </Link>
             ))}
             <button
               className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:from-green-700 active:to-emerald-800 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 border border-green-400/20 backdrop-blur-sm mt-6"
