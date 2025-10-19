@@ -21,7 +21,7 @@ export default function AfterPlant() {
       },
       {
         title: 'Real trees, real impact',
-        description: 'Whoever receives a tree gets access to MyTreedom, our online community where you will find updates, articles and quizzes on the world of sustainability.',
+        description: 'Whoever receives a tree gets access to Adoptrees, our online community where you will find updates, articles and quizzes on the world of sustainability.',
         icon: '🌱',
         position: 'right'
       },
@@ -44,7 +44,7 @@ export default function AfterPlant() {
     features: [
       {
         title: 'Start your sustainability journey',
-        description: 'With Treedom you do good for the planet and for people.',
+        description: 'With  Adoptrees you do good for the planet and for people.',
         icon: '🌍',
         position: 'left'
       },
@@ -121,7 +121,7 @@ export default function AfterPlant() {
 
           {/* Feature Callouts */}
           {/* Top Left */}
-          <div className="absolute top-16 left-8 max-w-xs text-right hidden lg:block">
+          <div className="absolute top-16 left-8 max-w-xs text-left hidden lg:block">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
               {currentContent.features[0].title}
             </h3>
@@ -141,7 +141,7 @@ export default function AfterPlant() {
           </div>
 
           {/* Bottom Left */}
-          <div className="absolute bottom-16 left-8 max-w-xs text-right hidden lg:block">
+          <div className="absolute bottom-16 left-8 max-w-xs text-left hidden lg:block">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
               {currentContent.features[2].title}
             </h3>
