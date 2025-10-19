@@ -7,8 +7,8 @@ export default function AfterPlant() {
   const [activeTab, setActiveTab] = useState('individuals');
 
   const phoneImages = {
-    individuals: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760806795/ChatGPT_Image_Oct_18_2025_09_49_46_PM_ucv4hv.png',
-    companies: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760806799/ChatGPT_Image_Oct_18_2025_09_49_55_PM_octl0t.png'
+    individuals: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760844979/ChatGPT_Image_Oct_18__2025__09_49_46_PM-removebg-preview_ju8rvr.png',
+    companies: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760844979/ChatGPT_Image_Oct_18__2025__09_49_55_PM-removebg-preview_cv2szo.png'
   };
 
   const individualsContent = {
@@ -114,7 +114,7 @@ export default function AfterPlant() {
               alt={`${activeTab} phone interface`}
               width={400}
               height={600}
-              className="shadow-2xl rounded-2xl"
+              className=""
               priority
             />
           </div>
