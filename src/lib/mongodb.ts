@@ -1,34 +1,31 @@
 import mongoose from 'mongoose';
+import { env } from './env';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-}
+const MONGODB_URI = env.MONGODB_URI;
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
-declare global {
-  var mongoose: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    conn: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    promise: any;
-  } | undefined;
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
 }
 
-let cached = global.mongoose;
+declare global {
+  var mongoose: MongooseCache | undefined;
+}
+
+let cached = globalThis.mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = globalThis.mongoose = { conn: null, promise: null };
 }
 
 async function connectDB() {
   if (!cached) {
-    cached = global.mongoose = { conn: null, promise: null };
+    cached = globalThis.mongoose = { conn: null, promise: null };
   }
 
   if (cached.conn) {
@@ -40,7 +37,7 @@ async function connectDB() {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts) as Promise<typeof mongoose>;
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {

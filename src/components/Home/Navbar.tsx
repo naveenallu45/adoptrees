@@ -13,10 +13,6 @@ export default function Navbar() {
     { name: 'About Us', href: '/about' }
   ];
 
-  const adminItems = [
-    { name: 'Admin', href: '/admin' }
-  ];
-
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
       <div className="container mx-auto px-1 py-1">
@@ -51,25 +47,15 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Admin and Action Buttons */}
+          {/* Action Buttons */}
           <div className="hidden md:flex items-center gap-8">
-            {/* Admin Link */}
-            {adminItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-gray-600 hover:text-red-600 transition-colors duration-300 font-medium text-sm"
-              >
-                {item.name}
-              </Link>
-            ))}
-            {/* Login Button */}
-            <button className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:from-green-700 active:to-emerald-800 text-white px-6 py-2.5 rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 border border-green-400/20 backdrop-blur-sm">
+            {/* Auth Buttons */}
+            <Link href="/login" className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:from-green-700 active:to-emerald-800 text-white px-6 py-2.5 rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 border border-green-400/20 backdrop-blur-sm">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               Login
-            </button>
+            </Link>
 
             {/* Cart Button */}
             <button className="relative flex items-center gap-2 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 active:from-green-600 active:to-green-700 text-white px-6 py-2.5 rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 border border-green-300/20 backdrop-blur-sm">
@@ -108,8 +94,9 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="flex gap-6 mt-6">
-              {/* Mobile Login Button */}
-              <button
+              {/* Mobile Auth Buttons */}
+              <Link
+                href="/login"
                 className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:from-green-700 active:to-emerald-800 text-white px-6 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 border border-green-400/20 backdrop-blur-sm"
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -117,7 +104,7 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Login
-              </button>
+              </Link>
 
               {/* Mobile Cart Button */}
               <button

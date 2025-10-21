@@ -1,6 +1,6 @@
 export default function HeroSection() {
   return (
-    <section id="about-hero" className="min-h-screen relative overflow-hidden mt-10 bg-gradient-to-br from-purple-600 to-pink-800">
+    <section id="about-hero" className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 to-pink-800">
       {/* Content */}
       <div className="relative z-20 min-h-screen flex items-center justify-center pt-32 translate-y-0.5">
         <div className="container mx-auto px-4 text-center">

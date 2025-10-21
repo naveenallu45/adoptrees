@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Tree from '@/models/Tree';
 import cloudinary from '@/lib/cloudinary';
+import { requireAdmin } from '@/lib/api-auth';
+import { treeSchema, validateImageFile, MAX_FILE_SIZE } from '@/lib/validations/tree';
 
 export async function GET() {
   try {
+    // Admin route - authentication handled by middleware
     await connectDB();
     const trees = await Tree.find({ isActive: true }).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: trees });
@@ -19,28 +22,69 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify admin authentication (double-check even though middleware handles it)
+    const authResult = await requireAdmin();
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
+
     await connectDB();
     
     const formData = await request.formData();
     const name = formData.get('name') as string;
-    const price = parseFloat(formData.get('price') as string);
+    const priceStr = formData.get('price') as string;
     const info = formData.get('info') as string;
-    const oxygenKgs = parseFloat(formData.get('oxygenKgs') as string);
+    const oxygenKgsStr = formData.get('oxygenKgs') as string;
     const image = formData.get('image') as File;
 
-    console.log('Received form data:', { name, price, info, oxygenKgs, imageName: image?.name });
-
-    // Validation
-    if (!name || !price || !info || !oxygenKgs || !image) {
+    // Validate all fields are present
+    if (!name || !priceStr || !info || !oxygenKgsStr || !image) {
       return NextResponse.json(
         { success: false, error: 'All fields are required' },
         { status: 400 }
       );
     }
 
-    if (price < 0 || oxygenKgs < 0) {
+    // Parse numeric values
+    const price = parseFloat(priceStr);
+    const oxygenKgs = parseFloat(oxygenKgsStr);
+
+    if (isNaN(price) || isNaN(oxygenKgs)) {
       return NextResponse.json(
-        { success: false, error: 'Price and oxygen production cannot be negative' },
+        { success: false, error: 'Price and oxygen production must be valid numbers' },
+        { status: 400 }
+      );
+    }
+
+    // Validate tree data
+    const validationResult = treeSchema.safeParse({
+      name,
+      price,
+      info,
+      oxygenKgs,
+    });
+
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues.map((err) => ({
+        field: String(err.path.join('.')),
+        message: err.message,
+      }));
+      
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Validation failed',
+          details: errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate image file
+    const imageValidation = validateImageFile(image);
+    if (!imageValidation.valid) {
+      return NextResponse.json(
+        { success: false, error: imageValidation.error },
         { status: 400 }
       );
     }
@@ -49,13 +93,17 @@ export async function POST(request: NextRequest) {
     const bytes = await image.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    console.log('Image buffer size:', buffer.length);
+    // Additional size check
+    if (buffer.length > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: 'Image file size exceeds 5MB limit' },
+        { status: 400 }
+      );
+    }
 
     // Upload to Cloudinary using base64
     const base64String = buffer.toString('base64');
     const dataUri = `data:${image.type};base64,${base64String}`;
-
-    console.log('Uploading to Cloudinary...');
     
     const result = await cloudinary.uploader.upload(dataUri, {
       folder: 'adoptrees/trees',
@@ -66,21 +114,17 @@ export async function POST(request: NextRequest) {
       ]
     });
 
-    console.log('Cloudinary upload result:', { url: result.secure_url, public_id: result.public_id });
-
     // Create tree in database
     const tree = new Tree({
-      name,
-      price,
-      info,
-      oxygenKgs,
+      name: validationResult.data.name,
+      price: validationResult.data.price,
+      info: validationResult.data.info,
+      oxygenKgs: validationResult.data.oxygenKgs,
       imageUrl: result.secure_url,
       imagePublicId: result.public_id,
     });
 
     await tree.save();
-
-    console.log('Tree saved to database:', tree._id);
 
     return NextResponse.json({
       success: true,
@@ -90,8 +134,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating tree:', error);
+    
+    // Don't expose internal error details
     return NextResponse.json(
-      { success: false, error: `Failed to create tree: ${error instanceof Error ? error.message : 'Unknown error'}` },
+      { success: false, error: 'Failed to create tree. Please try again.' },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 export default function HeroSection() {
   return (
-    <section id="individuals-hero" className="min-h-[50vh] relative overflow-hidden mt-10 bg-gradient-to-br from-green-600 to-emerald-800">
+    <section id="individuals-hero" className="min-h-[50vh] relative overflow-hidden bg-gradient-to-br from-green-600 to-emerald-800">
       {/* Content */}
       <div className="relative z-20 min-h-[50vh] flex items-center justify-center pt-32 translate-y-0.5">
         <div className="container mx-auto px-4 text-center">

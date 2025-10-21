@@ -1,33 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Tree from '@/models/Tree';
 import { deleteFromCloudinary } from '@/lib/upload';
+import { requireAdmin } from '@/lib/api-auth';
+import { treeUpdateSchema } from '@/lib/validations/tree';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verify admin authentication
+    const authResult = await requireAdmin();
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
+
     await connectDB();
     
     const { id } = await params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid tree ID' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
-    const { name, price, info, oxygenKgs } = body;
 
-    // Validation
-    if (!name || !price || !info || !oxygenKgs) {
+    // Validate input data
+    const validationResult = treeUpdateSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues.map((err) => ({
+        field: String(err.path.join('.')),
+        message: err.message,
+      }));
+      
       return NextResponse.json(
-        { success: false, error: 'All fields are required' },
+        { 
+          success: false,
+          error: 'Validation failed',
+          details: errors,
+        },
         { status: 400 }
       );
     }
 
-    if (price < 0 || oxygenKgs < 0) {
-      return NextResponse.json(
-        { success: false, error: 'Price and oxygen production cannot be negative' },
-        { status: 400 }
-      );
-    }
+    const { name, price, info, oxygenKgs } = validationResult.data;
 
     const tree = await Tree.findByIdAndUpdate(
       id,
@@ -51,7 +74,7 @@ export async function PUT(
   } catch (error) {
     console.error('Error updating tree:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update tree' },
+      { success: false, error: 'Failed to update tree. Please try again.' },
       { status: 500 }
     );
   }
@@ -62,9 +85,24 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verify admin authentication
+    const authResult = await requireAdmin();
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
+
     await connectDB();
     
     const { id } = await params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid tree ID' },
+        { status: 400 }
+      );
+    }
+
     const tree = await Tree.findById(id);
 
     if (!tree) {
@@ -74,12 +112,14 @@ export async function DELETE(
       );
     }
 
-    // Delete image from Cloudinary
-    try {
-      await deleteFromCloudinary(tree.imagePublicId);
-    } catch (error) {
-      console.error('Error deleting image from Cloudinary:', error);
-      // Continue with database deletion even if image deletion fails
+    // Delete image from Cloudinary (best effort)
+    if (tree.imagePublicId) {
+      try {
+        await deleteFromCloudinary(tree.imagePublicId);
+      } catch (error) {
+        console.error('Error deleting image from Cloudinary:', error);
+        // Continue with database deletion even if image deletion fails
+      }
     }
 
     // Soft delete by setting isActive to false
@@ -93,7 +133,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting tree:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete tree' },
+      { success: false, error: 'Failed to delete tree. Please try again.' },
       { status: 500 }
     );
   }
