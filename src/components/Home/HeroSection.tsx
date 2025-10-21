@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 export default function HeroSection() {
   return (
-    <section id="home" className="min-h-screen relative overflow-hidden mt-10">
+    <section id="home" className="min-h-screen relative overflow-hidden">
       {/* Background Image */}
       <Image
         src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760799467/pexels-leiliane-dutra-1841922-11130997_eqyprh.jpg"

@@ -56,4 +56,4 @@ TreeSchema.index({ name: 1 });
 TreeSchema.index({ isActive: 1 });
 TreeSchema.index({ createdAt: -1 });
 
-export default mongoose.models.Tree || mongoose.model<ITree>('Tree', TreeSchema);
+export default (mongoose.models?.Tree || mongoose.model<ITree>('Tree', TreeSchema)) as mongoose.Model<ITree>;

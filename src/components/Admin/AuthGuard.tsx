@@ -1,44 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export default function AuthGuard({ children }: AuthGuardProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const isLoading = status === 'loading';
+  const isAuthenticated = session?.user?.role === 'admin';
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const authStatus = localStorage.getItem('admin_auth');
-    if (authStatus === 'true') {
-      setIsAuthenticated(true);
+    if (status === 'unauthenticated') {
+      router.push('/admin/login');
+    } else if (status === 'authenticated' && session?.user?.role !== 'admin') {
+      router.push('/');
     }
-    setIsLoading(false);
-  }, []);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Simple password check (in production, use proper authentication)
-    if (password === 'admin123') {
-      setIsAuthenticated(true);
-      localStorage.setItem('admin_auth', 'true');
-      setError('');
-    } else {
-      setError('Invalid password');
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('admin_auth');
-  };
+  }, [status, session, router]);
 
   if (isLoading) {
     return (
@@ -57,58 +40,29 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md"
         >
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Access</h1>
-            <p className="text-gray-600">Enter password to access admin dashboard</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600">You need admin privileges to access this page</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Enter admin password"
-                required
-              />
-              {error && (
-                <p className="mt-2 text-sm text-red-600">{error}</p>
-              )}
-            </div>
-
+          <div className="space-y-4">
             <button
-              type="submit"
+              onClick={() => router.push('/admin/login')}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg transition-colors font-medium"
             >
-              Access Dashboard
+              Admin Login
             </button>
-          </form>
-
-          <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              <strong>Demo Password:</strong> admin123
-            </p>
+            
+            <button
+              onClick={() => router.push('/')}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors font-medium"
+            >
+              Go Home
+            </button>
           </div>
         </motion.div>
       </div>
     );
   }
 
-  return (
-    <div>
-      {/* Logout Button */}
-      <div className="fixed top-4 right-4 z-50">
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
-        >
-          Logout
-        </button>
-      </div>
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }

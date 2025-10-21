@@ -1,7 +1,6 @@
 "use client";
 
 import Image from 'next/image';
-import { useTrees } from '@/context/TreesContext';
 
 interface Tree {
   _id: string;
@@ -13,8 +12,13 @@ interface Tree {
   isActive: boolean;
 }
 
-export default function Products() {
-  const { trees, error } = useTrees();
+interface TreesProps {
+  initialTrees?: Tree[];
+}
+
+export default function Trees({ initialTrees = [] }: TreesProps) {
+  const trees = initialTrees;
+  const error = trees.length === 0 ? 'No trees available' : null;
 
   const handleInfoClick = (tree: Tree) => {
     alert(`Information about ${tree.name}:\n\n${tree.info}\n\nOxygen Production: ${tree.oxygenKgs} kg/year\n\nThis tree contributes significantly to oxygen production and environmental sustainability. Click "Add to Cart" to adopt this tree and make a positive impact on our planet.`);
