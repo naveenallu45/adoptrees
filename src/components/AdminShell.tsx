@@ -8,12 +8,13 @@ type AdminShellProps = {
   children: ReactNode;
 };
 
-// Renders site chrome except on /admin routes
+// Renders site chrome except on /admin and /dashboard routes
 export default function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith('/admin');
+  const isDashboardRoute = pathname?.startsWith('/dashboard');
 
-  if (isAdminRoute) {
+  if (isAdminRoute || isDashboardRoute) {
     return <main className="pt-0 min-h-screen">{children}</main>;
   }
 

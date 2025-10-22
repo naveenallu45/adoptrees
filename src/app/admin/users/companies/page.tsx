@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { TrashIcon, EnvelopeIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
@@ -22,11 +22,7 @@ export default function CompanyUsersPage() {
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       // Fetch company users from API
       const response = await fetch('/api/admin/users?type=company');
@@ -44,9 +40,13 @@ export default function CompanyUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Company?',
       text: "Are you sure you want to delete this company? This action cannot be undone!",
@@ -82,7 +82,7 @@ export default function CompanyUsersPage() {
       console.error('Error deleting company:', error);
       toast.error('An error occurred while deleting the company');
     }
-  };
+  }, [fetchUsers]);
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<CompanyUser>[]>(
@@ -168,7 +168,7 @@ export default function CompanyUsersPage() {
         enableSorting: false,
       },
     ],
-    [users]
+    [handleDelete]
   );
 
   if (loading && users.length === 0) {

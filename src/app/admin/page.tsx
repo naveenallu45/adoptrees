@@ -102,7 +102,7 @@ export default function AdminDashboard() {
             Welcome back, {session?.user?.name || 'Admin'}!
           </h1>
           <p className="mt-2 text-gray-600">
-            Here's what's happening with your platform today.
+            Here&apos;s what&apos;s happening with your platform today.
           </p>
         </div>
 

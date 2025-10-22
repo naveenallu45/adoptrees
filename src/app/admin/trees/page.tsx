@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
@@ -33,11 +33,7 @@ export default function TreesManagement() {
     image: null as File | null
   });
 
-  useEffect(() => {
-    fetchTrees();
-  }, []);
-
-  const fetchTrees = async () => {
+  const fetchTrees = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/trees');
       const data = await response.json();
@@ -52,7 +48,11 @@ export default function TreesManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTrees();
+  }, [fetchTrees]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +117,7 @@ export default function TreesManagement() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Tree?',
       text: "Are you sure you want to delete this tree? This action cannot be undone!",
@@ -154,7 +154,7 @@ export default function TreesManagement() {
       console.error('Error deleting tree:', error);
       toast.error('An error occurred while deleting the tree');
     }
-  };
+  }, [fetchTrees]);
 
   const handleCancel = () => {
     setShowForm(false);
@@ -245,7 +245,7 @@ export default function TreesManagement() {
         enableSorting: false,
       },
     ],
-    []
+    [handleDelete]
   );
 
   if (loading && trees.length === 0) {
