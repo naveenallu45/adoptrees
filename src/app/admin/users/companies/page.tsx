@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { TrashIcon, EnvelopeIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useCompanyUsers } from '@/hooks/useAdminData';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CompanyUser {
   _id: string;
   companyName: string;
   email: string;
-  phoneNumber?: string;
+  phone?: string;
   gstNumber?: string;
   createdAt: string;
   role: string;
@@ -19,34 +21,11 @@ interface CompanyUser {
 }
 
 export default function CompanyUsersPage() {
-  const [users, setUsers] = useState<CompanyUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: users = [], isLoading: loading, error } = useCompanyUsers();
+  
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      // Fetch company users from API
-      const response = await fetch('/api/admin/users?type=company');
-      const data = await response.json();
-      
-      if (data.success) {
-        setUsers(data.data);
-      } else {
-        console.error('Failed to fetch users:', data.error);
-        setUsers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Company?',
       text: "Are you sure you want to delete this company? This action cannot be undone!",
@@ -74,7 +53,8 @@ export default function CompanyUsersPage() {
       
       if (data.success) {
         toast.success('Company deleted successfully!');
-        fetchUsers();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'companies'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       } else {
         toast.error(data.error || 'Failed to delete company');
       }
@@ -82,7 +62,7 @@ export default function CompanyUsersPage() {
       console.error('Error deleting company:', error);
       toast.error('An error occurred while deleting the company');
     }
-  }, [fetchUsers]);
+  };
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<CompanyUser>[]>(
@@ -113,11 +93,11 @@ export default function CompanyUsersPage() {
         ),
       },
       {
-        accessorKey: 'phoneNumber',
+        accessorKey: 'phone',
         header: 'Phone',
         cell: ({ row }) => (
           <span className="text-sm text-gray-900">
-            {row.original.phoneNumber || 'N/A'}
+            {row.original.phone || 'N/A'}
           </span>
         ),
       },
@@ -208,7 +188,7 @@ export default function CompanyUsersPage() {
           <div className="rounded-lg bg-white p-6 shadow">
             <p className="text-sm font-medium text-gray-600">New This Month</p>
             <p className="mt-2 text-3xl font-bold text-blue-600">
-              {users.filter(u => 
+              {users.filter((u: CompanyUser) => 
                 new Date(u.createdAt).getMonth() === new Date().getMonth()
               ).length}
             </p>

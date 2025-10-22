@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
+
     return NextResponse.json({
       success: true,
       data: users,

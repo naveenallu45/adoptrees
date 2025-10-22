@@ -3,19 +3,19 @@ import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { registerSchema } from '@/lib/validations/auth';
-// import { checkRateLimit } from '@/lib/api-auth'; // Commented out - rate limiting disabled
+import { checkRateLimit } from '@/lib/api-auth';
+import { sanitizeInput } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting disabled for unlimited attempts
-    // Uncomment below to enable rate limiting if needed
-    // const rateLimitResult = checkRateLimit(req, {
-    //   maxRequests: 100,
-    //   windowMs: 15 * 60 * 1000,
-    // });
-    // if (!rateLimitResult.allowed) {
-    //   return rateLimitResult.response;
-    // }
+    // Rate limiting for registration
+    const rateLimitResult = checkRateLimit(req, {
+      maxRequests: 5, // 5 registration attempts per 15 minutes
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!rateLimitResult.allowed) {
+      return rateLimitResult.response;
+    }
 
     // Parse and validate request body
     const body = await req.json();
@@ -55,10 +55,10 @@ export async function POST(req: NextRequest) {
 
     const user = await User.create({
       userType,
-      name: userType === 'individual' ? name : undefined,
-      companyName: userType === 'company' ? companyName : undefined,
+      name: userType === 'individual' && name ? sanitizeInput(name) : undefined,
+      companyName: userType === 'company' && companyName ? sanitizeInput(companyName) : undefined,
       email: email.toLowerCase(),
-      phone,
+      phone: phone ? sanitizeInput(phone) : undefined,
       passwordHash,
       role: 'user',
     });

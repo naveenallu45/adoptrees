@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
@@ -8,6 +8,8 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useTrees } from '@/hooks/useAdminData';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Tree {
   _id: string;
@@ -20,8 +22,8 @@ interface Tree {
 }
 
 export default function TreesManagement() {
-  const [trees, setTrees] = useState<Tree[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: trees = [], isLoading: loading } = useTrees();
   const [showForm, setShowForm] = useState(false);
   const [editingTree, setEditingTree] = useState<Tree | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,27 +34,6 @@ export default function TreesManagement() {
     oxygenKgs: '',
     image: null as File | null
   });
-
-  const fetchTrees = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/trees');
-      const data = await response.json();
-      if (data.success) {
-        setTrees(data.data);
-      } else {
-        toast.error('Failed to fetch trees');
-      }
-    } catch (error) {
-      console.error('Error fetching trees:', error);
-      toast.error('Error loading trees');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTrees();
-  }, [fetchTrees]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +65,8 @@ export default function TreesManagement() {
       
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
-        fetchTrees();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
         setShowForm(false);
         setEditingTree(null);
         setFormData({
@@ -117,7 +99,7 @@ export default function TreesManagement() {
     setShowForm(true);
   };
 
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Tree?',
       text: "Are you sure you want to delete this tree? This action cannot be undone!",
@@ -146,7 +128,8 @@ export default function TreesManagement() {
       
       if (data.success) {
         toast.success('Tree deleted successfully!');
-        fetchTrees();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       } else {
         toast.error(data.error || 'Failed to delete tree');
       }
@@ -154,7 +137,7 @@ export default function TreesManagement() {
       console.error('Error deleting tree:', error);
       toast.error('An error occurred while deleting the tree');
     }
-  }, [fetchTrees]);
+  };
 
   const handleCancel = () => {
     setShowForm(false);
@@ -245,7 +228,7 @@ export default function TreesManagement() {
         enableSorting: false,
       },
     ],
-    [handleDelete]
+    []
   );
 
   if (loading && trees.length === 0) {
