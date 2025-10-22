@@ -1,51 +1,29 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { TrashIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useIndividualUsers } from '@/hooks/useAdminData';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface IndividualUser {
   _id: string;
   name: string;
   email: string;
-  phoneNumber?: string;
+  phone?: string;
   createdAt: string;
   role: string;
   userType: string;
 }
 
 export default function IndividualUsersPage() {
-  const [users, setUsers] = useState<IndividualUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: users = [], isLoading: loading } = useIndividualUsers();
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      // Fetch individual users from API
-      const response = await fetch('/api/admin/users?type=individual');
-      const data = await response.json();
-      
-      if (data.success) {
-        setUsers(data.data);
-      } else {
-        console.error('Failed to fetch users:', data.error);
-        setUsers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete User?',
       text: "Are you sure you want to delete this user? This action cannot be undone!",
@@ -73,7 +51,8 @@ export default function IndividualUsersPage() {
       
       if (data.success) {
         toast.success('User deleted successfully!');
-        fetchUsers();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'individuals'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       } else {
         toast.error(data.error || 'Failed to delete user');
       }
@@ -81,7 +60,7 @@ export default function IndividualUsersPage() {
       console.error('Error deleting user:', error);
       toast.error('An error occurred while deleting the user');
     }
-  }, [fetchUsers]);
+  };
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<IndividualUser>[]>(
@@ -112,11 +91,11 @@ export default function IndividualUsersPage() {
         ),
       },
       {
-        accessorKey: 'phoneNumber',
+        accessorKey: 'phone',
         header: 'Phone',
         cell: ({ row }) => (
           <span className="text-sm text-gray-900">
-            {row.original.phoneNumber || 'N/A'}
+            {row.original.phone || 'N/A'}
           </span>
         ),
       },
@@ -198,7 +177,7 @@ export default function IndividualUsersPage() {
           <div className="rounded-lg bg-white p-6 shadow">
             <p className="text-sm font-medium text-gray-600">New This Month</p>
             <p className="mt-2 text-3xl font-bold text-blue-600">
-              {users.filter(u => 
+              {users.filter((u: IndividualUser) =>
                 new Date(u.createdAt).getMonth() === new Date().getMonth()
               ).length}
             </p>

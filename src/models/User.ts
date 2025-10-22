@@ -10,7 +10,7 @@ export interface IUser {
   gstNumber?: string;
   passwordHash: string;
   userType: UserType;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'wellwisher';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,7 +37,7 @@ const UserSchema = new Schema<IUser>(
     gstNumber: { type: String },
     passwordHash: { type: String, required: true, select: false },
     userType: { type: String, enum: ['individual', 'company'], required: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'user', required: true },
+    role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
   },
   { timestamps: true }
 );

@@ -8,7 +8,7 @@ export default function HowItWorks() {
       alt: 'Choose a tree to adopt or gift'
     },
     {
-      title: 'A farmer will plant it for you',
+      title: 'A well wisher will plant it for you',
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760798633/WhatsApp_Image_2025-10-18_at_6.15.45_PM_aivxe9.jpg',
       alt: 'A farmer will plant it for you'
     },

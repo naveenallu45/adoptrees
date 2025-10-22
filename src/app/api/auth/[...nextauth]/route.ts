@@ -8,7 +8,7 @@ import { env } from '@/lib/env';
 import { loginSchema } from '@/lib/validations/auth';
 
 interface ExtendedUser extends NextAuthUser {
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'wellwisher';
   userType: 'individual' | 'company';
 }
 
@@ -16,7 +16,7 @@ interface UserWithPassword {
   _id: unknown;
   email: string;
   passwordHash: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'wellwisher';
   userType: 'individual' | 'company';
   name?: string;
   companyName?: string;
@@ -104,7 +104,7 @@ export const authOptions = {
         user: {
           ...session.user,
           id: token.id as string,
-          role: token.role as 'admin' | 'user',
+          role: token.role as 'admin' | 'user' | 'wellwisher',
           userType: token.userType as 'individual' | 'company',
         },
       };

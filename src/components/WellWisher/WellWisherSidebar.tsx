@@ -4,12 +4,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   HomeIcon,
-  UserIcon,
-  BuildingOfficeIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ArrowPathIcon,
   ArrowRightOnRectangleIcon,
-  HeartIcon,
 } from '@heroicons/react/24/outline';
-import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
 interface NavItem {
@@ -19,14 +18,14 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: 'Dashboard', href: '/admin', icon: HomeIcon },
-  { name: 'Trees', href: '/admin/trees', icon: TreeIcon },
-  { name: 'Individual Users', href: '/admin/users/individuals', icon: UserIcon },
-  { name: 'Company Users', href: '/admin/users/companies', icon: BuildingOfficeIcon },
-  { name: 'Well-Wishers', href: '/admin/wellwishers', icon: HeartIcon },
+  { name: 'Dashboard', href: '/wellwisher', icon: HomeIcon },
+  { name: 'Upcoming', href: '/wellwisher/upcoming', icon: ClockIcon },
+  { name: 'Ongoing', href: '/wellwisher/ongoing', icon: ArrowPathIcon },
+  { name: 'Completed', href: '/wellwisher/completed', icon: CheckCircleIcon },
+  { name: 'Updating', href: '/wellwisher/updating', icon: ArrowPathIcon },
 ];
 
-export default function AdminSidebar() {
+export default function WellWisherSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -38,7 +37,7 @@ export default function AdminSidebar() {
     <div className="flex h-screen w-64 flex-col bg-gradient-to-b from-green-900 to-green-800 text-white">
       {/* Logo/Header */}
       <div className="flex h-20 items-center justify-center border-b border-green-700 px-6">
-        <h1 className="text-2xl font-bold">Adoptrees Admin</h1>
+        <h1 className="text-2xl font-bold">Well-Wisher</h1>
       </div>
 
       {/* Navigation */}
@@ -92,4 +91,3 @@ export default function AdminSidebar() {
     </div>
   );
 }
-

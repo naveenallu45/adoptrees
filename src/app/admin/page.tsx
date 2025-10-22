@@ -1,91 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { UserIcon, BuildingOfficeIcon, CurrencyRupeeIcon } from '@heroicons/react/24/outline';
+import { UserIcon, BuildingOfficeIcon, CurrencyRupeeIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useAdminStats } from '@/hooks/useAdminData';
 
-interface DashboardStats {
-  totalTrees: number;
-  totalIndividuals: number;
-  totalCompanies: number;
-  totalRevenue: number;
-}
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalTrees: 0,
-    totalIndividuals: 0,
-    totalCompanies: 0,
-    totalRevenue: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      // Fetch all stats in parallel
-      const [treesRes, individualsRes, companiesRes] = await Promise.all([
-        fetch('/api/admin/trees'),
-        fetch('/api/admin/users?type=individual'),
-        fetch('/api/admin/users?type=company'),
-      ]);
-
-      const treesData = await treesRes.json();
-      const individualsData = await individualsRes.json();
-      const companiesData = await companiesRes.json();
-      
-      setStats({
-        totalTrees: treesData.success ? treesData.data.length : 0,
-        totalIndividuals: individualsData.success ? individualsData.data.length : 0,
-        totalCompanies: companiesData.success ? companiesData.data.length : 0,
-        totalRevenue: 0, // TODO: Implement revenue calculation
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: stats, isLoading: loading } = useAdminStats();
 
   const statCards = [
     {
       title: 'Total Trees',
-      value: stats.totalTrees,
+      value: stats?.totalTrees || 0,
       icon: TreeIcon,
       color: 'bg-green-500',
       link: '/admin/trees',
     },
     {
       title: 'Individual Users',
-      value: stats.totalIndividuals,
+      value: stats?.totalIndividuals || 0,
       icon: UserIcon,
       color: 'bg-blue-500',
       link: '/admin/users/individuals',
     },
     {
       title: 'Company Users',
-      value: stats.totalCompanies,
+      value: stats?.totalCompanies || 0,
       icon: BuildingOfficeIcon,
       color: 'bg-purple-500',
       link: '/admin/users/companies',
     },
     {
+      title: 'Well-Wishers',
+      value: stats?.totalWellWishers || 0,
+      icon: HeartIcon,
+      color: 'bg-pink-500',
+      link: '/admin/wellwishers',
+    },
+    {
       title: 'Total Revenue',
-      value: `₹${stats.totalRevenue.toLocaleString()}`,
+      value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`,
       icon: CurrencyRupeeIcon,
       color: 'bg-yellow-500',
       link: '#',
     },
   ];
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent"></div>
@@ -107,7 +72,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           {statCards.map((card, index) => {
             const Icon = card.icon;
             return (
@@ -140,7 +105,7 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div className="mt-12">
           <h2 className="mb-6 text-2xl font-bold text-gray-900">Quick Actions</h2>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-4">
             <Link href="/admin/trees">
               <motion.div
                 className="cursor-pointer rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
@@ -174,6 +139,18 @@ export default function AdminDashboard() {
                 <BuildingOfficeIcon className="mb-4 h-10 w-10" />
                 <h3 className="text-xl font-bold">Company Users</h3>
                 <p className="mt-2 text-purple-100">View and manage company accounts</p>
+              </motion.div>
+            </Link>
+
+            <Link href="/admin/wellwishers">
+              <motion.div
+                className="cursor-pointer rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <HeartIcon className="mb-4 h-10 w-10" />
+                <h3 className="text-xl font-bold">Well-Wishers</h3>
+                <p className="mt-2 text-pink-100">Manage well-wishers and view their status</p>
               </motion.div>
             </Link>
           </div>
