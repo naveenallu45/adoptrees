@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { TrashIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
@@ -21,11 +21,7 @@ export default function IndividualUsersPage() {
   const [users, setUsers] = useState<IndividualUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       // Fetch individual users from API
       const response = await fetch('/api/admin/users?type=individual');
@@ -43,9 +39,13 @@ export default function IndividualUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete User?',
       text: "Are you sure you want to delete this user? This action cannot be undone!",
@@ -81,7 +81,7 @@ export default function IndividualUsersPage() {
       console.error('Error deleting user:', error);
       toast.error('An error occurred while deleting the user');
     }
-  };
+  }, [fetchUsers]);
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<IndividualUser>[]>(
@@ -158,7 +158,7 @@ export default function IndividualUsersPage() {
         enableSorting: false,
       },
     ],
-    [users]
+    [handleDelete]
   );
 
   if (loading && users.length === 0) {

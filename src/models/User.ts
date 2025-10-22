@@ -50,7 +50,7 @@ UserSchema.pre('save', function(next) {
   next();
 });
 
-const User = (models?.User || model<IUser>('User', UserSchema)) as ReturnType<typeof model<IUser>>;
+const User = (models?.User || model<IUser>('User', UserSchema));
 
 export default User;
 

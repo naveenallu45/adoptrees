@@ -36,6 +36,67 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
   }
+
+  // Protect dashboard routes
+  if (pathname.startsWith('/dashboard')) {
+    const session = await auth();
+    
+    if (!session?.user) {
+      const url = new URL('/login', request.url);
+      return NextResponse.redirect(url);
+    }
+    
+    const userType = (session.user as { userType?: string }).userType;
+    const userRole = (session.user as { role?: string }).role;
+    
+    // Redirect to appropriate dashboard based on user type
+    if (pathname.startsWith('/dashboard/individual') && userType !== 'individual') {
+      if (userType === 'company') {
+        const url = new URL('/dashboard/company/trees', request.url);
+        return NextResponse.redirect(url);
+      } else if (userRole === 'admin') {
+        const url = new URL('/admin', request.url);
+        return NextResponse.redirect(url);
+      } else {
+        const url = new URL('/', request.url);
+        return NextResponse.redirect(url);
+      }
+    }
+    
+    if (pathname.startsWith('/dashboard/company') && userType !== 'company') {
+      if (userType === 'individual') {
+        const url = new URL('/dashboard/individual/trees', request.url);
+        return NextResponse.redirect(url);
+      } else if (userRole === 'admin') {
+        const url = new URL('/admin', request.url);
+        return NextResponse.redirect(url);
+      } else {
+        const url = new URL('/', request.url);
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  // Redirect authenticated users away from login/register pages
+  if (pathname === '/login' || pathname === '/register') {
+    const session = await auth();
+    
+    if (session?.user) {
+      const userType = (session.user as { userType?: string }).userType;
+      const userRole = (session.user as { role?: string }).role;
+      
+      if (userRole === 'admin') {
+        const url = new URL('/admin', request.url);
+        return NextResponse.redirect(url);
+      } else if (userType === 'individual') {
+        const url = new URL('/dashboard/individual/trees', request.url);
+        return NextResponse.redirect(url);
+      } else if (userType === 'company') {
+        const url = new URL('/dashboard/company/trees', request.url);
+        return NextResponse.redirect(url);
+      }
+    }
+  }
   
   // Protect API admin routes
   if (pathname.startsWith('/api/admin')) {
@@ -66,6 +127,9 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\..*|public).*)',
     '/api/:path*',
     '/admin/:path*',
+    '/dashboard/:path*',
+    '/login',
+    '/register',
   ],
 };
 

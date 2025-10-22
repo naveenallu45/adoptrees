@@ -25,7 +25,24 @@ export default function LoginForm() {
       if (res?.error) {
         setError('Invalid email or password');
       } else {
-        router.push('/');
+        // Fetch the updated session to get user type
+        try {
+          const sessionResponse = await fetch('/api/auth/session');
+          const sessionData = await sessionResponse.json();
+          
+          if (sessionData?.user?.userType === 'individual') {
+            router.push('/dashboard/individual/trees');
+          } else if (sessionData?.user?.userType === 'company') {
+            router.push('/dashboard/company/trees');
+          } else if (sessionData?.user?.role === 'admin') {
+            router.push('/admin');
+          } else {
+            router.push('/');
+          }
+        } catch (error) {
+          console.error('Error fetching session:', error);
+          router.push('/');
+        }
       }
     } catch {
       setError('Login failed. Please try again.');
