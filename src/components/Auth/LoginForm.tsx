@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -11,6 +11,8 @@ export default function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,23 +27,28 @@ export default function LoginForm() {
       if (res?.error) {
         setError('Invalid email or password');
       } else {
-        // Fetch the updated session to get user type
-        try {
-          const sessionResponse = await fetch('/api/auth/session');
-          const sessionData = await sessionResponse.json();
-          
-          if (sessionData?.user?.userType === 'individual') {
-            router.push('/dashboard/individual/trees');
-          } else if (sessionData?.user?.userType === 'company') {
-            router.push('/dashboard/company/trees');
-          } else if (sessionData?.user?.role === 'admin') {
-            router.push('/admin');
-          } else {
+        // Check if there's a redirect parameter (e.g., from cart page)
+        if (redirectTo) {
+          router.push(redirectTo);
+        } else {
+          // Fetch the updated session to get user type
+          try {
+            const sessionResponse = await fetch('/api/auth/session');
+            const sessionData = await sessionResponse.json();
+            
+            if (sessionData?.user?.userType === 'individual') {
+              router.push('/dashboard/individual/trees');
+            } else if (sessionData?.user?.userType === 'company') {
+              router.push('/dashboard/company/trees');
+            } else if (sessionData?.user?.role === 'admin') {
+              router.push('/admin');
+            } else {
+              router.push('/');
+            }
+          } catch (error) {
+            console.error('Error fetching session:', error);
             router.push('/');
           }
-        } catch (error) {
-          console.error('Error fetching session:', error);
-          router.push('/');
         }
       }
     } catch {

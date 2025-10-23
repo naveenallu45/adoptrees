@@ -20,6 +20,22 @@ export const treeSchema = z.object({
     .number()
     .nonnegative('Oxygen production cannot be negative')
     .max(10000, 'Oxygen production value seems unreasonably high'),
+  treeType: z
+    .enum(['individual', 'company'])
+    .refine((val) => ['individual', 'company'].includes(val), {
+      message: 'Tree type must be either individual or company'
+    }),
+  packageQuantity: z
+    .number()
+    .int('Package quantity must be a whole number')
+    .min(1, 'Package quantity must be at least 1')
+    .max(1000, 'Package quantity seems unreasonably high')
+    .optional(),
+  packagePrice: z
+    .number()
+    .nonnegative('Package price cannot be negative')
+    .max(10000000, 'Package price seems unreasonably high')
+    .optional(),
 });
 
 export type TreeInput = z.infer<typeof treeSchema>;

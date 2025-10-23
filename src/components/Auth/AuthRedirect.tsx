@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
 interface AuthRedirectProps {
@@ -11,23 +11,30 @@ interface AuthRedirectProps {
 export default function AuthRedirect({ children }: AuthRedirectProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
 
   useEffect(() => {
     if (status === 'loading') return; // Still loading
 
     if (session) {
-      // User is already logged in, redirect to appropriate dashboard
-      if (session.user.userType === 'individual') {
-        router.push('/dashboard/individual/trees');
-      } else if (session.user.userType === 'company') {
-        router.push('/dashboard/company/trees');
-      } else if (session.user.role === 'admin') {
-        router.push('/admin');
+      // Check if there's a redirect parameter (e.g., from cart page)
+      if (redirectTo) {
+        router.push(redirectTo);
       } else {
-        router.push('/');
+        // User is already logged in, redirect to appropriate dashboard
+        if (session.user.userType === 'individual') {
+          router.push('/dashboard/individual/trees');
+        } else if (session.user.userType === 'company') {
+          router.push('/dashboard/company/trees');
+        } else if (session.user.role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/');
+        }
       }
     }
-  }, [session, status, router]);
+  }, [session, status, router, redirectTo]);
 
   if (status === 'loading') {
     return (

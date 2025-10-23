@@ -35,7 +35,7 @@ export default function CompanyorPerson() {
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-tight tracking-tight whitespace-nowrap">
                 Are you a company?
               </h2>
-              <p className="text-lg sm:text-xl text-gray-700 leading-relaxed font-medium max-w-lg">
+              <p className="text-lg sm:text-xl text-gray-800 leading-relaxed font-medium max-w-lg">
                 Discover our services to make sustainability the competitive advantage of your business.
               </p>
             </div>

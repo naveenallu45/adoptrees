@@ -27,7 +27,7 @@ interface TreeType {
 async function getTrees(): Promise<TreeType[]> {
   try {
     await connectDB();
-    const trees = await Tree.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+    const trees = await Tree.find({ isActive: true, treeType: 'individual' }).sort({ createdAt: -1 }).lean();
     
     // Convert MongoDB documents to plain objects
     return trees.map((tree) => ({

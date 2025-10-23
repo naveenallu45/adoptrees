@@ -27,7 +27,6 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchPlaceholder?: string;
   pageSize?: number;
-  searchKey?: string;
   showSearch?: boolean;
   showPagination?: boolean;
   className?: string;
@@ -38,7 +37,6 @@ export function DataTable<TData, TValue>({
   data,
   searchPlaceholder = 'Search...',
   pageSize = 10,
-  searchKey: _searchKey,
   showSearch = true,
   showPagination = true,
   className = '',

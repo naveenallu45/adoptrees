@@ -1,6 +1,10 @@
 "use client";
 
 import Image from 'next/image';
+import { useCart } from '@/contexts/CartContext';
+import { useSession } from 'next-auth/react';
+import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 interface Tree {
   _id: string;
@@ -19,13 +23,50 @@ interface TreesProps {
 export default function Trees({ initialTrees = [] }: TreesProps) {
   const trees = initialTrees;
   const error = trees.length === 0 ? 'No trees available' : null;
+  const { addToCart } = useCart();
+  const { data: session } = useSession();
 
   const handleInfoClick = (tree: Tree) => {
-    alert(`Information about ${tree.name}:\n\n${tree.info}\n\nOxygen Production: ${tree.oxygenKgs} kg/year\n\nThis tree contributes significantly to oxygen production and environmental sustainability. Click "Add to Cart" to adopt this tree and make a positive impact on our planet.`);
+    Swal.fire({
+      title: `Information about ${tree.name}`,
+      html: `
+        <div class="text-left">
+          <p class="mb-4">${tree.info}</p>
+          <p class="mb-4"><strong>Oxygen Production:</strong> ${tree.oxygenKgs} kg/year</p>
+          <p class="mb-4">This tree contributes significantly to oxygen production and environmental sustainability. Click "Add to Cart" to adopt this tree and make a positive impact on our planet.</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Got it',
+      confirmButtonColor: '#10b981',
+      width: '500px'
+    });
   };
 
   const handleAddToCart = (tree: Tree) => {
-    alert(`${tree.name} (₹${tree.price}) has been added to your cart! Thank you for contributing to a greener future.`);
+    // Check if user is logged in
+    if (!session) {
+      toast.error('Please login to add items to cart');
+      return;
+    }
+
+    // Check if user is an individual user
+    if (session.user.userType !== 'individual') {
+      toast.error('Only individual users can add individual trees to cart');
+      return;
+    }
+
+    addToCart({
+      id: tree._id,
+      name: tree.name,
+      price: tree.price,
+      imageUrl: tree.imageUrl,
+      info: tree.info,
+      oxygenKgs: tree.oxygenKgs,
+      type: 'individual',
+      adoptionType: 'self' // Default to self, can be changed in cart
+    });
+    toast.success(`${tree.name} (₹${tree.price}) added to cart!`);
   };
 
 
@@ -75,12 +116,28 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                     >
                       Info
                     </button>
-                    <button
-                      onClick={() => handleAddToCart(tree)}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
-                    >
-                      Add to Cart
-                    </button>
+                    {!session ? (
+                      <a
+                        href="/login?redirect=/individuals"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
+                      >
+                        Login to Add
+                      </a>
+                    ) : session.user.userType !== 'individual' ? (
+                      <button
+                        disabled
+                        className="flex-1 bg-gray-400 text-white px-3 py-2 rounded text-sm font-medium cursor-not-allowed flex items-center justify-center"
+                      >
+                        Individual Only
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleAddToCart(tree)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
+                      >
+                        Add to Cart
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

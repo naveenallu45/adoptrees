@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
@@ -18,6 +18,9 @@ interface Tree {
   info: string;
   oxygenKgs: number;
   imageUrl: string;
+  treeType?: string;
+  packageQuantity?: number;
+  packagePrice?: number;
   createdAt: string;
 }
 
@@ -32,6 +35,9 @@ export default function TreesManagement() {
     price: '',
     info: '',
     oxygenKgs: '',
+    treeType: 'individual',
+    packageQuantity: '',
+    packagePrice: '',
     image: null as File | null
   });
 
@@ -39,11 +45,48 @@ export default function TreesManagement() {
     e.preventDefault();
     setSubmitting(true);
     
+    // Validate package fields for company trees
+    if (formData.treeType === 'company') {
+      if (!formData.packageQuantity || formData.packageQuantity === '') {
+        toast.error('Package quantity is required for company trees');
+        setSubmitting(false);
+        return;
+      }
+      if (!formData.packagePrice || formData.packagePrice === '') {
+        toast.error('Package price is required for company trees');
+        setSubmitting(false);
+        return;
+      }
+      if (parseInt(formData.packageQuantity) < 1) {
+        toast.error('Package quantity must be at least 1');
+        setSubmitting(false);
+        return;
+      }
+      if (parseFloat(formData.packagePrice) <= 0) {
+        toast.error('Package price must be greater than 0');
+        setSubmitting(false);
+        return;
+      }
+    }
+    
     const formDataToSend = new FormData();
     formDataToSend.append('name', formData.name);
-    formDataToSend.append('price', formData.price);
+    
+    // For company trees, calculate single tree price from package
+    if (formData.treeType === 'company') {
+      const packageQuantity = parseInt(formData.packageQuantity);
+      const packagePrice = parseFloat(formData.packagePrice);
+      const singleTreePrice = Math.round(packagePrice / packageQuantity);
+      formDataToSend.append('price', singleTreePrice.toString());
+    } else {
+      formDataToSend.append('price', formData.price);
+    }
+    
     formDataToSend.append('info', formData.info);
     formDataToSend.append('oxygenKgs', formData.oxygenKgs);
+    formDataToSend.append('treeType', formData.treeType);
+    formDataToSend.append('packageQuantity', formData.packageQuantity);
+    formDataToSend.append('packagePrice', formData.packagePrice);
     
     if (formData.image) {
       formDataToSend.append('image', formData.image);
@@ -74,6 +117,9 @@ export default function TreesManagement() {
           price: '',
           info: '',
           oxygenKgs: '',
+          treeType: 'individual',
+          packageQuantity: '',
+          packagePrice: '',
           image: null
         });
       } else {
@@ -94,12 +140,15 @@ export default function TreesManagement() {
       price: tree.price.toString(),
       info: tree.info,
       oxygenKgs: tree.oxygenKgs.toString(),
+      treeType: (tree as Tree & { treeType?: string }).treeType || 'individual',
+      packageQuantity: (tree as Tree & { packageQuantity?: number }).packageQuantity?.toString() || '',
+      packagePrice: (tree as Tree & { packagePrice?: number }).packagePrice?.toString() || '',
       image: null
     });
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Tree?',
       text: "Are you sure you want to delete this tree? This action cannot be undone!",
@@ -137,7 +186,7 @@ export default function TreesManagement() {
       console.error('Error deleting tree:', error);
       toast.error('An error occurred while deleting the tree');
     }
-  };
+  }, [queryClient]);
 
   const handleCancel = () => {
     setShowForm(false);
@@ -147,6 +196,9 @@ export default function TreesManagement() {
       price: '',
       info: '',
       oxygenKgs: '',
+      treeType: 'individual',
+      packageQuantity: '',
+      packagePrice: '',
       image: null
     });
   };
@@ -185,6 +237,19 @@ export default function TreesManagement() {
         cell: ({ row }) => (
           <span className="font-semibold text-green-600">
             ₹{row.original.price.toLocaleString()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'treeType',
+        header: 'Type',
+        cell: ({ row }) => (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            (row.original as Tree & { treeType?: string }).treeType === 'company' 
+              ? 'bg-blue-100 text-blue-800' 
+              : 'bg-green-100 text-green-800'
+          }`}>
+            {(row.original as Tree & { treeType?: string }).treeType === 'company' ? 'Company' : 'Individual'}
           </span>
         ),
       },
@@ -228,7 +293,7 @@ export default function TreesManagement() {
         enableSorting: false,
       },
     ],
-    []
+    [handleDelete]
   );
 
   if (loading && trees.length === 0) {
@@ -275,6 +340,38 @@ export default function TreesManagement() {
               {editingTree ? 'Edit Tree' : 'Add New Tree'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Tree Type Selection - First Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Tree Type</label>
+                <select
+                  required
+                  disabled={submitting}
+                  value={formData.treeType}
+                  onChange={(e) => {
+                    const newTreeType = e.target.value;
+                    setFormData({ 
+                      ...formData, 
+                      treeType: newTreeType,
+                      // Reset package fields when switching to individual
+                      packageQuantity: newTreeType === 'individual' ? '' : formData.packageQuantity,
+                      packagePrice: newTreeType === 'individual' ? '' : formData.packagePrice,
+                      // Reset price field when switching to company (will be calculated from package)
+                      price: newTreeType === 'company' ? '' : formData.price
+                    });
+                  }}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="individual">Individual Tree</option>
+                  <option value="company">Company Package</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.treeType === 'individual' 
+                    ? 'Single tree for individual adoption' 
+                    : 'Package of multiple trees for corporate adoption'
+                  }
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Name</label>
@@ -287,17 +384,20 @@ export default function TreesManagement() {
                     className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    disabled={submitting}
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  />
-                </div>
+                {/* Only show single tree price for individual trees */}
+                {formData.treeType === 'individual' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
+                    <input
+                      type="number"
+                      required
+                      disabled={submitting}
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Description</label>
@@ -321,6 +421,48 @@ export default function TreesManagement() {
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
+              
+              {/* Package fields - only show for company trees */}
+              {formData.treeType === 'company' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Package Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Package Quantity <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        disabled={submitting}
+                        value={formData.packageQuantity}
+                        onChange={(e) => setFormData({ ...formData, packageQuantity: e.target.value })}
+                        placeholder="Number of trees in package"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Package Price (₹) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        disabled={submitting}
+                        value={formData.packagePrice}
+                        onChange={(e) => setFormData({ ...formData, packagePrice: e.target.value })}
+                        placeholder="Total price for the package"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Package pricing will be calculated automatically (Package Price ÷ Package Quantity = Price per tree)
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700">Image</label>
                 <input

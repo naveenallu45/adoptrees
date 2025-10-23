@@ -1,6 +1,10 @@
 "use client";
 
 import Image from 'next/image';
+import { useCart } from '@/contexts/CartContext';
+import { useSession } from 'next-auth/react';
+import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 interface Tree {
   _id: string;
@@ -10,6 +14,8 @@ interface Tree {
   oxygenKgs: number;
   imageUrl: string;
   isActive: boolean;
+  packageQuantity?: number;
+  packagePrice?: number;
 }
 
 interface TreesProps {
@@ -19,13 +25,60 @@ interface TreesProps {
 export default function Trees({ initialTrees = [] }: TreesProps) {
   const trees = initialTrees;
   const error = trees.length === 0 ? 'No trees available' : null;
+  const { addToCart } = useCart();
+  const { data: session } = useSession();
 
   const handleInfoClick = (tree: Tree) => {
-    alert(`Corporate Program: ${tree.name}\n\n${tree.info}\n\nOxygen Production: ${tree.oxygenKgs} kg/year\n\nThis premium corporate tree adoption program includes:\n• Dedicated tree maintenance\n• Monthly progress reports\n• CSR certification\n• Environmental impact tracking\n• Corporate sustainability branding\n\nPerfect for companies committed to environmental responsibility.`);
+    Swal.fire({
+      title: `Corporate Program: ${tree.name}`,
+      html: `
+        <div class="text-left">
+          <p class="mb-4">${tree.info}</p>
+          <p class="mb-4"><strong>Oxygen Production:</strong> ${tree.oxygenKgs} kg/year</p>
+          <p class="mb-4">This premium corporate tree adoption program includes:</p>
+          <ul class="list-disc list-inside mb-4 space-y-1">
+            <li>Dedicated tree maintenance</li>
+            <li>Monthly progress reports</li>
+            <li>CSR certification</li>
+            <li>Environmental impact tracking</li>
+            <li>Corporate sustainability branding</li>
+          </ul>
+          <p class="text-green-600 font-semibold">Perfect for companies committed to environmental responsibility.</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Got it',
+      confirmButtonColor: '#10b981',
+      width: '600px'
+    });
   };
 
   const handleAddToCart = (tree: Tree) => {
-    alert(`Corporate Program: ${tree.name} (₹${tree.price})\n\nAdded to your corporate cart! Our team will contact you within 24 hours to discuss implementation and customization options for your corporate sustainability program.`);
+    // Check if user is logged in
+    if (!session) {
+      toast.error('Please login to add items to cart');
+      return;
+    }
+
+    // Check if user is a company user
+    if (session.user.userType !== 'company') {
+      toast.error('Only company users can add corporate trees to cart');
+      return;
+    }
+
+    addToCart({
+      id: tree._id,
+      name: `Corporate ${tree.name}`,
+      price: tree.packagePrice || tree.price,
+      imageUrl: tree.imageUrl,
+      info: tree.info,
+      oxygenKgs: tree.oxygenKgs,
+      type: 'company',
+      packageQuantity: tree.packageQuantity,
+      packagePrice: tree.packagePrice
+    });
+    const displayPrice = tree.packagePrice || tree.price;
+    toast.success(`Corporate Program: ${tree.name} (₹${displayPrice}) added to cart!`);
   };
 
 
@@ -58,13 +111,29 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                     Corporate {tree.name}
                   </h3>
 
-                  {/* Price and Oxygen Contribution */}
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-2xl font-bold text-blue-600">₹{tree.price}</span>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">Oxygen</p>
-                      <p className="text-sm font-semibold text-green-600">{tree.oxygenKgs} kg/year</p>
+                  {/* Price and Package Information */}
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-2xl font-bold text-blue-600">
+                        {tree.packagePrice ? `₹${tree.packagePrice}` : `₹${tree.price}`}
+                      </span>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Oxygen</p>
+                        <p className="text-sm font-semibold text-green-600">{tree.oxygenKgs} kg/year</p>
+                      </div>
                     </div>
+                    {tree.packageQuantity && tree.packageQuantity > 1 && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                        <p className="text-xs text-blue-700 font-medium">
+                          Package: {tree.packageQuantity} trees
+                          {tree.packagePrice && (
+                            <span className="ml-2">
+                              (₹{Math.round(tree.packagePrice / tree.packageQuantity)} per tree)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
@@ -75,12 +144,28 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                     >
                       Info
                     </button>
-                    <button
-                      onClick={() => handleAddToCart(tree)}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
-                    >
-                      Add to Cart
-                    </button>
+                    {!session ? (
+                      <a
+                        href="/login?redirect=/companies"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
+                      >
+                        Login to Add
+                      </a>
+                    ) : session.user.userType !== 'company' ? (
+                      <button
+                        disabled
+                        className="flex-1 bg-gray-400 text-white px-3 py-2 rounded text-sm font-medium cursor-not-allowed flex items-center justify-center"
+                      >
+                        Company Only
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleAddToCart(tree)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
+                      >
+                        Add to Cart
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

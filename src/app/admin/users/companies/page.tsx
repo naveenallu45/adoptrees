@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { TrashIcon, EnvelopeIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
@@ -22,10 +22,10 @@ interface CompanyUser {
 
 export default function CompanyUsersPage() {
   const queryClient = useQueryClient();
-  const { data: users = [], isLoading: loading, error } = useCompanyUsers();
+  const { data: users = [], isLoading: loading } = useCompanyUsers();
   
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Company?',
       text: "Are you sure you want to delete this company? This action cannot be undone!",
@@ -62,7 +62,7 @@ export default function CompanyUsersPage() {
       console.error('Error deleting company:', error);
       toast.error('An error occurred while deleting the company');
     }
-  };
+  }, [queryClient]);
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<CompanyUser>[]>(

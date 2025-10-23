@@ -8,6 +8,10 @@ export interface ITree extends Document {
   imageUrl: string;
   imagePublicId: string;
   isActive: boolean;
+  treeType: 'individual' | 'company';
+  // Package fields for corporate trees
+  packageQuantity?: number;
+  packagePrice?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +50,22 @@ const TreeSchema: Schema = new Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  treeType: {
+    type: String,
+    enum: ['individual', 'company'],
+    required: [true, 'Tree type is required'],
+    default: 'individual'
+  },
+  // Package fields for corporate trees
+  packageQuantity: {
+    type: Number,
+    min: [1, 'Package quantity must be at least 1'],
+    default: 1
+  },
+  packagePrice: {
+    type: Number,
+    min: [0, 'Package price cannot be negative']
   }
 }, {
   timestamps: true

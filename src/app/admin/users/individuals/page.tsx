@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { TrashIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
@@ -23,7 +23,7 @@ export default function IndividualUsersPage() {
   const queryClient = useQueryClient();
   const { data: users = [], isLoading: loading } = useIndividualUsers();
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete User?',
       text: "Are you sure you want to delete this user? This action cannot be undone!",
@@ -60,7 +60,7 @@ export default function IndividualUsersPage() {
       console.error('Error deleting user:', error);
       toast.error('An error occurred while deleting the user');
     }
-  };
+  }, [queryClient]);
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<IndividualUser>[]>(

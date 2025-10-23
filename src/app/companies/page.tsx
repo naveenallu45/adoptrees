@@ -22,12 +22,14 @@ interface TreeType {
   oxygenKgs: number;
   imageUrl: string;
   isActive: boolean;
+  packageQuantity?: number;
+  packagePrice?: number;
 }
 
 async function getTrees(): Promise<TreeType[]> {
   try {
     await connectDB();
-    const trees = await Tree.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+    const trees = await Tree.find({ isActive: true, treeType: 'company' }).sort({ createdAt: -1 }).lean();
     
     // Convert MongoDB documents to plain objects
     return trees.map((tree) => ({
@@ -37,7 +39,9 @@ async function getTrees(): Promise<TreeType[]> {
       info: tree.info,
       oxygenKgs: tree.oxygenKgs,
       imageUrl: tree.imageUrl,
-      isActive: tree.isActive
+      isActive: tree.isActive,
+      packageQuantity: tree.packageQuantity,
+      packagePrice: tree.packagePrice
     }));
   } catch (error) {
     console.error('Error fetching trees:', error);

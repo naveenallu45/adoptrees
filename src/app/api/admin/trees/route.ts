@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
     const priceStr = formData.get('price') as string;
     const info = formData.get('info') as string;
     const oxygenKgsStr = formData.get('oxygenKgs') as string;
+    const treeType = formData.get('treeType') as string;
+    const packageQuantityStr = formData.get('packageQuantity') as string;
+    const packagePriceStr = formData.get('packagePrice') as string;
     const image = formData.get('image') as File;
 
     // Validate all fields are present
@@ -48,10 +51,26 @@ export async function POST(request: NextRequest) {
     // Parse numeric values
     const price = parseFloat(priceStr);
     const oxygenKgs = parseFloat(oxygenKgsStr);
+    const packageQuantity = packageQuantityStr ? parseInt(packageQuantityStr) : 1;
+    const packagePrice = packagePriceStr ? parseFloat(packagePriceStr) : undefined;
 
     if (isNaN(price) || isNaN(oxygenKgs)) {
       return NextResponse.json(
         { success: false, error: 'Price and oxygen production must be valid numbers' },
+        { status: 400 }
+      );
+    }
+
+    if (packageQuantityStr && isNaN(packageQuantity)) {
+      return NextResponse.json(
+        { success: false, error: 'Package quantity must be a valid number' },
+        { status: 400 }
+      );
+    }
+
+    if (packagePriceStr && isNaN(packagePrice!)) {
+      return NextResponse.json(
+        { success: false, error: 'Package price must be a valid number' },
         { status: 400 }
       );
     }
@@ -122,6 +141,9 @@ export async function POST(request: NextRequest) {
       oxygenKgs: validationResult.data.oxygenKgs,
       imageUrl: result.secure_url,
       imagePublicId: result.public_id,
+      treeType: treeType || 'individual',
+      packageQuantity: packageQuantity,
+      packagePrice: packagePrice,
     });
 
     await tree.save();
