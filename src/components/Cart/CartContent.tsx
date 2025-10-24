@@ -3,15 +3,91 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import AdoptionDetails from './AdoptionDetails';
+import SuccessDialog from './SuccessDialog';
 
 export default function CartContent() {
-  const { cartItems, updateQuantity, removeFromCart, updateCartItem, getTotalPrice } = useCart();
+  const { cartItems, updateQuantity, removeFromCart, updateCartItem, getTotalPrice, clearCart } = useCart();
   const { data: session } = useSession();
+  const router = useRouter();
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [orderDetails, setOrderDetails] = useState<{
+    orderId: string;
+    totalAmount: number;
+    itemsCount: number;
+  } | null>(null);
 
   const subtotal = getTotalPrice();
   const total = subtotal;
+
+  const handlePlaceTree = async () => {
+    if (!session) {
+      router.push('/login?redirect=/cart');
+      return;
+    }
+
+    setIsPlacingOrder(true);
+    
+    try {
+      // Prepare order data
+      const orderData = {
+        items: cartItems.map(item => ({
+          treeId: item.id,
+          quantity: item.quantity,
+          adoptionType: item.adoptionType || 'self',
+          recipientName: item.recipientName,
+          recipientEmail: item.recipientEmail,
+          giftMessage: item.giftMessage
+        })),
+        isGift: cartItems.some(item => item.adoptionType === 'gift'),
+        giftRecipientName: cartItems.find(item => item.adoptionType === 'gift')?.recipientName,
+        giftRecipientEmail: cartItems.find(item => item.adoptionType === 'gift')?.recipientEmail,
+        giftMessage: cartItems.find(item => item.adoptionType === 'gift')?.giftMessage
+      };
+
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setOrderDetails({
+          orderId: result.data.orderId,
+          totalAmount: result.data.totalAmount,
+          itemsCount: result.data.items
+        });
+        clearCart();
+        setShowSuccessDialog(true);
+      } else {
+        alert('Failed to place order: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      alert('Failed to place order. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+    setOrderDetails(null);
+    // Redirect to appropriate dashboard
+    if (session?.user?.userType === 'individual') {
+      router.push('/dashboard/individual/trees');
+    } else if (session?.user?.userType === 'company') {
+      router.push('/dashboard/company/trees');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
@@ -124,15 +200,19 @@ export default function CartContent() {
                   </div>
                 </div>
                 {session ? (
-                  <button className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold transition-colors duration-300 mb-4">
-                    Place Order
+                  <button 
+                    onClick={handlePlaceTree}
+                    disabled={isPlacingOrder}
+                    className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors duration-300 mb-4"
+                  >
+                    {isPlacingOrder ? 'Placing Tree...' : 'Place Tree'}
                   </button>
                 ) : (
                   <Link 
                     href="/login?redirect=/cart"
                     className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold transition-colors duration-300 mb-4 flex items-center justify-center"
                   >
-                    Login & Place Order
+                    Login & Place Tree
                   </Link>
                 )}
                 <Link 
@@ -146,6 +226,13 @@ export default function CartContent() {
           </div>
         )}
       </div>
+      
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={showSuccessDialog}
+        onClose={handleSuccessDialogClose}
+        orderDetails={orderDetails}
+      />
     </div>
   );
 }

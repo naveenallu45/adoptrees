@@ -121,7 +121,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                         href="/login?redirect=/individuals"
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center justify-center"
                       >
-                        Login to Add
+                        Add to Cart
                       </a>
                     ) : session.user.userType !== 'individual' ? (
                       <button

@@ -7,6 +7,7 @@ import {
   ArrowRightOnRectangleIcon,
   GiftIcon,
   QuestionMarkCircleIcon,
+  CreditCardIcon,
 } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -22,6 +23,7 @@ const navItems: NavItem[] = [
   { name: 'Gifts', href: '/dashboard/company/gift', icon: GiftIcon },
   { name: 'Support', href: '/dashboard/company/support', icon: QuestionMarkCircleIcon },
   { name: 'Profile', href: '/dashboard/company/profile', icon: BuildingOfficeIcon },
+  { name: 'Transactions', href: '/dashboard/company/transactions', icon: CreditCardIcon },
 ];
 
 export default function CompanySidebar() {

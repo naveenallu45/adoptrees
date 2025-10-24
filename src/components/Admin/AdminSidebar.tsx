@@ -8,6 +8,7 @@ import {
   BuildingOfficeIcon,
   ArrowRightOnRectangleIcon,
   HeartIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -21,6 +22,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: HomeIcon },
   { name: 'Trees', href: '/admin/trees', icon: TreeIcon },
+  { name: 'Adoptions', href: '/admin/adoptions', icon: ClipboardDocumentListIcon },
   { name: 'Individual Users', href: '/admin/users/individuals', icon: UserIcon },
   { name: 'Company Users', href: '/admin/users/companies', icon: BuildingOfficeIcon },
   { name: 'Well-Wishers', href: '/admin/wellwishers', icon: HeartIcon },
