@@ -185,6 +185,47 @@ const OrderSchema: Schema = new Schema({
     },
     location: {
       type: String
+    },
+    // Planting details for completed tasks
+    plantingDetails: {
+      plantedAt: {
+        type: Date
+      },
+      plantingLocation: {
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point'
+        },
+        coordinates: {
+          type: [Number], // [longitude, latitude]
+          index: '2dsphere'
+        }
+      },
+      plantingImages: [{
+        url: {
+          type: String,
+          required: true
+        },
+        publicId: {
+          type: String,
+          required: true
+        },
+        caption: {
+          type: String
+        },
+        uploadedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }],
+      plantingNotes: {
+        type: String,
+        maxlength: [500, 'Planting notes cannot exceed 500 characters']
+      },
+      completedAt: {
+        type: Date
+      }
     }
   }],
   adminNotes: {

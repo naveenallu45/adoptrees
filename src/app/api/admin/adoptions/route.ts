@@ -54,13 +54,11 @@ export async function GET(request: NextRequest) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
         (query.createdAt as Record<string, Date>).$gte = start;
-        console.log('Start date filter:', start);
       }
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         (query.createdAt as Record<string, Date>).$lte = end;
-        console.log('End date filter:', end);
       }
     }
 
@@ -68,33 +66,56 @@ export async function GET(request: NextRequest) {
     const sort: Record<string, 1 | -1> = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-    console.log('Query being executed:', JSON.stringify(query, null, 2));
-
-    // Get total count for pagination
-    const totalCount = await Order.countDocuments(query);
-
-    // Get orders with pagination
-    const orders = await Order.find(query)
-      .sort(sort)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean();
-
-    // Calculate additional metrics
-    const totalRevenue = await Order.aggregate([
+    // Use aggregation pipeline for better performance
+    const pipeline = [
       { $match: query },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-    ]);
+      {
+        $facet: {
+          orders: [
+            { $sort: sort },
+            { $skip: (page - 1) * limit },
+            { $limit: limit }
+          ],
+          totalCount: [{ $count: 'count' }],
+          metrics: [
+            {
+              $group: {
+                _id: null,
+                totalRevenue: { $sum: '$totalAmount' },
+                statusCounts: {
+                  $push: {
+                    status: '$status',
+                    count: 1
+                  }
+                },
+                userTypeCounts: {
+                  $push: {
+                    userType: '$userType',
+                    count: 1
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ];
 
-    const statusCounts = await Order.aggregate([
-      { $match: query },
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]);
-
-    const userTypeCounts = await Order.aggregate([
-      { $match: query },
-      { $group: { _id: '$userType', count: { $sum: 1 } } }
-    ]);
+    const [result] = await Order.aggregate(pipeline);
+    const orders = result.orders;
+    const totalCount = result.totalCount[0]?.count || 0;
+    const metrics = result.metrics[0] || { totalRevenue: 0, statusCounts: [], userTypeCounts: [] };
+    
+    // Process status and user type counts
+    const statusCountsMap = metrics.statusCounts.reduce((acc: Record<string, number>, item: { status: string; count: number }) => {
+      acc[item.status] = (acc[item.status] || 0) + item.count;
+      return acc;
+    }, {});
+    
+    const userTypeCountsMap = metrics.userTypeCounts.reduce((acc: Record<string, number>, item: { userType: string; count: number }) => {
+      acc[item.userType] = (acc[item.userType] || 0) + item.count;
+      return acc;
+    }, {});
 
     return NextResponse.json({
       success: true,
@@ -108,15 +129,9 @@ export async function GET(request: NextRequest) {
         limit
       },
       metrics: {
-        totalRevenue: totalRevenue[0]?.total || 0,
-        statusCounts: statusCounts.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
-        userTypeCounts: userTypeCounts.reduce((acc, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {})
+        totalRevenue: metrics.totalRevenue || 0,
+        statusCounts: statusCountsMap,
+        userTypeCounts: userTypeCountsMap
       }
     });
 

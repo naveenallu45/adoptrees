@@ -76,7 +76,9 @@ export const authOptions = {
             userType: user.userType,
           } as ExtendedUser;
         } catch (error) {
-          console.error('Auth error:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Auth error:', error);
+          }
           return null;
         }
       },

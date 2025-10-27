@@ -87,22 +87,22 @@ export default function RegisterForm() {
   }
 
   return (
-    <div className="w-full max-w-2xl">
-      <div className="bg-white/80 backdrop-blur rounded-2xl shadow-xl border border-green-100 p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Create your account</h1>
-        <p className="text-sm text-gray-600 mb-6">Choose account type and fill the details.</p>
+    <div className="w-full max-w-sm sm:max-w-md lg:max-w-2xl">
+      <div className="bg-white/80 backdrop-blur rounded-2xl shadow-xl border border-green-100 p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Create your account</h1>
+        <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">Choose account type and fill the details.</p>
 
-        <div className="mb-6" ref={dropdownRef}>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
+        <div className="mb-4 sm:mb-6" ref={dropdownRef}>
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Account Type</label>
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-left flex items-center justify-between"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-left flex items-center justify-between text-sm sm:text-base"
             >
               <span className={userType === '' ? 'text-gray-500' : ''}>{getUserTypeLabel()}</span>
               <svg
-                className={`w-5 h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -116,21 +116,21 @@ export default function RegisterForm() {
                 <button
                   type="button"
                   onClick={() => handleSelectUserType('')}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 text-gray-500 transition-colors"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-gray-50 text-gray-500 transition-colors text-sm sm:text-base"
                 >
                   Select
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSelectUserType('individual')}
-                  className="w-full px-4 py-3 text-left hover:bg-green-50 text-gray-900 transition-colors border-t border-gray-100"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-green-50 text-gray-900 transition-colors border-t border-gray-100 text-sm sm:text-base"
                 >
                   Individual
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSelectUserType('company')}
-                  className="w-full px-4 py-3 text-left hover:bg-green-50 text-gray-900 transition-colors border-t border-gray-100"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-green-50 text-gray-900 transition-colors border-t border-gray-100 text-sm sm:text-base"
                 >
                   Company
                 </button>
@@ -139,99 +139,99 @@ export default function RegisterForm() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           {userType === 'individual' && (
             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Full name</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Doe"
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
               />
             </div>
           )}
 
           {userType === 'company' && (
             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company name</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Company name</label>
               <input
                 type="text"
                 required
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Acme Inc."
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
               />
             </div>
           )}
 
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
             />
           </div>
 
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone number</label>
             <input
               type="tel"
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91 98765 43210"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
             />
           </div>
 
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
             />
           </div>
 
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Confirm password</label>
             <input
               type="password"
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
             />
           </div>
 
           {error && (
-            <div className="md:col-span-2 text-red-600 text-sm bg-red-50 border border-red-100 rounded-lg p-3">{error}</div>
+            <div className="md:col-span-2 text-red-600 text-xs sm:text-sm bg-red-50 border border-red-100 rounded-lg p-2 sm:p-3">{error}</div>
           )}
 
           <div className="md:col-span-2">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-2 sm:py-3 rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {isSubmitting ? 'Creating account…' : 'Create account'}
             </button>
           </div>
         </form>
 
-        <div className="mt-6 text-sm text-center text-gray-700">
+        <div className="mt-4 sm:mt-6 text-xs sm:text-sm text-center text-gray-700">
           Already have an account?{' '}
           <Link href="/login" className="text-green-600 font-semibold hover:underline">Sign in</Link>
         </div>

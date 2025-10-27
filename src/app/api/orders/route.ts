@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { nanoid } from 'nanoid';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Tree from '@/models/Tree';
@@ -97,26 +96,24 @@ export async function POST(request: NextRequest) {
 
     await order.save();
 
-    // If it's a gift, create wellwisher tasks
-    if (isGift && giftRecipientEmail) {
-      // Find a wellwisher to assign (for now, assign to first available wellwisher)
-      const wellwisher = await User.findOne({ role: 'wellwisher' });
-      
-      if (wellwisher) {
-        const wellwisherTasks = orderItems.map((item, index) => ({
-          taskId: `TASK-${Date.now()}-${index}`,
-          task: `Plant and care for ${item.treeName}`,
-          description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${giftMessage ? `Gift message: ${giftMessage}` : ''}`,
-          scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000), // Schedule tasks over next few days
-          priority: 'medium' as const,
-          status: 'pending' as const,
-          location: 'To be determined'
-        }));
+    // Create wellwisher tasks for all orders (not just gifts)
+    // Find a wellwisher to assign (for now, assign to first available wellwisher)
+    const wellwisher = await User.findOne({ role: 'wellwisher' });
+    
+    if (wellwisher) {
+      const wellwisherTasks = orderItems.map((item, index) => ({
+        taskId: `${orderId}-${index}`, // Use existing order ID (like WEL60136-0, WEL60136-1)
+        task: `Plant and care for ${item.treeName}`,
+        description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${isGift && giftMessage ? `Gift message: ${giftMessage}` : ''}`,
+        scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000), // Schedule tasks over next few days
+        priority: 'medium' as const,
+        status: 'pending' as const,
+        location: 'To be determined'
+      }));
 
-        order.assignedWellwisher = wellwisher._id.toString();
-        order.wellwisherTasks = wellwisherTasks;
-        await order.save();
-      }
+      order.assignedWellwisher = wellwisher._id.toString();
+      order.wellwisherTasks = wellwisherTasks;
+      await order.save();
     }
 
     return NextResponse.json({

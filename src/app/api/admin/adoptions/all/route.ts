@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import { requireAdmin } from '@/lib/api-auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Verify admin authentication
     const authResult = await requireAdmin();
