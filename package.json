@@ -9,7 +9,10 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf .next out node_modules/.cache"
+    "clean": "rm -rf .next out node_modules/.cache",
+    "optimize-db": "node scripts/optimize-database.js",
+    "analyze": "ANALYZE=true next build",
+    "perf": "next build && next start"
   },
   "dependencies": {
     "@cloudinary/react": "^1.14.3",

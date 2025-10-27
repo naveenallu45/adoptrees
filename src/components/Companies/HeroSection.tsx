@@ -2,10 +2,10 @@ export default function HeroSection() {
   return (
     <section id="companies-hero" className="min-h-[50vh] relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-800">
       {/* Content */}
-      <div className="relative z-20 min-h-[50vh] flex items-center justify-center pt-32 translate-y-0.5">
-        <div className="container mx-auto px-4 text-center">
+      <div className="relative z-20 min-h-[50vh] flex items-center justify-center pt-12 sm:pt-14 md:pt-16 lg:pt-18 translate-y-0.5">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 drop-shadow-2xl">
             <span className="block">
               For Companies
             </span>
@@ -15,7 +15,7 @@ export default function HeroSection() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-white max-w-3xl mx-auto mb-8 drop-shadow-lg font-medium">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white max-w-2xl sm:max-w-3xl mx-auto mb-6 sm:mb-8 drop-shadow-lg font-medium px-4">
             Partner with us to create a sustainable future and enhance your corporate social responsibility
           </p>
         </div>

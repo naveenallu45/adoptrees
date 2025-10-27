@@ -163,7 +163,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error registering well-wisher:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error registering well-wisher:', error);
+    }
     const ip = getClientIp(request);
     logSecurityEvent('WELLWISHER_CREATION_ERROR', { error: error instanceof Error ? error.message : 'Unknown error' }, ip);
     return NextResponse.json(

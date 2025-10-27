@@ -120,3 +120,122 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Responsive text utilities */
+  .text-responsive-xs {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl;
+  }
+  
+  .text-responsive-2xl {
+    @apply text-2xl sm:text-3xl md:text-4xl;
+  }
+  
+  .text-responsive-3xl {
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl;
+  }
+  
+  /* Responsive spacing utilities */
+  .space-responsive-sm {
+    @apply space-y-2 sm:space-y-3;
+  }
+  
+  .space-responsive-md {
+    @apply space-y-3 sm:space-y-4 md:space-y-6;
+  }
+  
+  .space-responsive-lg {
+    @apply space-y-4 sm:space-y-6 md:space-y-8;
+  }
+  
+  /* Responsive padding utilities */
+  .p-responsive-sm {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+  
+  .p-responsive-md {
+    @apply p-4 sm:p-6 md:p-8;
+  }
+  
+  .p-responsive-lg {
+    @apply p-6 sm:p-8 md:p-12;
+  }
+  
+  /* Responsive margin utilities */
+  .m-responsive-sm {
+    @apply m-3 sm:m-4 md:m-6;
+  }
+  
+  .m-responsive-md {
+    @apply m-4 sm:m-6 md:m-8;
+  }
+  
+  .m-responsive-lg {
+    @apply m-6 sm:m-8 md:m-12;
+  }
+  
+  /* Line clamp utilities for better text handling */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  /* Mobile-first responsive containers */
+  .container-responsive {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Touch-friendly button sizing */
+  .btn-touch {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Safe area handling for mobile devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}

@@ -22,31 +22,31 @@ export default function Footer() {
 
   return (
     <footer className="bg-gradient-to-br from-purple-900 to-purple-600 text-white">
-      <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12">
           {/* Brand Section */}
-          <div className="lg:col-span-2 mb-8 lg:mb-0">
-            <div className="flex items-center gap-3 mb-6">
-              <h3 className="text-2xl font-bold">Adoptrees</h3>
+          <div className="lg:col-span-2 mb-6 sm:mb-8 lg:mb-0">
+            <div className="flex items-center gap-3 mb-4 sm:mb-6">
+              <h3 className="text-xl sm:text-2xl font-bold">Adoptrees</h3>
             </div>
-            <p className="text-purple-200 mb-8 leading-relaxed max-w-md">
+            <p className="text-purple-200 mb-6 sm:mb-8 leading-relaxed max-w-md text-sm sm:text-base">
               Making the world greener, one tree at a time. Join our mission to create a sustainable future for generations to come.
             </p>
             
             {/* Newsletter Signup */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:mb-8">
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-4 py-3 rounded-lg bg-purple-700/50 border border-purple-600/50 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent backdrop-blur-sm"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg bg-purple-700/50 border border-purple-600/50 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent backdrop-blur-sm text-sm sm:text-base"
               />
-              <button className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105">
+              <button className="bg-green-500 hover:bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 text-sm sm:text-base">
                 Subscribe
               </button>
             </div>
 
             {/* Copyright */}
-            <p className="text-purple-300 text-sm">
+            <p className="text-purple-300 text-xs sm:text-sm">
               © 2024 All rights reserved Adoptrees
             </p>
           </div>
@@ -55,7 +55,7 @@ export default function Footer() {
           <div className="grid grid-cols-3 lg:contents gap-4 lg:gap-0">
             {/* Company Links */}
             <div className="lg:mb-0">
-              <h4 className="text-white font-bold text-sm lg:text-lg mb-3 lg:mb-6">Company</h4>
+              <h4 className="text-white font-bold text-sm lg:text-lg mb-2 sm:mb-3 lg:mb-6">Company</h4>
               <ul className="space-y-1 lg:space-y-3">
                 {footerLinks.company.map((link) => (
                   <li key={link.name}>
@@ -72,7 +72,7 @@ export default function Footer() {
 
             {/* Support Links */}
             <div className="lg:mb-0">
-              <h4 className="text-white font-bold text-sm lg:text-lg mb-3 lg:mb-6">Support</h4>
+              <h4 className="text-white font-bold text-sm lg:text-lg mb-2 sm:mb-3 lg:mb-6">Support</h4>
               <ul className="space-y-1 lg:space-y-3">
                 {footerLinks.support.map((link) => (
                   <li key={link.name}>
@@ -89,7 +89,7 @@ export default function Footer() {
 
             {/* Legal Links */}
             <div>
-              <h4 className="text-white font-bold text-sm lg:text-lg mb-3 lg:mb-6">Legal</h4>
+              <h4 className="text-white font-bold text-sm lg:text-lg mb-2 sm:mb-3 lg:mb-6">Legal</h4>
               <ul className="space-y-1 lg:space-y-3">
                 {footerLinks.legal.map((link) => (
                   <li key={link.name}>

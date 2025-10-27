@@ -20,7 +20,6 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
   MagnifyingGlassIcon,
-  FunnelIcon,
   ArrowDownTrayIcon,
   EyeIcon,
   PencilIcon,
@@ -114,55 +113,7 @@ export default function AdminAdoptionsPage() {
   });
 
 
-  // Build query parameters
-  const queryParams = useMemo(() => {
-    console.log('Building query params with filters:', filters);
-    const params = new URLSearchParams();
-    params.set('page', (pagination.pageIndex + 1).toString());
-    params.set('limit', pagination.pageSize.toString());
-    
-    if (filters.search) params.set('search', filters.search);
-    if (filters.status) params.set('status', filters.status);
-    if (filters.userType) params.set('userType', filters.userType);
-    if (filters.startDate) {
-      const startDate = new Date(filters.startDate);
-      startDate.setHours(0, 0, 0, 0);
-      params.set('startDate', startDate.toISOString().split('T')[0]);
-    }
-    if (filters.endDate) {
-      const endDate = new Date(filters.endDate);
-      endDate.setHours(23, 59, 59, 999);
-      params.set('endDate', endDate.toISOString().split('T')[0]);
-    }
-    if (sorting.length > 0) {
-      params.set('sortBy', sorting[0].id);
-      params.set('sortOrder', sorting[0].desc ? 'desc' : 'asc');
-    }
 
-    const queryString = params.toString();
-    console.log('Query params result:', queryString);
-    return queryString;
-  }, [filters, pagination, sorting]);
-
-  // Create a more stable query key
-  const queryKey = useMemo(() => {
-    const key = [
-      'admin-adoptions',
-      {
-        page: pagination.pageIndex + 1,
-        limit: pagination.pageSize,
-        search: filters.search || '',
-        status: filters.status || '',
-        userType: filters.userType || '',
-        startDate: filters.startDate ? filters.startDate.toISOString().split('T')[0] : '',
-        endDate: filters.endDate ? filters.endDate.toISOString().split('T')[0] : '',
-        sortBy: sorting.length > 0 ? sorting[0].id : '',
-        sortOrder: sorting.length > 0 ? (sorting[0].desc ? 'desc' : 'asc') : '',
-      }
-    ];
-    console.log('Query key:', key);
-    return key;
-  }, [filters, pagination, sorting]);
 
   // Fetch all adoptions data once
   const { data: allData, isLoading, error, refetch } = useQuery({
@@ -176,18 +127,12 @@ export default function AdminAdoptionsPage() {
       return response.json();
     },
     staleTime: 10 * 60 * 1000, // 10 minutes - data stays fresh much longer
-    cacheTime: 30 * 60 * 1000, // 30 minutes - keep in cache much longer
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache much longer (formerly cacheTime)
     refetchOnWindowFocus: false, // Don't refetch when window gains focus
     refetchOnMount: true, // Refetch on component mount
     refetchOnReconnect: false, // Don't refetch on network reconnect
     retry: 1, // Only retry once on failure
     retryDelay: 1000, // 1 second delay between retries
-    onSuccess: (data) => {
-      console.log('All adoptions data loaded:', data);
-    },
-    onError: (error) => {
-      console.log('Query error:', error);
-    },
   });
 
   console.log('Query state - isLoading:', isLoading, 'hasData:', !!allData);
@@ -196,53 +141,58 @@ export default function AdminAdoptionsPage() {
   const filteredAdoptions = useMemo(() => {
     if (!allData?.data) return [];
     
-    let filtered = [...allData.data];
+    let filtered = [...(allData as { data: Adoption[] }).data];
     
     // Search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(adoption => 
+      filtered = filtered.filter((adoption: Adoption) => 
         adoption.orderId.toLowerCase().includes(searchLower) ||
         adoption.userEmail.toLowerCase().includes(searchLower) ||
         adoption.userName.toLowerCase().includes(searchLower) ||
-        adoption.items.some(item => item.treeName.toLowerCase().includes(searchLower))
+        adoption.items.some((item) => item.treeName.toLowerCase().includes(searchLower))
       );
     }
     
     // Status filter
     if (filters.status) {
-      filtered = filtered.filter(adoption => adoption.status === filters.status);
+      filtered = filtered.filter((adoption: Adoption) => adoption.status === filters.status);
     }
     
     // User type filter
     if (filters.userType) {
-      filtered = filtered.filter(adoption => adoption.userType === filters.userType);
+      filtered = filtered.filter((adoption: Adoption) => adoption.userType === filters.userType);
     }
     
     // Date range filter
     if (filters.startDate) {
       const startDate = new Date(filters.startDate);
       startDate.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(adoption => new Date(adoption.createdAt) >= startDate);
+      filtered = filtered.filter((adoption: Adoption) => new Date(adoption.createdAt) >= startDate);
     }
     
     if (filters.endDate) {
       const endDate = new Date(filters.endDate);
       endDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(adoption => new Date(adoption.createdAt) <= endDate);
+      filtered = filtered.filter((adoption: Adoption) => new Date(adoption.createdAt) <= endDate);
     }
     
     // Sorting
     if (sorting.length > 0) {
       const { id, desc } = sorting[0];
       filtered.sort((a, b) => {
-        let aVal = a[id as keyof Adoption];
-        let bVal = b[id as keyof Adoption];
+        let aVal: unknown = a[id as keyof Adoption];
+        let bVal: unknown = b[id as keyof Adoption];
         
         if (id === 'createdAt') {
           aVal = new Date(a.createdAt).getTime();
           bVal = new Date(b.createdAt).getTime();
         }
+        
+        // Handle undefined and null values
+        if ((aVal === undefined || aVal === null) && (bVal === undefined || bVal === null)) return 0;
+        if (aVal === undefined || aVal === null) return desc ? 1 : -1;
+        if (bVal === undefined || bVal === null) return desc ? -1 : 1;
         
         if (aVal < bVal) return desc ? 1 : -1;
         if (aVal > bVal) return desc ? -1 : 1;
@@ -251,7 +201,7 @@ export default function AdminAdoptionsPage() {
     }
     
     return filtered;
-  }, [allData?.data, filters, sorting]);
+  }, [allData, filters, sorting]);
 
   // Pagination for filtered results
   const paginatedAdoptions = useMemo(() => {
@@ -488,15 +438,12 @@ export default function AdminAdoptionsPage() {
 
   // Debounced search
   const debouncedSearch = useCallback(
-    (() => {
-      let timeoutId: NodeJS.Timeout;
-      return (value: string) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          handleFilterChange('search', value);
-        }, 500); // 500ms delay
-      };
-    })(),
+    (value: string) => {
+      const timeoutId = setTimeout(() => {
+        handleFilterChange('search', value);
+      }, 500); // 500ms delay
+      return () => clearTimeout(timeoutId);
+    },
     []
   );
 
@@ -637,7 +584,7 @@ export default function AdminAdoptionsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Pending</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {metrics.statusCounts.pending || 0}
+                {(metrics.statusCounts as Record<string, number>).pending || 0}
               </p>
             </div>
           </div>

@@ -12,7 +12,7 @@ import {
   ColumnFiltersState,
   VisibilityState,
 } from '@tanstack/react-table';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   ChevronUpIcon,
@@ -51,7 +51,8 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  const table = useReactTable({
+  // Memoize the table configuration
+  const tableConfig = useMemo(() => ({
     data,
     columns,
     onSortingChange: setSorting,
@@ -73,7 +74,9 @@ export function DataTable<TData, TValue>({
         pageSize,
       },
     },
-  });
+  }), [data, columns, sorting, columnFilters, columnVisibility, rowSelection, pageSize]);
+
+  const table = useReactTable(tableConfig);
 
   return (
     <div className={`w-full ${className}`}>
