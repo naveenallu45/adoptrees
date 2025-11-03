@@ -55,8 +55,7 @@ export default function IndividualDashboardLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Dashboard</h1>
-            <div className="w-10"></div>
+            <h1 className="text-lg font-semibold text-gray-900">Adoptrees</h1>
           </div>
           
           {/* Page content */}

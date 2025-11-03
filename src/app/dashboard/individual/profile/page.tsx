@@ -25,7 +25,6 @@ export default function IndividualProfilePage() {
 
   const handleSave = () => {
     // Here you would typically save the data to your backend
-    console.log('Saving profile data:', formData);
     setIsEditing(false);
   };
 

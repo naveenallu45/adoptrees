@@ -47,8 +47,7 @@ export default function UpcomingPage() {
       } else {
         setError(result.error);
       }
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
+    } catch (_error) {
       setError('Failed to fetch tasks');
     } finally {
       setLoading(false);
@@ -77,8 +76,7 @@ export default function UpcomingPage() {
       } else {
         alert('Failed to start task: ' + result.error);
       }
-    } catch (error) {
-      console.error('Error starting task:', error);
+    } catch (_error) {
       alert('Failed to start task. Please try again.');
     }
   };

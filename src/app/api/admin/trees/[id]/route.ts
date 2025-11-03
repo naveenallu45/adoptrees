@@ -158,8 +158,7 @@ export async function PUT(
       message: 'Tree updated successfully'
     });
 
-  } catch (error) {
-    console.error('Error updating tree:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to update tree. Please try again.' },
       { status: 500 }
@@ -203,8 +202,7 @@ export async function DELETE(
     if (tree.imagePublicId) {
       try {
         await deleteFromCloudinary(tree.imagePublicId);
-      } catch (error) {
-        console.error('Error deleting image from Cloudinary:', error);
+      } catch (_error) {
         // Continue with database deletion even if image deletion fails
       }
     }
@@ -217,8 +215,7 @@ export async function DELETE(
       message: 'Tree deleted successfully'
     });
 
-  } catch (error) {
-    console.error('Error deleting tree:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to delete tree. Please try again.' },
       { status: 500 }

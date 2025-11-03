@@ -125,8 +125,7 @@ export default function TreesManagement() {
       } else {
         toast.error(data.error || 'Failed to save tree');
       }
-    } catch (error) {
-      console.error('Error saving tree:', error);
+    } catch (_error) {
       toast.error('An error occurred while saving the tree');
     } finally {
       setSubmitting(false);
@@ -182,8 +181,7 @@ export default function TreesManagement() {
       } else {
         toast.error(data.error || 'Failed to delete tree');
       }
-    } catch (error) {
-      console.error('Error deleting tree:', error);
+    } catch (_error) {
       toast.error('An error occurred while deleting the tree');
     }
   }, [queryClient]);

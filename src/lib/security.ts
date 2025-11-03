@@ -89,9 +89,9 @@ export function validateObjectId(id: string): boolean {
   return /^[0-9a-fA-F]{24}$/.test(id);
 }
 
-export function logSecurityEvent(event: string, details: Record<string, unknown>, ip: string) {
+export function logSecurityEvent(_event: string, _details: Record<string, unknown>, _ip: string) {
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[SECURITY] ${event} - IP: ${ip} - Details:`, JSON.stringify(details));
+    // Development logging disabled
   }
   // In production, send to security monitoring service (e.g., Sentry, DataDog, etc.)
   // Example: securityMonitoringService.log(event, { ...details, ip });

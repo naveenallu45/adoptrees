@@ -68,8 +68,7 @@ export async function GET(request: NextRequest) {
         hasPrevPage: page > 1,
       },
     });
-  } catch (error) {
-    console.error('Error fetching well-wishers:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }
@@ -162,12 +161,11 @@ export async function POST(request: NextRequest) {
         createdAt: wellWisher.createdAt,
       },
     });
-  } catch (error) {
+  } catch (_error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Error registering well-wisher:', error);
     }
     const ip = getClientIp(request);
-    logSecurityEvent('WELLWISHER_CREATION_ERROR', { error: error instanceof Error ? error.message : 'Unknown error' }, ip);
+    logSecurityEvent('WELLWISHER_CREATION_ERROR', { error: _error instanceof Error ? _error.message : 'Unknown error' }, ip);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }

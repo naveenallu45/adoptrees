@@ -22,13 +22,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(_error: Error, _errorInfo: React.ErrorInfo) {
     // Log error to monitoring service in production
     if (process.env.NODE_ENV === 'production') {
       // Example: errorMonitoringService.captureException(error, { extra: errorInfo });
-      console.error('Error caught by boundary:', error, errorInfo);
     } else {
-      console.error('Error caught by boundary:', error, errorInfo);
+      // Development error handling disabled
     }
   }
 

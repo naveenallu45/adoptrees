@@ -56,8 +56,7 @@ export default function IndividualUsersPage() {
       } else {
         toast.error(data.error || 'Failed to delete user');
       }
-    } catch (error) {
-      console.error('Error deleting user:', error);
+    } catch (_error) {
       toast.error('An error occurred while deleting the user');
     }
   }, [queryClient]);

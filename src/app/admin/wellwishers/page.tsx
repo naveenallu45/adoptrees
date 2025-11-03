@@ -74,8 +74,7 @@ export default function AdminWellWishersPage() {
       } else {
         toast.error(data.message || 'Failed to register well-wisher');
       }
-    } catch (error) {
-      console.error('Error registering well-wisher:', error);
+    } catch (_error) {
       toast.error('Error registering well-wisher');
     }
   };
@@ -98,8 +97,7 @@ export default function AdminWellWishersPage() {
       } else {
         toast.error('Failed to fetch well-wisher details');
       }
-    } catch (error) {
-      console.error('Error fetching well-wisher details:', error);
+    } catch (_error) {
       toast.error('Error fetching well-wisher details');
     }
   };
@@ -130,8 +128,7 @@ export default function AdminWellWishersPage() {
       } else {
         toast.error(data.message || 'Failed to update well-wisher');
       }
-    } catch (error) {
-      console.error('Error updating well-wisher:', error);
+    } catch (_error) {
       toast.error('Error updating well-wisher');
     }
   };
@@ -160,8 +157,7 @@ export default function AdminWellWishersPage() {
       } else {
         toast.error(data.message || 'Failed to delete well-wisher');
       }
-    } catch (error) {
-      console.error('Error deleting well-wisher:', error);
+    } catch (_error) {
       toast.error('Error deleting well-wisher');
     }
   };

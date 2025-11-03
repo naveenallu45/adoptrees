@@ -14,7 +14,6 @@ export async function createDatabaseIndexes() {
   try {
     await connectDB();
     
-    console.log('Creating database indexes...');
     
     // User model indexes
     await User.collection.createIndex({ email: 1 }, { unique: true });
@@ -50,11 +49,9 @@ export async function createDatabaseIndexes() {
       isActive: 1 
     }); // Compound index for filtering
     
-    console.log('Database indexes created successfully!');
     
-  } catch (error) {
-    console.error('Error creating database indexes:', error);
-    throw error;
+  } catch (_error) {
+    throw _error;
   }
 }
 
@@ -199,7 +196,6 @@ export class QueryMonitor {
       
       // Log slow queries
       if (duration > 1000) {
-        console.warn(`Slow query detected: ${queryName} took ${duration}ms`);
       }
     };
   }

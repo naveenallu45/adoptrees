@@ -43,8 +43,7 @@ async function getTrees(): Promise<TreeType[]> {
       packageQuantity: tree.packageQuantity,
       packagePrice: tree.packagePrice
     }));
-  } catch (error) {
-    console.error('Error fetching trees:', error);
+  } catch (_error) {
     return [];
   }
 }

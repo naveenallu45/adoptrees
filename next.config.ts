@@ -4,12 +4,23 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'framer-motion', '@tanstack/react-table'],
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+  },
+  
+  // Allow cross-origin requests from local network devices
+  allowedDevOrigins: [
+    '192.168.43.134', // Your current IP
+    '192.168.1.0/24',  // Common home network range
+    '192.168.0.0/24',  // Common home network range
+    '10.0.0.0/24',     // Common home network range
+    '172.16.0.0/24',   // Common home network range
+  ],
+  
+  // Turbopack configuration (replaces deprecated turbo)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
       },
     },
   },
@@ -35,7 +46,9 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src 'self' https://checkout.razorpay.com;",
+    // Configure image qualities for Next.js 16 compatibility
+    qualities: [25, 50, 75, 85, 90, 95, 100],
   },
   
   // Compression and optimization
@@ -67,7 +80,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   
-  // Headers for performance
+  // Headers for performance and security
   async headers() {
     return [
       {
@@ -76,18 +89,6 @@ const nextConfig: NextConfig = {
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
           },
         ],
       },

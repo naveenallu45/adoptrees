@@ -11,8 +11,7 @@ export async function GET() {
     await connectDB();
     const trees = await Tree.find({ isActive: true }).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: trees });
-  } catch (error) {
-    console.error('Error fetching trees:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch trees' },
       { status: 500 }
@@ -81,6 +80,9 @@ export async function POST(request: NextRequest) {
       price,
       info,
       oxygenKgs,
+      treeType: treeType || 'individual',
+      packageQuantity,
+      packagePrice,
     });
 
     if (!validationResult.success) {
@@ -141,9 +143,9 @@ export async function POST(request: NextRequest) {
       oxygenKgs: validationResult.data.oxygenKgs,
       imageUrl: result.secure_url,
       imagePublicId: result.public_id,
-      treeType: treeType || 'individual',
-      packageQuantity: packageQuantity,
-      packagePrice: packagePrice,
+      treeType: validationResult.data.treeType,
+      packageQuantity: validationResult.data.packageQuantity ?? 1,
+      packagePrice: validationResult.data.packagePrice,
     });
 
     await tree.save();
@@ -154,8 +156,7 @@ export async function POST(request: NextRequest) {
       message: 'Tree created successfully'
     });
 
-  } catch (error) {
-    console.error('Error creating tree:', error);
+  } catch (_error) {
     
     // Don't expose internal error details
     return NextResponse.json(

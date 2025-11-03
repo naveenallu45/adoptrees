@@ -54,8 +54,7 @@ export async function DELETE(
       success: true,
       message: 'User deleted successfully',
     });
-  } catch (error) {
-    console.error('Error deleting user:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to delete user' },
       { status: 500 }
@@ -102,8 +101,7 @@ export async function GET(
       success: true,
       data: user,
     });
-  } catch (error) {
-    console.error('Error fetching user:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch user' },
       { status: 500 }

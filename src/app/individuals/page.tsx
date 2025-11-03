@@ -39,8 +39,7 @@ async function getTrees(): Promise<TreeType[]> {
       imageUrl: tree.imageUrl,
       isActive: tree.isActive
     }));
-  } catch (error) {
-    console.error('Error fetching trees:', error);
+  } catch (_error) {
     return [];
   }
 }

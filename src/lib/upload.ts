@@ -23,8 +23,7 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
       url: result.secure_url,
       publicId: result.public_id
     };
-  } catch (error) {
-    console.error('Upload error:', error);
+  } catch (_error) {
     throw new Error('Failed to upload image');
   }
 }
@@ -32,8 +31,7 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
 export async function deleteFromCloudinary(publicId: string): Promise<void> {
   try {
     await cloudinary.uploader.destroy(publicId);
-  } catch (error) {
-    console.error('Delete error:', error);
+  } catch (_error) {
     throw new Error('Failed to delete image');
   }
 }

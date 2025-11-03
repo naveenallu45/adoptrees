@@ -68,8 +68,7 @@ export default function CompletedPage() {
       } else {
         setError(result.error);
       }
-    } catch (error) {
-      console.error('Error fetching completed tasks:', error);
+    } catch (_error) {
       setError('Failed to fetch completed tasks');
     } finally {
       setLoading(false);

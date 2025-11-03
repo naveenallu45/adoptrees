@@ -19,10 +19,18 @@ export async function middleware(request: NextRequest) {
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), interest-cohort=()'
   );
-  response.headers.set(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
-  );
+  // More permissive CSP for development
+  if (process.env.NODE_ENV === 'development') {
+    response.headers.set(
+      'Content-Security-Policy',
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; style-src 'self' 'unsafe-inline' https: http:; img-src 'self' data: https: http: blob:; font-src 'self' data: https: http:; connect-src 'self' https: http: ws: wss:; frame-src 'self' https: http:; frame-ancestors 'none';"
+    );
+  } else {
+    response.headers.set(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: https://api.razorpay.com https://checkout.razorpay.com; frame-src 'self' https://checkout.razorpay.com; frame-ancestors 'none';"
+    );
+  }
   
   // Protect admin routes
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {

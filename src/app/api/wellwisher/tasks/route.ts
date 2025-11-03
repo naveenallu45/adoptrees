@@ -78,8 +78,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error fetching wellwisher tasks:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch tasks' },
       { status: 500 }
@@ -149,8 +148,7 @@ export async function PUT(request: NextRequest) {
       message: 'Task status updated successfully'
     });
 
-  } catch (error) {
-    console.error('Error updating task status:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to update task status' },
       { status: 500 }
