@@ -45,8 +45,7 @@ export default function LoginForm() {
             } else {
               router.push('/');
             }
-          } catch (error) {
-            console.error('Error fetching session:', error);
+          } catch (_error) {
             router.push('/');
           }
         }

@@ -18,7 +18,6 @@ const STATIC_FILES = [
 
 // Install event - cache static files
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
   
   event.waitUntil(
     Promise.all([
@@ -34,7 +33,6 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
   
   event.waitUntil(
     Promise.all([
@@ -45,7 +43,6 @@ self.addEventListener('activate', (event) => {
             if (cacheName !== CACHE_NAME && 
                 cacheName !== STATIC_CACHE && 
                 cacheName !== API_CACHE) {
-              console.log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
@@ -113,7 +110,6 @@ async function cacheFirst(request, cacheName) {
     
     return networkResponse;
   } catch (error) {
-    console.error('Cache first strategy failed:', error);
     return new Response('Offline', { status: 503 });
   }
 }
@@ -130,7 +126,6 @@ async function networkFirst(request, cacheName) {
     
     return networkResponse;
   } catch (error) {
-    console.log('Network failed, trying cache:', error);
     
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
@@ -175,7 +170,6 @@ self.addEventListener('sync', (event) => {
 });
 
 async function doBackgroundSync() {
-  console.log('Performing background sync...');
   // Implement background sync logic here
 }
 

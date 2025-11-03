@@ -3,13 +3,13 @@ import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { registerSchema } from '@/lib/validations/auth';
-import { checkRateLimit } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { sanitizeInput } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting for registration
-    const rateLimitResult = checkRateLimit(req, {
+    const rateLimitResult = await checkRateLimit(req, {
       maxRequests: 5, // 5 registration attempts per 15 minutes
       windowMs: 15 * 60 * 1000,
     });
@@ -73,8 +73,7 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (err) {
-    console.error('Registration error:', err);
+  } catch (_err) {
     
     // Don't expose internal errors
     return NextResponse.json(

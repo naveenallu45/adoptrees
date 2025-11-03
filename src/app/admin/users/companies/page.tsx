@@ -58,8 +58,7 @@ export default function CompanyUsersPage() {
       } else {
         toast.error(data.error || 'Failed to delete company');
       }
-    } catch (error) {
-      console.error('Error deleting company:', error);
+    } catch (_error) {
       toast.error('An error occurred while deleting the company');
     }
   }, [queryClient]);

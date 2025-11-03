@@ -64,8 +64,7 @@ export default function OngoingPage() {
       } else {
         setError(result.error);
       }
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
+    } catch (_error) {
       setError('Failed to fetch tasks');
     } finally {
       setLoading(false);
@@ -119,8 +118,7 @@ export default function OngoingPage() {
       } else {
         toast.error(result.error || 'Failed to upload planting details');
       }
-    } catch (error) {
-      console.error('Error uploading planting details:', error);
+    } catch (_error) {
       toast.error('Failed to upload planting details');
     } finally {
       setUploading(false);
@@ -138,8 +136,7 @@ export default function OngoingPage() {
           }));
           toast.success('Location detected!');
         },
-        (error) => {
-          console.error('Geolocation error:', error);
+        (_error) => {
           toast.error('Unable to get location. Please enter manually.');
         }
       );

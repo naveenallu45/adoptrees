@@ -66,12 +66,7 @@ export function createIntersectionObserver(
 // Memory usage monitoring (development only)
 export function logMemoryUsage() {
   if (process.env.NODE_ENV === 'development' && 'memory' in performance) {
-    const memory = (performance as { memory: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
-    console.log('Memory usage:', {
-      used: Math.round(memory.usedJSHeapSize / 1048576) + ' MB',
-      total: Math.round(memory.totalJSHeapSize / 1048576) + ' MB',
-      limit: Math.round(memory.jsHeapSizeLimit / 1048576) + ' MB',
-    });
+    // Memory usage tracking disabled
   }
 }
 
@@ -101,11 +96,11 @@ export function registerServiceWorker() {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
+        .then((_registration) => {
+          // Service worker registered
         })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+        .catch((_registrationError) => {
+          // Service worker registration failed
         });
     });
   }
@@ -116,22 +111,22 @@ export function collectPerformanceMetrics() {
   if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     // First Contentful Paint
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        console.log('FCP:', entry.startTime);
+      for (const _entry of list.getEntries()) {
+        // Performance metrics collection disabled
       }
     }).observe({ entryTypes: ['paint'] });
 
     // Largest Contentful Paint
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        console.log('LCP:', entry.startTime);
+      for (const _entry of list.getEntries()) {
+        // Performance metrics collection disabled
       }
     }).observe({ entryTypes: ['largest-contentful-paint'] });
 
     // Cumulative Layout Shift
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        console.log('CLS:', (entry as unknown as { value: number }).value);
+      for (const _entry of list.getEntries()) {
+        // Performance metrics collection disabled
       }
     }).observe({ entryTypes: ['layout-shift'] });
   }

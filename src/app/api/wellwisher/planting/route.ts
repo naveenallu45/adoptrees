@@ -122,8 +122,7 @@ export async function POST(request: NextRequest) {
           caption: `Planting image for ${order.wellwisherTasks?.[taskIndex]?.task || 'tree'}`,
           uploadedAt: new Date()
         });
-      } catch (error) {
-        console.error('Error uploading image:', error);
+      } catch (_error) {
         return NextResponse.json(
           { success: false, error: 'Failed to upload image' },
           { status: 500 }
@@ -165,8 +164,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error uploading planting details:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to upload planting details' },
       { status: 500 }
@@ -229,8 +227,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error fetching planting details:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch planting details' },
       { status: 500 }

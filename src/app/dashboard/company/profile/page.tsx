@@ -27,7 +27,6 @@ export default function CompanyProfilePage() {
 
   const handleSave = () => {
     // Here you would typically save the data to your backend
-    console.log('Saving company profile data:', formData);
     setIsEditing(false);
   };
 

@@ -58,8 +58,7 @@ export async function GET(
         hasPassword: !!wellWisher.passwordHash,
       },
     });
-  } catch (error) {
-    console.error('Error fetching well-wisher:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }
@@ -155,8 +154,7 @@ export async function PUT(
         updatedAt: updatedWellWisher.updatedAt,
       },
     });
-  } catch (error) {
-    console.error('Error updating well-wisher:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }
@@ -198,8 +196,7 @@ export async function DELETE(
       success: true,
       message: 'Well-wisher deleted successfully',
     });
-  } catch (error) {
-    console.error('Error deleting well-wisher:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }

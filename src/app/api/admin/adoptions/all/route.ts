@@ -45,8 +45,7 @@ export async function GET() {
         giftOrders,
       },
     });
-  } catch (error) {
-    console.error('Error fetching all adoptions:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch adoptions' },
       { status: 500 }

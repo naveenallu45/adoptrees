@@ -26,11 +26,24 @@ export const authOptions = {
   basePath: '/api/auth',
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 24 * 60 * 60, // 1 day instead of 30 days
+    updateAge: 60 * 60, // Update session every hour
   },
   secret: env.NEXTAUTH_SECRET,
   trustHost: true,
-  debug: false, // Disable debug mode to avoid _log endpoint errors
+  debug: false,
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60, // 1 day
+      },
+    },
+  },
   providers: [
     Credentials({
       name: 'Credentials',
@@ -75,9 +88,8 @@ export const authOptions = {
             role: user.role,
             userType: user.userType,
           } as ExtendedUser;
-        } catch (error) {
+        } catch (_error) {
           if (process.env.NODE_ENV === 'development') {
-            console.error('Auth error:', error);
           }
           return null;
         }

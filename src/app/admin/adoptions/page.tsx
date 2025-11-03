@@ -119,7 +119,6 @@ export default function AdminAdoptionsPage() {
   const { data: allData, isLoading, error, refetch } = useQuery({
     queryKey: ['admin-adoptions-all'],
     queryFn: async () => {
-      console.log('Fetching all adoptions data...');
       const response = await fetch('/api/admin/adoptions/all');
       if (!response.ok) {
         throw new Error('Failed to fetch adoptions');
@@ -135,7 +134,6 @@ export default function AdminAdoptionsPage() {
     retryDelay: 1000, // 1 second delay between retries
   });
 
-  console.log('Query state - isLoading:', isLoading, 'hasData:', !!allData);
 
   // Client-side filtering
   const filteredAdoptions = useMemo(() => {
@@ -248,8 +246,8 @@ export default function AdminAdoptionsPage() {
     () => [
       columnHelper.accessor('orderId', {
         header: 'Order ID',
-        cell: (info) => {
-          const orderId = info.getValue();
+        cell: (_info) => {
+          const orderId = _info.getValue();
           // Format order ID for better readability
           // New format: ABC12345 (3 letters + 5 numbers)
           // Old format: ORD-... or other formats
@@ -295,29 +293,29 @@ export default function AdminAdoptionsPage() {
       }),
       columnHelper.accessor('userName', {
         header: 'Customer',
-        cell: (info) => (
+        cell: (_info) => (
           <div>
-            <div className="font-medium text-gray-900">{info.getValue()}</div>
-            <div className="text-sm text-gray-500">{info.row.original.userEmail}</div>
+            <div className="font-medium text-gray-900">{_info.getValue()}</div>
+            <div className="text-sm text-gray-500">{_info.row.original.userEmail}</div>
           </div>
         ),
       }),
       columnHelper.accessor('userType', {
         header: 'Type',
-        cell: (info) => (
+        cell: (_info) => (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            info.getValue() === 'company' 
+            _info.getValue() === 'company' 
               ? 'bg-blue-100 text-blue-800' 
               : 'bg-green-100 text-green-800'
           }`}>
-            {info.getValue() === 'company' ? 'Company' : 'Individual'}
+            {_info.getValue() === 'company' ? 'Company' : 'Individual'}
           </span>
         ),
       }),
       columnHelper.accessor('items', {
         header: 'Trees',
-        cell: (info) => {
-          const items = info.getValue();
+        cell: (_info) => {
+          const items = _info.getValue();
           return (
             <div className="space-y-1">
               {items.map((item, index) => (
@@ -332,16 +330,16 @@ export default function AdminAdoptionsPage() {
       }),
       columnHelper.accessor('totalAmount', {
         header: 'Amount',
-        cell: (info) => (
+        cell: (_info) => (
           <span className="font-medium text-gray-900">
-            ₹{info.getValue().toFixed(2)}
+            ₹{_info.getValue().toFixed(2)}
           </span>
         ),
       }),
       columnHelper.accessor('status', {
         header: 'Status',
-        cell: (info) => {
-          const status = info.getValue();
+        cell: (_info) => {
+          const status = _info.getValue();
           const Icon = statusIcons[status];
           return (
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[status]}`}>
@@ -353,8 +351,8 @@ export default function AdminAdoptionsPage() {
       }),
       columnHelper.accessor('paymentStatus', {
         header: 'Payment',
-        cell: (info) => {
-          const status = info.getValue();
+        cell: (_info) => {
+          const status = _info.getValue();
           return (
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatusColors[status]}`}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -364,32 +362,31 @@ export default function AdminAdoptionsPage() {
       }),
       columnHelper.accessor('isGift', {
         header: 'Gift',
-        cell: (info) => (
+        cell: (_info) => (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            info.getValue() 
+            _info.getValue() 
               ? 'bg-purple-100 text-purple-800' 
               : 'bg-gray-100 text-gray-800'
           }`}>
-            {info.getValue() ? 'Yes' : 'No'}
+            {_info.getValue() ? 'Yes' : 'No'}
           </span>
         ),
       }),
       columnHelper.accessor('createdAt', {
         header: 'Date',
-        cell: (info) => (
+        cell: (_info) => (
           <div className="text-sm text-gray-900">
-            {format(parseISO(info.getValue()), 'MMM dd, yyyy')}
+            {format(parseISO(_info.getValue()), 'MMM dd, yyyy')}
           </div>
         ),
       }),
       columnHelper.display({
         id: 'actions',
         header: 'Actions',
-        cell: (info) => (
+        cell: (_info) => (
           <div className="flex items-center space-x-2">
             <button
               onClick={() => {
-                console.log('View adoption:', info.row.original.orderId);
               }}
               className="text-gray-400 hover:text-gray-600"
             >
@@ -398,7 +395,6 @@ export default function AdminAdoptionsPage() {
             <button
               onClick={() => {
                 // Handle edit action
-                console.log('Edit adoption:', info.row.original.orderId);
               }}
               className="text-gray-400 hover:text-gray-600"
             >
@@ -431,7 +427,6 @@ export default function AdminAdoptionsPage() {
   });
 
   const handleFilterChange = (key: keyof AdoptionFilters, value: string | Date | null) => {
-    console.log(`Filter change: ${key} = ${value}`);
     setFilters(prev => ({ ...prev, [key]: value }));
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
@@ -454,7 +449,6 @@ export default function AdminAdoptionsPage() {
 
   const handleExport = () => {
     // Implement CSV export functionality
-    console.log('Export adoptions');
   };
 
 
@@ -672,7 +666,6 @@ export default function AdminAdoptionsPage() {
               <DatePicker
                 selected={filters.startDate}
                 onChange={(date) => {
-                  console.log('Start date selected:', date);
                   handleFilterChange('startDate', date);
                 }}
                 dateFormat="MMM dd, yyyy"
@@ -690,7 +683,6 @@ export default function AdminAdoptionsPage() {
               <DatePicker
                 selected={filters.endDate}
                 onChange={(date) => {
-                  console.log('End date selected:', date);
                   handleFilterChange('endDate', date);
                 }}
                 dateFormat="MMM dd, yyyy"

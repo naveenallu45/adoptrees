@@ -4,29 +4,137 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import AdoptionDetails from './AdoptionDetails';
-import SuccessDialog from './SuccessDialog';
+import PaymentDialog, { PaymentStatus } from './SuccessDialog';
 
 export default function CartContent() {
   const { cartItems, updateQuantity, removeFromCart, updateCartItem, getTotalPrice, clearCart } = useCart();
   const { data: session } = useSession();
   const router = useRouter();
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('success');
+  const [paymentMessage, setPaymentMessage] = useState('');
   const [orderDetails, setOrderDetails] = useState<{
     orderId: string;
     totalAmount: number;
     itemsCount: number;
   } | null>(null);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [scriptLoadError, setScriptLoadError] = useState(false);
 
   const subtotal = getTotalPrice();
   const total = subtotal;
 
+  // Multiple Razorpay loading strategies
+  useEffect(() => {
+    const checkRazorpay = () => {
+      if (typeof window !== 'undefined' && window.Razorpay && typeof window.Razorpay === 'function') {
+        setRazorpayLoaded(true);
+        setScriptLoadError(false);
+        return true;
+      }
+      return false;
+    };
+
+    // Try multiple loading methods
+    const tryLoadRazorpay = () => {
+      if (checkRazorpay()) return;
+      
+      // Remove any existing scripts
+      const existingScripts = document.querySelectorAll('script[src*="razorpay"]');
+      existingScripts.forEach(script => script.remove());
+
+      // Try manual script loading
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => {
+        setTimeout(() => {
+          if (checkRazorpay()) return;
+        }, 200);
+      };
+        script.onerror = () => {
+        // Try alternative CDN
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = 'https://cdn.razorpay.com/v1/checkout.js';
+        fallbackScript.async = true;
+        fallbackScript.onload = () => {
+          setTimeout(() => {
+            if (checkRazorpay()) return;
+            setScriptLoadError(true);
+          }, 500);
+        };
+        fallbackScript.onerror = () => {
+          setScriptLoadError(true);
+        };
+        document.head.appendChild(fallbackScript);
+      };
+      
+      document.head.appendChild(script);
+    };
+
+    // Start loading immediately, then try again after delay
+    tryLoadRazorpay();
+    
+    const timer = setTimeout(() => {
+      if (!checkRazorpay()) {
+        tryLoadRazorpay();
+      }
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  const retryRazorpayLoad = () => {
+    setScriptLoadError(false);
+    setRazorpayLoaded(false);
+    
+    // Remove all existing scripts
+    const existingScripts = document.querySelectorAll('script[src*="razorpay"]');
+    existingScripts.forEach(script => script.remove());
+    
+    // Try direct script injection
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      setTimeout(() => {
+        if (window.Razorpay && typeof window.Razorpay === 'function') {
+          setRazorpayLoaded(true);
+          setScriptLoadError(false);
+        } else {
+          setScriptLoadError(true);
+        }
+      }, 300);
+    };
+    script.onerror = () => {
+      setScriptLoadError(true);
+    };
+    
+    document.head.appendChild(script);
+  };
+
   const handlePlaceTree = async () => {
     if (!session) {
       router.push('/login?redirect=/cart');
+      return;
+    }
+
+    if (!razorpayLoaded) {
+      retryRazorpayLoad();
+      // Wait a moment and try again
+      setTimeout(() => {
+        if (window.Razorpay && typeof window.Razorpay === 'function') {
+          handlePlaceTree();
+        } else {
+          setPaymentStatus('failed');
+          setPaymentMessage('Payment gateway failed to load. Please try refreshing the page.');
+          setShowPaymentDialog(true);
+        }
+      }, 2000);
       return;
     }
 
@@ -49,7 +157,8 @@ export default function CartContent() {
         giftMessage: cartItems.find(item => item.adoptionType === 'gift')?.giftMessage
       };
 
-      const response = await fetch('/api/orders', {
+      // Create Razorpay order
+      const response = await fetch('/api/payments/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,34 +168,125 @@ export default function CartContent() {
 
       const result = await response.json();
 
-      if (result.success) {
-        setOrderDetails({
-          orderId: result.data.orderId,
-          totalAmount: result.data.totalAmount,
-          itemsCount: result.data.items
-        });
-        clearCart();
-        setShowSuccessDialog(true);
-      } else {
-        alert('Failed to place order: ' + result.error);
+      if (!result.success) {
+        alert('Failed to create order: ' + result.error);
+        setIsPlacingOrder(false);
+        return;
       }
-    } catch (error) {
-      console.error('Error placing order:', error);
-      alert('Failed to place order. Please try again.');
-    } finally {
+
+      const { razorpayOrderId, orderId, amount, currency, razorpayKeyId } = result.data;
+
+      // Check if Razorpay is properly loaded
+      if (!window.Razorpay || typeof window.Razorpay !== 'function') {
+        alert('Payment gateway not properly loaded. Please refresh the page and try again.');
+        setIsPlacingOrder(false);
+        return;
+      }
+
+      // Open Razorpay checkout
+      const options = {
+        key: razorpayKeyId,
+        amount: amount,
+        currency: currency,
+        name: 'Adoptrees',
+        description: `Order for ${cartItems.length} tree(s)`,
+        order_id: razorpayOrderId,
+        prefill: {
+          name: session.user?.name || 'Customer',
+          email: session.user?.email || '',
+        },
+        theme: {
+          color: '#22c55e', // Green color
+        },
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          // Handle payment success
+          try {
+            const verifyResponse = await fetch('/api/payments/verify-payment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderId: orderId,
+              }),
+            });
+
+            const verifyResult = await verifyResponse.json();
+
+            if (verifyResult.success) {
+              setOrderDetails({
+                orderId: verifyResult.data.orderId,
+                totalAmount: verifyResult.data.totalAmount,
+                itemsCount: verifyResult.data.items
+              });
+              clearCart();
+              setPaymentStatus('success');
+              setShowPaymentDialog(true);
+            } else {
+              setPaymentStatus('failed');
+              setPaymentMessage('Payment verification failed: ' + verifyResult.error);
+              setShowPaymentDialog(true);
+            }
+          } catch (_error) {
+            setPaymentStatus('failed');
+            setPaymentMessage('Failed to verify payment. Please contact support.');
+            setShowPaymentDialog(true);
+          } finally {
+            setIsPlacingOrder(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            // User closed the payment modal
+            setIsPlacingOrder(false);
+            setPaymentStatus('failed');
+            setPaymentMessage('Payment was cancelled or dismissed. You can try again anytime.');
+            setShowPaymentDialog(true);
+          },
+        },
+        notes: {
+          orderId: orderId,
+        },
+      };
+
+      try {
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      } catch (_error) {
+        setPaymentStatus('failed');
+        setPaymentMessage('Failed to open payment gateway. Please try again.');
+        setShowPaymentDialog(true);
+        setIsPlacingOrder(false);
+      }
+    } catch (_error) {
+      setPaymentStatus('failed');
+      setPaymentMessage('Failed to place order. Please try again.');
+      setShowPaymentDialog(true);
       setIsPlacingOrder(false);
     }
   };
 
-  const handleSuccessDialogClose = () => {
-    setShowSuccessDialog(false);
+  const handlePaymentDialogClose = () => {
+    setShowPaymentDialog(false);
     setOrderDetails(null);
-    // Redirect to appropriate dashboard
-    if (session?.user?.userType === 'individual') {
-      router.push('/dashboard/individual/trees');
-    } else if (session?.user?.userType === 'company') {
-      router.push('/dashboard/company/trees');
+    setPaymentMessage('');
+    // Redirect to appropriate dashboard only on success
+    if (paymentStatus === 'success') {
+      if (session?.user?.userType === 'individual') {
+        router.push('/dashboard/individual/trees');
+      } else if (session?.user?.userType === 'company') {
+        router.push('/dashboard/company/trees');
+      }
     }
+  };
+
+  const handleRetryPayment = () => {
+    setShowPaymentDialog(false);
+    setPaymentMessage('');
+    handlePlaceTree();
   };
 
   return (
@@ -205,13 +405,42 @@ export default function CartContent() {
                 </div>
                 <div className="space-y-3">
                   {session ? (
-                    <button 
-                      onClick={handlePlaceTree}
-                      disabled={isPlacingOrder}
-                      className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 sm:py-3 rounded-lg font-semibold transition-colors duration-300 text-sm sm:text-base"
-                    >
-                      {isPlacingOrder ? 'Placing Tree...' : 'Place Tree'}
-                    </button>
+                    <>
+                      <button 
+                        onClick={handlePlaceTree}
+                        disabled={isPlacingOrder}
+                        className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 sm:py-3 rounded-lg font-semibold transition-colors duration-300 text-sm sm:text-base"
+                      >
+                        {isPlacingOrder ? 'Processing...' : razorpayLoaded ? 'Place Tree' : 'Place Tree (Retry Loading)'}
+                      </button>
+                      
+                      {scriptLoadError && (
+                        <div className="space-y-2">
+                          <button 
+                            onClick={retryRazorpayLoad}
+                            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 sm:py-3 rounded-lg font-semibold transition-colors duration-300 text-sm sm:text-base"
+                          >
+                            🔄 Retry Loading Payment Gateway
+                          </button>
+                          <div className="text-xs text-gray-600 text-center">
+                            <p><strong>Payment gateway failed to load.</strong></p>
+                            <p className="mt-1">Common causes:</p>
+                            <ul className="list-disc list-inside mt-1">
+                              <li>Ad blocker blocking the script</li>
+                              <li>Network connectivity issues</li>
+                              <li>Corporate firewall restrictions</li>
+                            </ul>
+                            <p className="mt-2"><strong>Solutions:</strong></p>
+                            <ul className="list-disc list-inside">
+                              <li>Disable ad blockers</li>
+                              <li>Try incognito mode</li>
+                              <li>Check network connection</li>
+                              <li>Refresh the page</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <Link 
                       href="/login?redirect=/cart"
@@ -233,11 +462,14 @@ export default function CartContent() {
         )}
       </div>
       
-      {/* Success Dialog */}
-      <SuccessDialog
-        isOpen={showSuccessDialog}
-        onClose={handleSuccessDialogClose}
+      {/* Unified Payment Dialog */}
+      <PaymentDialog
+        isOpen={showPaymentDialog}
+        onClose={handlePaymentDialogClose}
+        status={paymentStatus}
         orderDetails={orderDetails}
+        errorMessage={paymentMessage}
+        onRetry={handleRetryPayment}
       />
     </div>
   );

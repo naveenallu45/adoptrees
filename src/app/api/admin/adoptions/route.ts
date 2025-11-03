@@ -135,8 +135,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error fetching adoptions:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch adoptions' },
       { status: 500 }
@@ -186,8 +185,7 @@ export async function PUT(request: NextRequest) {
       data: order
     });
 
-  } catch (error) {
-    console.error('Error updating adoption:', error);
+  } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to update adoption' },
       { status: 500 }

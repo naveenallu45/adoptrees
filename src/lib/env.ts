@@ -13,6 +13,19 @@ const envSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(32, 'NEXTAUTH_SECRET must be at least 32 characters'),
   NEXTAUTH_URL: z.string().url('NEXTAUTH_URL must be a valid URL').optional(),
   
+  // Razorpay
+  RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
+  RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1, 'RAZORPAY_WEBHOOK_SECRET is required'),
+  
+  // Redis
+  REDIS_HOST: z.string().optional(),
+  REDIS_PORT: z.string().optional(),
+  REDIS_PASSWORD: z.string().optional(),
+  
+  // Sentry (optional)
+  SENTRY_DSN: z.string().optional(),
+  
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
@@ -29,6 +42,13 @@ function validateEnv(): Env {
       CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || '',
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+      RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || '',
+      RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
+      RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+      REDIS_HOST: process.env.REDIS_HOST,
+      REDIS_PORT: process.env.REDIS_PORT,
+      REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+      SENTRY_DSN: process.env.SENTRY_DSN,
       NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
     };
   }
@@ -41,12 +61,19 @@ function validateEnv(): Env {
       CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+      RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+      RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+      RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+      REDIS_HOST: process.env.REDIS_HOST,
+      REDIS_PORT: process.env.REDIS_PORT,
+      REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+      SENTRY_DSN: process.env.SENTRY_DSN,
       NODE_ENV: process.env.NODE_ENV,
     });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const missingVars = error.issues.map((err) => `${String(err.path.join('.'))}: ${err.message}`);
-      console.error(
+  } catch (_error) {
+    if (_error instanceof z.ZodError) {
+      const missingVars = _error.issues.map((err) => `${String(err.path.join('.'))}: ${err.message}`);
+      throw new Error(
         `\n❌ Invalid environment variables:\n${missingVars.join('\n')}\n\nPlease check your .env.local file.\n`
       );
       
@@ -57,7 +84,7 @@ function validateEnv(): Env {
         );
       }
     }
-    throw error;
+    throw _error;
   }
 }
 

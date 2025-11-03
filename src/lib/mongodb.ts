@@ -35,16 +35,31 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      // Production optimizations
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      family: 4, // Use IPv4, skip trying IPv6
+      // Connection options
+      connectTimeoutMS: 10000,
+      heartbeatFrequencyMS: 10000,
+      // Retry options
+      retryWrites: true,
+      retryReads: true,
+      // Compression
+      compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts);
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      return mongoose;
+    });
   }
 
   try {
     cached.conn = await cached.promise;
-  } catch (e) {
+  } catch (_e) {
     cached.promise = null;
-    throw e;
+    throw _e;
   }
 
   return cached.conn;
