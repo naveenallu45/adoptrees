@@ -29,42 +29,95 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    // Find orders assigned to this wellwisher
-    const query: { assignedWellwisher: string; 'wellwisherTasks.status': string } = { 
-      assignedWellwisher: session.user.id,
-      'wellwisherTasks.status': status
-    };
+    // Find orders assigned to this wellwisher that have tasks with the specified status
+    // Use aggregation to filter tasks by status more precisely
+    const tasksAggregation = await Order.aggregate([
+      {
+        $match: {
+          assignedWellwisher: session.user.id,
+          'wellwisherTasks.status': status
+        }
+      },
+      {
+        $unwind: '$wellwisherTasks'
+      },
+      {
+        $match: {
+          'wellwisherTasks.status': status
+        }
+      },
+      {
+        $project: {
+          orderId: '$_id',
+          taskId: '$wellwisherTasks.taskId',
+          task: '$wellwisherTasks.task',
+          description: '$wellwisherTasks.description',
+          scheduledDate: '$wellwisherTasks.scheduledDate',
+          priority: '$wellwisherTasks.priority',
+          status: '$wellwisherTasks.status',
+          location: '$wellwisherTasks.location',
+          isGift: 1,
+          giftRecipientName: 1,
+          giftRecipientEmail: 1,
+          giftMessage: 1,
+          totalAmount: 1,
+          items: 1,
+          createdAt: 1
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $skip: (page - 1) * limit
+      },
+      {
+        $limit: limit
+      }
+    ]);
 
-    const orders = await Order.find(query)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    // Transform aggregation results to task format
+    const tasks = tasksAggregation.map((taskDoc: any) => ({
+      id: taskDoc.taskId,
+      orderId: taskDoc.orderId.toString(),
+      task: taskDoc.task,
+      description: taskDoc.description,
+      scheduledDate: taskDoc.scheduledDate,
+      priority: taskDoc.priority,
+      status: taskDoc.status,
+      location: taskDoc.location || 'To be determined',
+      orderDetails: {
+        isGift: taskDoc.isGift,
+        giftRecipientName: taskDoc.giftRecipientName,
+        giftRecipientEmail: taskDoc.giftRecipientEmail,
+        giftMessage: taskDoc.giftMessage,
+        totalAmount: taskDoc.totalAmount,
+        items: taskDoc.items
+      }
+    }));
 
-    // Extract tasks from orders
-    const tasks = orders.flatMap(order => 
-      order.wellwisherTasks
-        ?.filter(task => task.status === status)
-        .map(task => ({
-          id: task.taskId,
-          orderId: order._id,
-          task: task.task,
-          description: task.description,
-          scheduledDate: task.scheduledDate,
-          priority: task.priority,
-          status: task.status,
-          location: task.location,
-          orderDetails: {
-            isGift: order.isGift,
-            giftRecipientName: order.giftRecipientName,
-            giftRecipientEmail: order.giftRecipientEmail,
-            giftMessage: order.giftMessage,
-            totalAmount: order.totalAmount,
-            items: order.items
-          }
-        })) || []
-    );
-
-    const totalCount = await Order.countDocuments(query);
+    // Count total tasks with the specified status
+    const totalCountResult = await Order.aggregate([
+      {
+        $match: {
+          assignedWellwisher: session.user.id,
+          'wellwisherTasks.status': status
+        }
+      },
+      {
+        $unwind: '$wellwisherTasks'
+      },
+      {
+        $match: {
+          'wellwisherTasks.status': status
+        }
+      },
+      {
+        $count: 'total'
+      }
+    ]);
+    
+    const totalCount = totalCountResult[0]?.total || 0;
 
     return NextResponse.json({
       success: true,

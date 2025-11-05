@@ -2,13 +2,26 @@
 
 import IndividualSidebar from '@/components/Dashboard/IndividualSidebar';
 import AuthGuard from '@/components/Dashboard/AuthGuard';
+import { useSearchParams } from 'next/navigation';
 
 export default function IndividualDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-
+  const searchParams = useSearchParams();
+  const publicId = searchParams.get('publicId');
+  if (publicId) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    );
+  }
   return (
     <AuthGuard userType="individual">
       <div className="flex h-screen overflow-hidden bg-gray-50">

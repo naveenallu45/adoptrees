@@ -9,8 +9,39 @@ import {
   ClockIcon, 
   ExclamationTriangleIcon,
   GiftIcon,
-  HeartIcon
+  HeartIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline';
+import PlantingLocationMap from './PlantingLocationMap';
+
+function LocationToggle({ latitude, longitude, treeName }: { latitude: number; longitude: number; treeName: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        className="inline-flex items-center text-sm text-green-700 hover:text-green-900"
+      >
+        <MapPinIcon className="h-4 w-4 mr-1" />
+        {show ? 'Hide location' : 'View location'}
+      </button>
+      {show && (
+        <div className="mt-3">
+          <PlantingLocationMap
+            latitude={latitude}
+            longitude={longitude}
+            treeName={treeName}
+            className="w-full h-64 rounded-lg border border-gray-200"
+          />
+          <p className="mt-2 text-xs text-gray-500 text-center">
+            Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface OrderItem {
   treeId: string;
@@ -58,6 +89,7 @@ interface Order {
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   isGift: boolean;
+  userName?: string;
   giftRecipientName?: string;
   giftRecipientEmail?: string;
   giftMessage?: string;
@@ -69,27 +101,39 @@ interface Order {
 
 interface UserTreesListProps {
   userType: 'individual' | 'company';
+  publicId?: string;
 }
 
-export default function UserTreesList({ userType }: UserTreesListProps) {
+export default function UserTreesList({ userType, publicId }: UserTreesListProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pathname = usePathname();
   const isTransactionsPage = pathname.includes('/transactions');
 
+  const formatAdoptedDate = (isoDateString: string) => {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      timeZone: 'UTC',
+    }).format(new Date(isoDateString));
+  };
+
   useEffect(() => {
     fetchUserOrders();
-  }, []);
+  }, [publicId]);
 
   const fetchUserOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/orders');
+      const endpoint = publicId ? `/api/public/users/${publicId}/orders` : '/api/orders';
+      const response = await fetch(endpoint);
       const result = await response.json();
       
       if (result.success) {
-        setOrders(result.data);
+        const ordersData = publicId ? result.data.orders : result.data;
+        setOrders(ordersData);
       } else {
         setError(result.error);
       }
@@ -165,22 +209,17 @@ export default function UserTreesList({ userType }: UserTreesListProps) {
   };
 
   const getStatusText = (order: Order) => {
-    // Check if order has wellwisher tasks
-    if (order.wellwisherTasks && order.wellwisherTasks.length > 0) {
-      const allTasksCompleted = order.wellwisherTasks.every(task => task.status === 'completed');
-      const anyTaskInProgress = order.wellwisherTasks.some(task => task.status === 'in_progress');
-      
-      if (allTasksCompleted) {
-        return 'Tree Planted Successfully';
-      } else if (anyTaskInProgress) {
-        return 'Well-wisher Planting Your Tree';
-      } else {
-        return 'Well-wisher to Plant Your Tree';
-      }
+    // Business rule: Certificate available without wellwisher confirmation
+    if (
+      order.paymentStatus === 'paid' ||
+      order.status === 'confirmed' ||
+      order.status === 'planted' ||
+      order.status === 'completed'
+    ) {
+      return 'Certificate';
     }
-    
-    // Fallback to order status
-    return order.status.charAt(0).toUpperCase() + order.status.slice(1);
+    // No other statuses needed in UI
+    return '';
   };
 
 
@@ -280,7 +319,6 @@ export default function UserTreesList({ userType }: UserTreesListProps) {
                             <div className="flex-1">
                               <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">{item.treeName}</h4>
                               <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-1 sm:space-y-0 text-sm text-gray-600 mb-2">
-                                <span>Quantity: {item.quantity}</span>
                                 <span className="text-green-600 font-medium">
                                   {item.oxygenKgs} kg/year oxygen
                                 </span>
@@ -295,16 +333,41 @@ export default function UserTreesList({ userType }: UserTreesListProps) {
                             </div>
                             
                             <div className="flex flex-col sm:flex-col items-center sm:items-end space-y-2">
-                              <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(order)}`}>
-                                {getStatusText(order)}
-                              </span>
+                              {getStatusText(order) === 'Certificate' && (
+                                <button
+                                  className="px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-800"
+                                  type="button"
+                                >
+                                  Certificate
+                                </button>
+                              )}
                               <span className="text-xs sm:text-sm text-gray-500">
-                                Adopted: {new Date(order.createdAt).toLocaleDateString()}
+                                Adopted on {formatAdoptedDate(order.createdAt)}
                               </span>
                             </div>
                           </div>
                         </div>
                       </div>
+
+                      {/* Planting location (collapsed by default) */}
+                      {order.wellwisherTasks?.some(task => 
+                        task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
+                      ) && (() => {
+                        const completedTask = order.wellwisherTasks?.find(task => 
+                          task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
+                        );
+                        if (completedTask?.plantingDetails?.plantingLocation) {
+                          const coords = completedTask.plantingDetails.plantingLocation.coordinates;
+                          return (
+                            <LocationToggle
+                              latitude={coords[1]}
+                              longitude={coords[0]}
+                              treeName={item.treeName}
+                            />
+                          );
+                        }
+                        return null;
+                      })()}
                     </motion.div>
                   ))
                 )}
@@ -348,14 +411,16 @@ export default function UserTreesList({ userType }: UserTreesListProps) {
                             Order #{order.orderId || order._id.slice(-8)}
                           </h3>
                           <p className="text-xs text-gray-500">
-                            {new Date(order.createdAt).toLocaleDateString()}
+                            Adopted on {formatAdoptedDate(order.createdAt)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order)}`}>
-                          {getStatusText(order)}
-                        </span>
+                        {getStatusText(order) === 'Certificate' && (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800`}>
+                            Certificate
+                          </span>
+                        )}
                         {order.isGift && (
                           <span className="flex items-center text-xs text-purple-600">
                             <GiftIcon className="h-4 w-4 mr-1" />
@@ -388,7 +453,7 @@ export default function UserTreesList({ userType }: UserTreesListProps) {
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-medium text-gray-900 truncate">{item.treeName}</h4>
                             <p className="text-xs text-gray-500">
-                              Quantity: {item.quantity} • ₹{item.price} each
+                              ₹{item.price} each
                             </p>
                             <p className="text-xs text-green-600">
                               {item.oxygenKgs} kg/year oxygen
@@ -423,3 +488,4 @@ export default function UserTreesList({ userType }: UserTreesListProps) {
     </div>
   );
 }
+

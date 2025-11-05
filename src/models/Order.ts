@@ -202,6 +202,17 @@ const OrderSchema: Schema = new Schema({
           index: '2dsphere'
         }
       },
+        // Optional metadata captured from the device's Geolocation API
+        locationMeta: {
+          accuracy: { type: Number }, // meters
+          altitude: { type: Number }, // meters above sea level
+          altitudeAccuracy: { type: Number }, // meters
+          heading: { type: Number }, // degrees
+          speed: { type: Number }, // m/s
+          source: { type: String }, // gps|network|watch|high_accuracy|standard|cached|unknown
+          permissionState: { type: String }, // granted|prompt|denied (if available)
+          clientTimestamp: { type: Date } // timestamp from the device
+        },
       plantingImages: [{
         url: {
           type: String,

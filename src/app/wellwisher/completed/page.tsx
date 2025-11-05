@@ -153,17 +153,13 @@ export default function CompletedPage() {
 
               {/* Order Details */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">Order Details</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Trees Planted</h4>
                 <div className="space-y-1 text-sm text-gray-600">
                   {task.orderDetails.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between">
+                    <div key={idx}>
                       <span>{item.treeName} x{item.quantity}</span>
-                      <span>₹{item.price * item.quantity}</span>
                     </div>
                   ))}
-                  <div className="border-t pt-1 font-medium">
-                    Total: ₹{task.orderDetails.totalAmount}
-                  </div>
                 </div>
                 {task.orderDetails.isGift && (
                   <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">

@@ -2,13 +2,26 @@
 
 import CompanySidebar from '@/components/Dashboard/CompanySidebar';
 import AuthGuard from '@/components/Dashboard/AuthGuard';
+import { useSearchParams } from 'next/navigation';
 
 export default function CompanyDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-
+  const searchParams = useSearchParams();
+  const publicId = searchParams.get('publicId');
+  if (publicId) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    );
+  }
   return (
     <AuthGuard userType="company">
       <div className="flex h-screen overflow-hidden bg-gray-50">

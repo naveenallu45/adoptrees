@@ -11,6 +11,7 @@ export interface IUser {
   passwordHash: string;
   userType: UserType;
   role: 'user' | 'admin' | 'wellwisher';
+  publicId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,14 +39,24 @@ const UserSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true, select: false },
     userType: { type: String, enum: ['individual', 'company'], required: true },
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
+    publicId: { type: String, unique: true, index: true, sparse: true },
   },
   { timestamps: true }
 );
 
-// Ensure email is lowercase before saving
-UserSchema.pre('save', function(next) {
+// Ensure email is lowercase and publicId exists before saving
+UserSchema.pre('save', async function(next) {
   if (this.email) {
+    // @ts-ignore - mongoose doc mutability
     this.email = this.email.toLowerCase();
+  }
+  if (!this.publicId) {
+    const generatePublicId = () => {
+      const random = Math.random().toString(36).slice(2, 8);
+      const timestamp = Date.now().toString(36).slice(-4);
+      return `${random}${timestamp}`.toLowerCase();
+    };
+    this.publicId = generatePublicId();
   }
   next();
 });

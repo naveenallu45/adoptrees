@@ -14,8 +14,9 @@ export default function AdminShell({ children }: AdminShellProps) {
   const isAdminRoute = pathname?.startsWith('/admin');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
   const isWellWisherRoute = pathname?.startsWith('/wellwisher');
+  const isPublicUserRoute = pathname?.startsWith('/u/');
 
-  if (isAdminRoute || isDashboardRoute || isWellWisherRoute) {
+  if (isAdminRoute || isDashboardRoute || isWellWisherRoute || isPublicUserRoute) {
     return <main className="pt-0 min-h-screen">{children}</main>;
   }
 

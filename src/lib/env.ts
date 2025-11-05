@@ -26,6 +26,11 @@ const envSchema = z.object({
   // Sentry (optional)
   SENTRY_DSN: z.string().optional(),
   
+  // Google Maps (optional but recommended)
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: z.string().optional(),
+  // Server-side Google Maps/Geolocation API key (optional)
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
+  
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
@@ -49,6 +54,8 @@ function validateEnv(): Env {
       REDIS_PORT: process.env.REDIS_PORT,
       REDIS_PASSWORD: process.env.REDIS_PASSWORD,
       SENTRY_DSN: process.env.SENTRY_DSN,
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+      GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
       NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
     };
   }
@@ -68,6 +75,8 @@ function validateEnv(): Env {
       REDIS_PORT: process.env.REDIS_PORT,
       REDIS_PASSWORD: process.env.REDIS_PASSWORD,
       SENTRY_DSN: process.env.SENTRY_DSN,
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+      GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
       NODE_ENV: process.env.NODE_ENV,
     });
   } catch (_error) {

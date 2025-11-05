@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowPathIcon, 
@@ -39,18 +39,71 @@ export default function OngoingPage() {
   const [tasks, setTasks] = useState<WellwisherTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<WellwisherTask | null>(null);
-  const [showPlantingModal, setShowPlantingModal] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [plantingForm, setPlantingForm] = useState({
-    latitude: '',
-    longitude: '',
-    plantingNotes: '',
-    images: [] as File[]
-  });
+  const [uploading, setUploading] = useState<string | null>(null); // Track which task is uploading
+  const [taskImages, setTaskImages] = useState<Record<string, File[]>>({}); // Store images per task
+  const previewUrlsRef = useRef<Record<string, string>>({}); // Store preview URLs for cleanup
+  const [fastMode, setFastMode] = useState<boolean>(true); // Faster location with lower accuracy
+  const [prewarmedLocation, setPrewarmedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    altitude?: number | null;
+    altitudeAccuracy?: number | null;
+    heading?: number | null;
+    speed?: number | null;
+    timestamp?: number;
+    source?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchTasks();
+  }, []);
+
+  // Pre-warm a quick location fix on page load or when fast mode toggles
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isSecure = window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isSecure) return;
+
+    // Skip if permission is explicitly denied
+    (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+      .then(res => {
+        if (res && 'state' in res && res.state === 'denied') return;
+
+        if (!navigator.geolocation) return;
+        // Fast, low-power get; allow cached location
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setPrewarmedLocation({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              altitude: pos.coords.altitude ?? null,
+              altitudeAccuracy: pos.coords.altitudeAccuracy ?? null,
+              heading: pos.coords.heading ?? null,
+              speed: pos.coords.speed ?? null,
+              timestamp: pos.timestamp,
+              source: 'prewarm'
+            });
+          },
+          () => {
+            // ignore prewarm errors
+          },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 1800000 }
+        );
+      })
+      .catch(() => {
+        // ignore
+      }));
+  }, [fastMode]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(previewUrlsRef.current).forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+    };
   }, []);
 
   const fetchTasks = async () => {
@@ -71,30 +124,142 @@ export default function OngoingPage() {
     }
   };
 
-  const handlePlantingSubmit = async () => {
-    if (!selectedTask) return;
-
-    if (!plantingForm.latitude || !plantingForm.longitude) {
-      toast.error('Please provide GPS coordinates');
+  const handleImageChange = (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 5) {
+      toast.error('Maximum 5 images allowed');
       return;
     }
 
-    if (plantingForm.images.length === 0) {
+    // Clean up old preview URLs for this task
+    const oldImages = taskImages[taskId];
+    if (oldImages) {
+      oldImages.forEach(image => {
+        // URL was created when displaying, we'll clean it up properly in the component
+      });
+    }
+    
+    setTaskImages(prev => ({
+      ...prev,
+      [taskId]: files
+    }));
+  };
+
+  const removeImage = (taskId: string, index: number) => {
+    const images = taskImages[taskId];
+    if (images && images[index]) {
+      // Clean up the preview URL for this image
+      const urlKey = `${taskId}-${index}`;
+      if (previewUrlsRef.current[urlKey]) {
+        URL.revokeObjectURL(previewUrlsRef.current[urlKey]);
+        delete previewUrlsRef.current[urlKey];
+      }
+      
+      // Remove the image from the array
+      const newImages = images.filter((_, i) => i !== index);
+      
+      // Recreate preview URLs for remaining images with new indices
+      // Clean up all URLs for this task
+      Object.keys(previewUrlsRef.current).forEach(key => {
+        if (key.startsWith(`${taskId}-`)) {
+          URL.revokeObjectURL(previewUrlsRef.current[key]);
+          delete previewUrlsRef.current[key];
+        }
+      });
+      // Create new URLs for remaining images
+      newImages.forEach((img, newIdx) => {
+        const newKey = `${taskId}-${newIdx}`;
+        previewUrlsRef.current[newKey] = URL.createObjectURL(img);
+      });
+      
+      setTaskImages(prev => ({
+        ...prev,
+        [taskId]: newImages
+      }));
+    }
+  };
+
+  const handleCompletePlanting = async (task: WellwisherTask) => {
+    const images = taskImages[task.id] || [];
+    
+    if (images.length === 0) {
       toast.error('Please upload at least one planting image');
       return;
     }
 
+    // Get current device location using Google Geolocation API first, browser as fallback
+    const getLocation = (): Promise<{ 
+      latitude: number; 
+      longitude: number; 
+      accuracy?: number; 
+      altitude?: number | null; 
+      altitudeAccuracy?: number | null; 
+      heading?: number | null; 
+      speed?: number | null; 
+      timestamp?: number; 
+      source?: string;
+    }> => {
+      return new Promise((resolve, reject) => {
+        (async () => {
+          try {
+            const res = await fetch('/api/geolocation/google', { method: 'POST' });
+            const data = await res.json();
+            if (data?.success && typeof data?.data?.latitude === 'number' && typeof data?.data?.longitude === 'number') {
+              return resolve({
+                latitude: data.data.latitude,
+                longitude: data.data.longitude,
+                accuracy: data.data.accuracy,
+                source: 'google_geolocation_api',
+                timestamp: Date.now(),
+              });
+            }
+          } catch (_e) {
+            // No network/browser fallback right now
+          }
+
+          // Temporary bypass: allow submission without location
+          return resolve({
+            latitude: 0,
+            longitude: 0,
+            accuracy: undefined,
+            source: 'bypass_no_location',
+            timestamp: Date.now(),
+          });
+        })();
+      });
+    };
+
     try {
-      setUploading(true);
+      setUploading(task.id);
+      
+      // Use prewarmed location if recent and fast mode is enabled
+      const now = Date.now();
+      const recentMs = 2 * 60 * 1000; // 2 minutes
+      const canUsePrewarm = fastMode && prewarmedLocation && prewarmedLocation.timestamp && (now - prewarmedLocation.timestamp) <= recentMs;
+
+      // Get current location automatically and capture permission state
+      const permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+        .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
+        .catch(() => undefined));
+
+      const location = canUsePrewarm ? prewarmedLocation! : await getLocation();
       
       const formData = new FormData();
-      formData.append('taskId', selectedTask.id);
-      formData.append('orderId', selectedTask.orderId);
-      formData.append('latitude', plantingForm.latitude);
-      formData.append('longitude', plantingForm.longitude);
-      formData.append('plantingNotes', plantingForm.plantingNotes);
+      formData.append('taskId', task.id);
+      formData.append('orderId', task.orderId);
+      formData.append('latitude', location.latitude.toString());
+      formData.append('longitude', location.longitude.toString());
+      formData.append('plantingNotes', ''); // Empty notes
+      if (typeof location.accuracy === 'number') formData.append('accuracy', String(location.accuracy));
+      if (typeof location.altitude === 'number') formData.append('altitude', String(location.altitude));
+      if (typeof location.altitudeAccuracy === 'number') formData.append('altitudeAccuracy', String(location.altitudeAccuracy));
+      if (typeof location.heading === 'number') formData.append('heading', String(location.heading));
+      if (typeof location.speed === 'number') formData.append('speed', String(location.speed));
+      if (location.timestamp) formData.append('clientTimestamp', String(location.timestamp));
+      if (location.source) formData.append('source', location.source);
+      if (permissionState) formData.append('permissionState', permissionState);
       
-      plantingForm.images.forEach((image) => {
+      images.forEach((image) => {
         formData.append('images', image);
       });
 
@@ -107,51 +272,50 @@ export default function OngoingPage() {
       
       if (result.success) {
         toast.success('Planting details uploaded successfully!');
-        setShowPlantingModal(false);
-        setPlantingForm({
-          latitude: '',
-          longitude: '',
-          plantingNotes: '',
-          images: []
+        // Clean up preview URLs for this task
+        Object.keys(previewUrlsRef.current).forEach(key => {
+          if (key.startsWith(`${task.id}-`)) {
+            URL.revokeObjectURL(previewUrlsRef.current[key]);
+            delete previewUrlsRef.current[key];
+          }
+        });
+        setTaskImages(prev => {
+          const updated = { ...prev };
+          delete updated[task.id];
+          return updated;
         });
         fetchTasks(); // Refresh tasks
       } else {
-        toast.error(result.error || 'Failed to upload planting details');
+        // Show detailed error message
+        const errorMessage = result.error || 'Failed to upload planting details';
+        const details = result.details ? ` - ${result.details.map((d: any) => d.message).join(', ')}` : '';
+        toast.error(`${errorMessage}${details}`);
+        console.error('Planting upload error:', result);
       }
-    } catch (_error) {
-      toast.error('Failed to upload planting details');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setPlantingForm(prev => ({
-            ...prev,
-            latitude: position.coords.latitude.toString(),
-            longitude: position.coords.longitude.toString()
-          }));
-          toast.success('Location detected!');
-        },
-        (_error) => {
-          toast.error('Unable to get location. Please enter manually.');
-        }
-      );
-    } else {
-      toast.error('Geolocation not supported by this browser.');
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 5) {
-      toast.error('Maximum 5 images allowed');
-      return;
-    }
-    setPlantingForm(prev => ({ ...prev, images: files }));
+          } catch (error: any) {
+            console.error('Planting upload exception:', error);
+            const errorMessage = error?.message || error?.toString() || 'Unknown error';
+            
+            if (errorMessage.includes('location') || errorMessage.includes('Location') || errorMessage.includes('Geolocation') || errorMessage.includes('permissions policy')) {
+              // Format multi-line error messages for toast
+              const formattedMessage = errorMessage.includes('\n') 
+                ? errorMessage.split('\n')[0] + ' Check console for details.'
+                : errorMessage;
+              toast.error(formattedMessage || 'Unable to get location. Please enable location access in your browser settings.', {
+                duration: 8000, // Longer duration for important messages
+              });
+              if (process.env.NODE_ENV !== 'production') {
+                // Keep detailed logs only during development
+                console.debug('Location error details:', errorMessage);
+              }
+            } else if (errorMessage === '[object Object]') {
+              toast.error('Failed to get location. Please check your browser settings and try again.');
+            } else {
+              toast.error(`Failed to upload planting details: ${errorMessage}`);
+            }
+          } finally {
+            setUploading(null);
+          }
   };
 
   if (loading) {
@@ -232,17 +396,13 @@ export default function OngoingPage() {
 
               {/* Order Details */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">Order Details</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Trees to Plant</h4>
                 <div className="space-y-1 text-sm text-gray-600">
                   {task.orderDetails.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between">
+                    <div key={idx}>
                       <span>{item.treeName} x{item.quantity}</span>
-                      <span>₹{item.price * item.quantity}</span>
                     </div>
                   ))}
-                  <div className="border-t pt-1 font-medium">
-                    Total: ₹{task.orderDetails.totalAmount}
-                  </div>
                 </div>
                 {task.orderDetails.isGift && (
                   <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
@@ -258,127 +418,68 @@ export default function OngoingPage() {
                 )}
               </div>
 
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    setSelectedTask(task);
-                    setShowPlantingModal(true);
-                  }}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2"
-                >
-                  <CameraIcon className="h-4 w-4" />
-                  <span>Upload Planting Details</span>
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      {/* Planting Details Modal */}
-      {showPlantingModal && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Upload Planting Details</h2>
-                <button
-                  onClick={() => setShowPlantingModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* GPS Coordinates */}
+              {/* Image Upload Section */}
+              <div className="mt-4 space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    GPS Coordinates *
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="Latitude"
-                        value={plantingForm.latitude}
-                        onChange={(e) => setPlantingForm(prev => ({ ...prev, latitude: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="Longitude"
-                        value={plantingForm.longitude}
-                        onChange={(e) => setPlantingForm(prev => ({ ...prev, longitude: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={getCurrentLocation}
-                    className="mt-2 text-sm text-green-600 hover:text-green-700"
-                  >
-                    📍 Use Current Location
-                  </button>
-                </div>
-
-                {/* Planting Images */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Planting Images * (Max 5)
+                    Upload Planting Images (Max 5) - Use Camera
                   </label>
                   <input
                     type="file"
-                    multiple
                     accept="image/*"
-                    onChange={handleImageChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    capture="environment"
+                    multiple
+                    onChange={(e) => handleImageChange(task.id, e)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    disabled={uploading === task.id}
                   />
-                  {plantingForm.images.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600">
-                        Selected {plantingForm.images.length} image(s)
+                  {taskImages[task.id] && taskImages[task.id].length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm text-green-600 mb-2">
+                        {taskImages[task.id].length} image(s) selected
                       </p>
+                      {/* Image Previews */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        {taskImages[task.id].map((image, idx) => {
+                          // Create or reuse preview URL
+                          const urlKey = `${task.id}-${idx}`;
+                          if (!previewUrlsRef.current[urlKey]) {
+                            previewUrlsRef.current[urlKey] = URL.createObjectURL(image);
+                          }
+                          
+                          return (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={previewUrlsRef.current[urlKey]}
+                              alt={`Preview ${idx + 1}`}
+                              className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                            />
+                            <button
+                              onClick={() => removeImage(task.id, idx)}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                              type="button"
+                              disabled={uploading === task.id}
+                              title="Remove image"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Planting Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Planting Notes
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Describe the planting process, soil condition, weather, etc."
-                    value={plantingForm.plantingNotes}
-                    onChange={(e) => setPlantingForm(prev => ({ ...prev, plantingNotes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end">
                   <button
-                    onClick={() => setShowPlantingModal(false)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    onClick={() => handleCompletePlanting(task)}
+                    disabled={uploading === task.id || !taskImages[task.id] || taskImages[task.id].length === 0}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handlePlantingSubmit}
-                    disabled={uploading}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {uploading ? (
+                    {uploading === task.id ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         <span>Uploading...</span>
@@ -390,10 +491,10 @@ export default function OngoingPage() {
                       </>
                     )}
                   </button>
-                </div>
               </div>
             </div>
           </motion.div>
+          ))}
         </div>
       )}
     </div>

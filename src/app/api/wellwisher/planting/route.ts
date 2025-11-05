@@ -12,6 +12,15 @@ const plantingDetailsSchema = z.object({
   latitude: z.number().min(-90).max(90, 'Invalid latitude'),
   longitude: z.number().min(-180).max(180, 'Invalid longitude'),
   plantingNotes: z.string().max(500, 'Planting notes cannot exceed 500 characters').optional(),
+  // Optional location metadata from browser
+  accuracy: z.number().min(0).optional(),
+  altitude: z.number().optional(),
+  altitudeAccuracy: z.number().min(0).optional(),
+  heading: z.number().optional(),
+  speed: z.number().optional(),
+  source: z.string().optional(),
+  permissionState: z.enum(['granted', 'prompt', 'denied']).optional(),
+  clientTimestamp: z.number().optional() // ms since epoch
 });
 
 export async function POST(request: NextRequest) {
@@ -38,10 +47,37 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const taskId = formData.get('taskId') as string;
     const orderId = formData.get('orderId') as string;
-    const latitude = parseFloat(formData.get('latitude') as string);
-    const longitude = parseFloat(formData.get('longitude') as string);
-    const plantingNotes = formData.get('plantingNotes') as string;
+    const latitudeStr = formData.get('latitude') as string;
+    const longitudeStr = formData.get('longitude') as string;
+    const plantingNotes = (formData.get('plantingNotes') as string) || '';
+    // Optional metadata
+    const accuracyStr = formData.get('accuracy') as string | null;
+    const altitudeStr = formData.get('altitude') as string | null;
+    const altitudeAccuracyStr = formData.get('altitudeAccuracy') as string | null;
+    const headingStr = formData.get('heading') as string | null;
+    const speedStr = formData.get('speed') as string | null;
+    const source = (formData.get('source') as string) || undefined;
+    const permissionState = (formData.get('permissionState') as 'granted'|'prompt'|'denied' | null) || undefined;
+    const clientTimestampStr = formData.get('clientTimestamp') as string | null;
     const images = formData.getAll('images') as File[];
+
+    // Validate and parse coordinates
+    if (!latitudeStr || !longitudeStr) {
+      return NextResponse.json(
+        { success: false, error: 'Latitude and longitude are required' },
+        { status: 400 }
+      );
+    }
+
+    const latitude = parseFloat(latitudeStr);
+    const longitude = parseFloat(longitudeStr);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid latitude or longitude format' },
+        { status: 400 }
+      );
+    }
 
     // Validate required fields
     const validationResult = plantingDetailsSchema.safeParse({
@@ -49,7 +85,15 @@ export async function POST(request: NextRequest) {
       orderId,
       latitude,
       longitude,
-      plantingNotes
+      plantingNotes,
+      accuracy: accuracyStr ? parseFloat(accuracyStr) : undefined,
+      altitude: altitudeStr ? parseFloat(altitudeStr) : undefined,
+      altitudeAccuracy: altitudeAccuracyStr ? parseFloat(altitudeAccuracyStr) : undefined,
+      heading: headingStr ? parseFloat(headingStr) : undefined,
+      speed: speedStr ? parseFloat(speedStr) : undefined,
+      source,
+      permissionState,
+      clientTimestamp: clientTimestampStr ? parseInt(clientTimestampStr, 10) : undefined
     });
 
     if (!validationResult.success) {
@@ -113,8 +157,26 @@ export async function POST(request: NextRequest) {
 
     // Upload images to Cloudinary
     const uploadedImages = [];
-    for (const image of images) {
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
       try {
+        // Validate image file
+        if (!(image instanceof File)) {
+          return NextResponse.json(
+            { success: false, error: `Invalid image file at index ${i}` },
+            { status: 400 }
+          );
+        }
+
+        // Check file size (max 10MB per image)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (image.size > maxSize) {
+          return NextResponse.json(
+            { success: false, error: `Image ${i + 1} is too large. Maximum size is 10MB` },
+            { status: 400 }
+          );
+        }
+
         const result = await uploadToCloudinary(image);
         uploadedImages.push({
           url: result.url,
@@ -122,9 +184,14 @@ export async function POST(request: NextRequest) {
           caption: `Planting image for ${order.wellwisherTasks?.[taskIndex]?.task || 'tree'}`,
           uploadedAt: new Date()
         });
-      } catch (_error) {
+      } catch (error: any) {
+        console.error(`Failed to upload image ${i + 1}:`, error);
         return NextResponse.json(
-          { success: false, error: 'Failed to upload image' },
+          { 
+            success: false, 
+            error: `Failed to upload image ${i + 1}`,
+            details: error.message || 'Unknown error'
+          },
           { status: 500 }
         );
       }
@@ -138,6 +205,16 @@ export async function POST(request: NextRequest) {
         plantingLocation: {
           type: 'Point',
           coordinates: [longitude, latitude]
+        },
+        locationMeta: {
+          accuracy: accuracyStr ? parseFloat(accuracyStr) : undefined,
+          altitude: altitudeStr ? parseFloat(altitudeStr) : undefined,
+          altitudeAccuracy: altitudeAccuracyStr ? parseFloat(altitudeAccuracyStr) : undefined,
+          heading: headingStr ? parseFloat(headingStr) : undefined,
+          speed: speedStr ? parseFloat(speedStr) : undefined,
+          source: source || undefined,
+          permissionState: permissionState || undefined,
+          clientTimestamp: clientTimestampStr ? new Date(parseInt(clientTimestampStr, 10)) : undefined
         },
         plantingImages: uploadedImages,
         plantingNotes: plantingNotes || '',
@@ -160,13 +237,28 @@ export async function POST(request: NextRequest) {
         taskId,
         plantedAt: new Date(),
         imagesCount: uploadedImages.length,
-        location: { latitude, longitude }
+        location: { latitude, longitude },
+        locationMeta: {
+          accuracy: accuracyStr ? parseFloat(accuracyStr) : undefined,
+          altitude: altitudeStr ? parseFloat(altitudeStr) : undefined,
+          altitudeAccuracy: altitudeAccuracyStr ? parseFloat(altitudeAccuracyStr) : undefined,
+          heading: headingStr ? parseFloat(headingStr) : undefined,
+          speed: speedStr ? parseFloat(speedStr) : undefined,
+          source: source || undefined,
+          permissionState: permissionState || undefined,
+          clientTimestamp: clientTimestampStr ? new Date(parseInt(clientTimestampStr, 10)) : undefined
+        }
       }
     });
 
-  } catch (_error) {
+  } catch (error: any) {
+    console.error('Planting upload error:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to upload planting details' },
+      { 
+        success: false, 
+        error: error.message || 'Failed to upload planting details',
+        details: error.stack
+      },
       { status: 500 }
     );
   }
