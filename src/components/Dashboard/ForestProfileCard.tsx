@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
-  ShareIcon,
   SparklesIcon as TreeIcon,
   CloudArrowUpIcon as CloudIcon,
   MapPinIcon as MapIcon,
@@ -68,6 +67,7 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     impacts: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [publicUserName, setPublicUserName] = useState<string | null>(null);
 
   const calculateStats = useCallback((ordersData: Order[]) => {
     let totalTrees = 0;
@@ -130,6 +130,11 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
         if (result.success) {
           const ordersData = publicId ? result.data.orders : result.data;
           calculateStats(ordersData);
+          
+          // Store public user name if viewing public profile
+          if (publicId && result.data?.user?.name) {
+            setPublicUserName(result.data.user.name);
+          }
         }
       } catch (_error) {
         console.error('Failed to fetch orders');
@@ -141,34 +146,12 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     fetchUserOrders();
   }, [calculateStats, publicId]);
 
-  // QR code state
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [qrVisible, setQrVisible] = useState(false);
-
-  useEffect(() => {
-    const initQr = async () => {
-      try {
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        let id = publicId;
-        if (!id) {
-          const res = await fetch('/api/users/public-id');
-          const data = await res.json();
-          if (data?.success) id = data.data.publicId;
-        }
-        if (id) {
-          const viewUrl = `${origin}/u/${id}`;
-          const QRCode = (await import('qrcode')).default as any;
-          const dataUrl = await QRCode.toDataURL(viewUrl, { width: 320, margin: 1 });
-          setQrUrl(dataUrl);
-        }
-      } catch (_e) {
-        // ignore
-      }
-    };
-    initQr();
-  }, [publicId]);
-
   const getUserDisplayName = () => {
+    // If viewing public profile, use the public user name
+    if (publicId && publicUserName) {
+      return publicUserName;
+    }
+    // Otherwise use session data
     if (!session?.user) return 'User';
     return session.user.name || (userType === 'company' ? 'Company' : 'Individual');
   };
@@ -235,9 +218,6 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
               <p className="text-green-200 text-sm">{getLastPlantingText()}</p>
             </div>
           </div>
-          <button className="p-2 hover:bg-green-700 rounded-lg transition-colors" onClick={() => setQrVisible(true)}>
-            <ShareIcon className="h-5 w-5 text-white" />
-          </button>
         </div>
 
         {/* Description */}
@@ -298,40 +278,6 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
           </div>
         </div>
       </div>
-      {qrVisible && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 sm:p-6 w-80 text-center">
-            <h3 className="text-lg font-semibold mb-3">Your public forest QR</h3>
-            {qrUrl ? (
-              <img src={qrUrl} alt="QR code" className="mx-auto w-64 h-64" />
-            ) : (
-              <div className="w-64 h-64 bg-gray-200 animate-pulse mx-auto rounded" />
-            )}
-            <div className="mt-4 flex justify-center gap-3">
-              <button
-                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-                onClick={() => setQrVisible(false)}
-              >
-                Close
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
-                onClick={async () => {
-                  const origin = window.location.origin;
-                  try {
-                    const res = await fetch('/api/users/public-id');
-                    const data = await res.json();
-                    const id = publicId || data?.data?.publicId;
-                    if (id) await navigator.clipboard.writeText(`${origin}/u/${id}`);
-                  } catch {}
-                }}
-              >
-                Copy link
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }

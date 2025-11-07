@@ -58,8 +58,15 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Protect dashboard routes
+  // Protect dashboard routes (but allow public access with publicId query param)
   if (pathname.startsWith('/dashboard')) {
+    // Allow public access if publicId query parameter is present
+    const publicId = request.nextUrl.searchParams.get('publicId');
+    if (publicId) {
+      // Public access allowed - let it through
+      return response;
+    }
+    
     const session = await auth();
     
     if (!session?.user) {

@@ -3,16 +3,18 @@ import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import User from '@/models/User';
 
-export async function GET(_request: NextRequest, { params }: { params: { publicId: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ publicId: string }> }) {
   try {
     await connectDB();
 
-    const pid = (params.publicId || '').toLowerCase();
-    const user = await User.findOne({ publicId: pid }).lean();
-    if (!user) {
+    const { publicId: publicIdParam } = await params;
+    const pid = (publicIdParam || '').toLowerCase();
+    const userDoc = await User.findOne({ publicId: pid }).lean();
+    if (!userDoc || !('_id' in userDoc)) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
+    const user = userDoc as { _id: unknown; email?: string; name?: string; companyName?: string; userType?: string };
     const orders = await Order.find({
       $or: [
         { userId: String(user._id) },
@@ -23,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: { params: { publicI
       .lean();
 
     // Do not leak sensitive info
-    const safeOrders = orders.map((o: any) => ({
+    const safeOrders = orders.map((o: typeof orders[0]) => ({
       _id: o._id,
       orderId: o.orderId,
       items: o.items,

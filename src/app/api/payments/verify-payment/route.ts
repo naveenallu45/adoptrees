@@ -6,6 +6,7 @@ import Order from '@/models/Order';
 import User from '@/models/User';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
+import { generateCertificate } from '@/lib/certificate';
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,6 +88,32 @@ export async function POST(request: NextRequest) {
 
     // Check if order already processed
     if (order.paymentStatus === 'paid') {
+      // Generate certificate if it doesn't exist
+      if (!order.certificate) {
+        try {
+          const user = await User.findById(order.userId).select('publicId qrCode');
+          if (user && user.publicId) {
+            const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+            const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
+            
+            const certificateBuffer = await generateCertificate({
+              userName: order.userName,
+              profilePicUrl: undefined,
+              treesCount,
+              oxygenKgs,
+              publicId: user.publicId,
+              orderId: order.orderId,
+              qrCode: user.qrCode, // Use stored QR code from user
+            });
+            
+            order.certificate = certificateBuffer;
+            await order.save();
+          }
+        } catch (certError) {
+          logError('Error generating certificate for existing order', certError as Error);
+        }
+      }
+      
       logPaymentEvent('payment_verification_already_processed', { 
         orderId,
         paymentStatus: order.paymentStatus 
@@ -123,6 +150,37 @@ export async function POST(request: NextRequest) {
 
       order.assignedWellwisher = wellwisher._id.toString();
       order.wellwisherTasks = wellwisherTasks;
+    }
+
+    // Generate and store certificate
+    try {
+      // Get user details including publicId and qrCode
+      const user = await User.findById(order.userId).select('publicId qrCode');
+      if (!user || !user.publicId) {
+        throw new Error('User publicId not found');
+      }
+
+      // Calculate total trees count and oxygen for this order
+      const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
+
+      // Generate certificate
+      const certificateBuffer = await generateCertificate({
+        userName: order.userName,
+        profilePicUrl: undefined, // Profile pic can be added later if available
+        treesCount,
+        oxygenKgs,
+        publicId: user.publicId,
+        orderId: order.orderId,
+        qrCode: user.qrCode, // Use stored QR code from user
+      });
+
+      // Store certificate in order
+      order.certificate = certificateBuffer;
+    } catch (certError) {
+      // Log error but don't fail the payment verification
+      logError('Error generating certificate', certError as Error);
+      // Continue with order save even if certificate generation fails
     }
 
     await order.save();

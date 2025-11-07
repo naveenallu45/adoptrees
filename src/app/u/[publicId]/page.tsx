@@ -1,10 +1,7 @@
-
-import ForestProfileCard from '@/components/Dashboard/ForestProfileCard';
-import UserTreesList from '@/components/Dashboard/UserTreesList';
 import { redirect } from 'next/navigation';
 
-export default async function PublicForestPage({ params }: { params: { publicId: string } }) {
-  const { publicId } = params;
+export default async function PublicForestPage({ params }: { params: Promise<{ publicId: string }> }) {
+  const { publicId } = await params;
   let userType: 'individual' | 'company' = 'individual';
   try {
     const res = await fetch(`${process.env.NEXTAUTH_URL || ''}/api/public/users/${publicId}/orders`, { cache: 'no-store' });

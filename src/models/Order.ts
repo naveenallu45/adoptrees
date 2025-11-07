@@ -41,6 +41,8 @@ export interface IOrder extends Document {
   }[];
   // Admin fields
   adminNotes?: string;
+  // Certificate PDF stored as Buffer
+  certificate?: Buffer;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -242,6 +244,10 @@ const OrderSchema: Schema = new Schema({
   adminNotes: {
     type: String,
     maxlength: [1000, 'Admin notes cannot exceed 1000 characters']
+  },
+  certificate: {
+    type: Buffer,
+    select: false // Don't include in queries by default to avoid loading large data
   }
 }, {
   timestamps: true

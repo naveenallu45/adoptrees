@@ -9,6 +9,33 @@ interface PlantingLocationMapProps {
   className?: string;
 }
 
+interface GoogleMapsWindow extends Window {
+  google?: {
+    maps: {
+      Map: new (element: HTMLElement, options: unknown) => GoogleMap;
+      Marker: new (options: unknown) => GoogleMarker;
+      Animation: { DROP: unknown };
+      Size: new (width: number, height: number) => unknown;
+      Point: new (x: number, y: number) => unknown;
+      InfoWindow: new (options: unknown) => GoogleInfoWindow;
+    };
+  };
+}
+
+interface GoogleMap {
+  setCenter: (location: { lat: number; lng: number }) => void;
+}
+
+interface GoogleMarker {
+  setPosition: (location: { lat: number; lng: number }) => void;
+  setMap: (map: GoogleMap | null) => void;
+  addListener: (event: string, callback: () => void) => void;
+}
+
+interface GoogleInfoWindow {
+  open: (map: GoogleMap, marker: GoogleMarker) => void;
+}
+
 export default function PlantingLocationMap({ 
   latitude, 
   longitude, 
@@ -16,8 +43,8 @@ export default function PlantingLocationMap({
   className = 'w-full h-64 rounded-lg'
 }: PlantingLocationMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<GoogleMap | null>(null);
+  const markerRef = useRef<GoogleMarker | null>(null);
 
   useEffect(() => {
     // Only initialize if Google Maps API is loaded
@@ -32,19 +59,22 @@ export default function PlantingLocationMap({
     let checkInterval: NodeJS.Timeout | null = null;
 
     function checkAndInit() {
-      if ((window as any).google && (window as any).google.maps) {
+      const googleMapsWindow = window as unknown as GoogleMapsWindow;
+      if (googleMapsWindow.google && googleMapsWindow.google.maps) {
         initializeMap();
       }
     }
 
     function initializeMap() {
-      if (!mapRef.current || !(window as any).google?.maps) return;
+      const googleMapsWindow = window as unknown as GoogleMapsWindow;
+      if (!mapRef.current || !googleMapsWindow.google?.maps) return;
 
       const location = { lat: latitude, lng: longitude };
+      const maps = googleMapsWindow.google.maps;
 
       // Initialize map
       if (!mapInstanceRef.current) {
-        mapInstanceRef.current = new (window as any).google.maps.Map(mapRef.current, {
+        mapInstanceRef.current = new maps.Map(mapRef.current, {
           center: location,
           zoom: 15,
           mapTypeControl: false,
@@ -57,18 +87,18 @@ export default function PlantingLocationMap({
               stylers: [{ visibility: 'off' }]
             }
           ]
-        });
+        } as never);
       } else {
         mapInstanceRef.current.setCenter(location);
       }
 
       // Add or update marker
       if (!markerRef.current) {
-        markerRef.current = new (window as any).google.maps.Marker({
+        markerRef.current = new maps.Marker({
           position: location,
           map: mapInstanceRef.current,
           title: treeName || 'Tree Planting Location',
-          animation: (window as any).google.maps.Animation.DROP,
+          animation: maps.Animation.DROP,
           icon: {
             url: 'data:image/svg+xml;base64,' + btoa(`
               <svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -76,13 +106,13 @@ export default function PlantingLocationMap({
                 <circle cx="16" cy="16" r="8" fill="white"/>
               </svg>
             `),
-            scaledSize: new (window as any).google.maps.Size(32, 40),
-            anchor: new (window as any).google.maps.Point(16, 40)
+            scaledSize: new maps.Size(32, 40),
+            anchor: new maps.Point(16, 40)
           }
-        });
+        } as never);
 
         // Add info window
-        const infoWindow = new (window as any).google.maps.InfoWindow({
+        const infoWindow = new maps.InfoWindow({
           content: `
             <div style="padding: 8px;">
               <strong style="color: #22c55e;">${treeName || 'Tree Planting Location'}</strong>
@@ -91,10 +121,12 @@ export default function PlantingLocationMap({
               </p>
             </div>
           `
-        });
+        } as never);
 
         markerRef.current.addListener('click', () => {
-          infoWindow.open(mapInstanceRef.current, markerRef.current);
+          if (mapInstanceRef.current && markerRef.current) {
+            infoWindow.open(mapInstanceRef.current, markerRef.current);
+          }
         });
       } else {
         markerRef.current.setPosition(location);
@@ -111,11 +143,12 @@ export default function PlantingLocationMap({
       document.head.appendChild(script);
     } else {
       // Wait for script to load if not ready
-      if ((window as any).google?.maps) {
+      const googleMapsWindow = window as unknown as GoogleMapsWindow;
+      if (googleMapsWindow.google?.maps) {
         checkAndInit();
       } else {
         checkInterval = setInterval(() => {
-          if ((window as any).google?.maps) {
+          if (googleMapsWindow.google?.maps) {
             if (checkInterval) clearInterval(checkInterval);
             checkAndInit();
           }

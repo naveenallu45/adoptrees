@@ -184,13 +184,14 @@ export async function POST(request: NextRequest) {
           caption: `Planting image for ${order.wellwisherTasks?.[taskIndex]?.task || 'tree'}`,
           uploadedAt: new Date()
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Failed to upload image ${i + 1}:`, error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
           { 
             success: false, 
             error: `Failed to upload image ${i + 1}`,
-            details: error.message || 'Unknown error'
+            details: errorMessage
           },
           { status: 500 }
         );
@@ -251,13 +252,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Planting upload error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to upload planting details';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || 'Failed to upload planting details',
-        details: error.stack
+        error: errorMessage,
+        details: errorStack
       },
       { status: 500 }
     );

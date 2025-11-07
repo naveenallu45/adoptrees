@@ -12,6 +12,7 @@ export interface IUser {
   userType: UserType;
   role: 'user' | 'admin' | 'wellwisher';
   publicId?: string;
+  qrCode?: string; // QR code data URL stored at registration
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +41,7 @@ const UserSchema = new Schema<IUser>(
     userType: { type: String, enum: ['individual', 'company'], required: true },
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
     publicId: { type: String, unique: true, index: true, sparse: true },
+    qrCode: { type: String }, // QR code data URL stored at registration
   },
   { timestamps: true }
 );
@@ -47,7 +49,6 @@ const UserSchema = new Schema<IUser>(
 // Ensure email is lowercase and publicId exists before saving
 UserSchema.pre('save', async function(next) {
   if (this.email) {
-    // @ts-ignore - mongoose doc mutability
     this.email = this.email.toLowerCase();
   }
   if (!this.publicId) {

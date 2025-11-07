@@ -6,7 +6,6 @@ import {
   ArrowPathIcon, 
   MapPinIcon, 
   ClockIcon, 
-  CameraIcon, 
   CheckCircleIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
@@ -42,7 +41,7 @@ export default function OngoingPage() {
   const [uploading, setUploading] = useState<string | null>(null); // Track which task is uploading
   const [taskImages, setTaskImages] = useState<Record<string, File[]>>({}); // Store images per task
   const previewUrlsRef = useRef<Record<string, string>>({}); // Store preview URLs for cleanup
-  const [fastMode, setFastMode] = useState<boolean>(true); // Faster location with lower accuracy
+  const [fastMode] = useState<boolean>(true); // Faster location with lower accuracy
   const [prewarmedLocation, setPrewarmedLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -99,8 +98,9 @@ export default function OngoingPage() {
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
+    const currentUrls = previewUrlsRef.current;
     return () => {
-      Object.values(previewUrlsRef.current).forEach(url => {
+      Object.values(currentUrls).forEach(url => {
         URL.revokeObjectURL(url);
       });
     };
@@ -134,7 +134,7 @@ export default function OngoingPage() {
     // Clean up old preview URLs for this task
     const oldImages = taskImages[taskId];
     if (oldImages) {
-      oldImages.forEach(image => {
+      oldImages.forEach(() => {
         // URL was created when displaying, we'll clean it up properly in the component
       });
     }
@@ -199,7 +199,7 @@ export default function OngoingPage() {
       timestamp?: number; 
       source?: string;
     }> => {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         (async () => {
           try {
             const res = await fetch('/api/geolocation/google', { method: 'POST' });
@@ -288,13 +288,13 @@ export default function OngoingPage() {
       } else {
         // Show detailed error message
         const errorMessage = result.error || 'Failed to upload planting details';
-        const details = result.details ? ` - ${result.details.map((d: any) => d.message).join(', ')}` : '';
+        const details = result.details ? ` - ${result.details.map((d: { message?: string }) => d.message || '').join(', ')}` : '';
         toast.error(`${errorMessage}${details}`);
         console.error('Planting upload error:', result);
       }
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error('Planting upload exception:', error);
-            const errorMessage = error?.message || error?.toString() || 'Unknown error';
+            const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error');
             
             if (errorMessage.includes('location') || errorMessage.includes('Location') || errorMessage.includes('Geolocation') || errorMessage.includes('permissions policy')) {
               // Format multi-line error messages for toast
@@ -449,6 +449,7 @@ export default function OngoingPage() {
                           
                           return (
                           <div key={idx} className="relative group">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={previewUrlsRef.current[urlKey]}
                               alt={`Preview ${idx + 1}`}

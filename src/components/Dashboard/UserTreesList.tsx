@@ -10,7 +10,8 @@ import {
   ExclamationTriangleIcon,
   GiftIcon,
   HeartIcon,
-  MapPinIcon
+  MapPinIcon,
+  DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
@@ -122,7 +123,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
 
   useEffect(() => {
     fetchUserOrders();
-  }, [publicId]);
+  }, [publicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUserOrders = async () => {
     try {
@@ -176,38 +177,6 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     }
   };
 
-  const getStatusColor = (order: Order) => {
-    // Check if order has wellwisher tasks
-    if (order.wellwisherTasks && order.wellwisherTasks.length > 0) {
-      const allTasksCompleted = order.wellwisherTasks.every(task => task.status === 'completed');
-      const anyTaskInProgress = order.wellwisherTasks.some(task => task.status === 'in_progress');
-      
-      if (allTasksCompleted) {
-        return 'bg-green-100 text-green-800';
-      } else if (anyTaskInProgress) {
-        return 'bg-blue-100 text-blue-800';
-      } else {
-        return 'bg-yellow-100 text-yellow-800';
-      }
-    }
-    
-    // Fallback to order status
-    switch (order.status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'planted':
-        return 'bg-blue-100 text-blue-800';
-      case 'confirmed':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'pending':
-        return 'bg-gray-100 text-gray-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const getStatusText = (order: Order) => {
     // Business rule: Certificate available without wellwisher confirmation
     if (
@@ -220,6 +189,36 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     }
     // No other statuses needed in UI
     return '';
+  };
+
+  const handleDownloadCertificate = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/certificates/${orderId}`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Failed to download certificate');
+        return;
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `certificate-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      alert('Failed to download certificate');
+    }
   };
 
 
@@ -333,11 +332,13 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                             </div>
                             
                             <div className="flex flex-col sm:flex-col items-center sm:items-end space-y-2">
-                              {getStatusText(order) === 'Certificate' && (
+                              {getStatusText(order) === 'Certificate' && order.orderId && (
                                 <button
-                                  className="px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-800"
+                                  onClick={() => handleDownloadCertificate(order.orderId!)}
+                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
                                   type="button"
                                 >
+                                  <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
                                   Certificate
                                 </button>
                               )}
@@ -416,10 +417,15 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {getStatusText(order) === 'Certificate' && (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800`}>
+                        {getStatusText(order) === 'Certificate' && order.orderId && (
+                          <button
+                            onClick={() => handleDownloadCertificate(order.orderId!)}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                            type="button"
+                          >
+                            <DocumentArrowDownIcon className="h-3 w-3 mr-1" />
                             Certificate
-                          </span>
+                          </button>
                         )}
                         {order.isGift && (
                           <span className="flex items-center text-xs text-purple-600">

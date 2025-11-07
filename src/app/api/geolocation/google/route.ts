@@ -46,9 +46,10 @@ export async function POST(_req: NextRequest) {
         accuracy
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch location from Google';
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch location from Google' },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

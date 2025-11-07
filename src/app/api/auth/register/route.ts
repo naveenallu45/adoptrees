@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import QRCode from 'qrcode';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { registerSchema } from '@/lib/validations/auth';
@@ -62,6 +63,27 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: 'user',
     });
+
+    // Generate and store QR code for the user
+    if (user.publicId) {
+      try {
+        const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
+        const qrUrl = `${origin}/u/${user.publicId}`;
+        // Use same settings as modal (width: 320 for better quality)
+        const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
+          width: 320,
+          margin: 1,
+          errorCorrectionLevel: 'M'
+        });
+        
+        // Update user with QR code
+        user.qrCode = qrDataUrl;
+        await user.save();
+      } catch (qrError) {
+        // Log error but don't fail registration if QR code generation fails
+        console.error('Error generating QR code during registration:', qrError);
+      }
+    }
 
     return NextResponse.json(
       {

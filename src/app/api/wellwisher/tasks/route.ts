@@ -77,9 +77,26 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform aggregation results to task format
-    const tasks = tasksAggregation.map((taskDoc: any) => ({
+    type TaskAggregationResult = {
+      orderId: { toString(): string } | string;
+      taskId: string;
+      task: string;
+      description: string;
+      scheduledDate: Date;
+      priority: string;
+      status: string;
+      location?: string;
+      isGift: boolean;
+      giftRecipientName?: string;
+      giftRecipientEmail?: string;
+      giftMessage?: string;
+      totalAmount: number;
+      items: unknown[];
+      createdAt: Date;
+    };
+    const tasks = tasksAggregation.map((taskDoc: TaskAggregationResult) => ({
       id: taskDoc.taskId,
-      orderId: taskDoc.orderId.toString(),
+      orderId: typeof taskDoc.orderId === 'string' ? taskDoc.orderId : taskDoc.orderId.toString(),
       task: taskDoc.task,
       description: taskDoc.description,
       scheduledDate: taskDoc.scheduledDate,

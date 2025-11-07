@@ -3,24 +3,26 @@
 import CompanySidebar from '@/components/Dashboard/CompanySidebar';
 import AuthGuard from '@/components/Dashboard/AuthGuard';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function CompanyDashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function PublicLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const publicId = searchParams.get('publicId');
+  
   if (publicId) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-4 sm:p-6">
-            {children}
-          </div>
-        </main>
-      </div>
-    );
+    return <PublicLayout>{children}</PublicLayout>;
   }
   return (
     <AuthGuard userType="company">
@@ -80,5 +82,24 @@ export default function CompanyDashboardLayout({
         </div>
       </div>
     </AuthGuard>
+  );
+}
+
+export default function CompanyDashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-green-200 border-t-green-600"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LayoutContent>{children}</LayoutContent>
+    </Suspense>
   );
 }

@@ -25,7 +25,6 @@ export async function GET(_request: NextRequest) {
     if (!user.publicId) {
       // Ensure uniqueness on potential collision
       let publicId = generatePublicId();
-      // eslint-disable-next-line no-constant-condition
       while (await User.findOne({ publicId })) {
         publicId = generatePublicId();
       }
