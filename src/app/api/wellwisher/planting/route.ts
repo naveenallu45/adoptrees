@@ -9,8 +9,8 @@ import { z } from 'zod';
 const plantingDetailsSchema = z.object({
   taskId: z.string().min(1, 'Task ID is required'),
   orderId: z.string().min(1, 'Order ID is required'),
-  latitude: z.number().min(-90).max(90, 'Invalid latitude'),
-  longitude: z.number().min(-180).max(180, 'Invalid longitude'),
+  latitude: z.number().min(-90).max(90, 'Invalid latitude').optional(),
+  longitude: z.number().min(-180).max(180, 'Invalid longitude').optional(),
   plantingNotes: z.string().max(500, 'Planting notes cannot exceed 500 characters').optional(),
   // Optional location metadata from browser
   accuracy: z.number().min(0).optional(),
@@ -61,22 +61,21 @@ export async function POST(request: NextRequest) {
     const clientTimestampStr = formData.get('clientTimestamp') as string | null;
     const images = formData.getAll('images') as File[];
 
-    // Validate and parse coordinates
-    if (!latitudeStr || !longitudeStr) {
-      return NextResponse.json(
-        { success: false, error: 'Latitude and longitude are required' },
-        { status: 400 }
-      );
-    }
+    // Parse coordinates (optional - location can be skipped if unavailable)
+    let latitude: number | undefined;
+    let longitude: number | undefined;
 
-    const latitude = parseFloat(latitudeStr);
-    const longitude = parseFloat(longitudeStr);
+    if (latitudeStr && longitudeStr) {
+      const parsedLat = parseFloat(latitudeStr);
+      const parsedLng = parseFloat(longitudeStr);
 
-    if (isNaN(latitude) || isNaN(longitude)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid latitude or longitude format' },
-        { status: 400 }
-      );
+      if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+        // Only set if both are valid numbers
+        if (parsedLat >= -90 && parsedLat <= 90 && parsedLng >= -180 && parsedLng <= 180) {
+          latitude = parsedLat;
+          longitude = parsedLng;
+        }
+      }
     }
 
     // Validate required fields
@@ -198,58 +197,133 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update the task with planting details
-    if (order.wellwisherTasks && order.wellwisherTasks[taskIndex]) {
-      order.wellwisherTasks[taskIndex].status = 'completed';
-      (order.wellwisherTasks[taskIndex] as unknown as { plantingDetails: Record<string, unknown> }).plantingDetails = {
-        plantedAt: new Date(),
-        plantingLocation: {
-          type: 'Point',
-          coordinates: [longitude, latitude]
-        },
-        locationMeta: {
-          accuracy: accuracyStr ? parseFloat(accuracyStr) : undefined,
-          altitude: altitudeStr ? parseFloat(altitudeStr) : undefined,
-          altitudeAccuracy: altitudeAccuracyStr ? parseFloat(altitudeAccuracyStr) : undefined,
-          heading: headingStr ? parseFloat(headingStr) : undefined,
-          speed: speedStr ? parseFloat(speedStr) : undefined,
-          source: source || undefined,
-          permissionState: permissionState || undefined,
-          clientTimestamp: clientTimestampStr ? new Date(parseInt(clientTimestampStr, 10)) : undefined
-        },
-        plantingImages: uploadedImages,
-        plantingNotes: plantingNotes || '',
-        completedAt: new Date()
+    // Prepare planting details
+    const completedAt = new Date();
+    const nextGrowthUpdateDue = new Date(completedAt);
+    nextGrowthUpdateDue.setDate(nextGrowthUpdateDue.getDate() + 30); // 30 days from completion
+
+    const plantingDetailsData: {
+      plantedAt: Date;
+      plantingLocation?: {
+        type: 'Point';
+        coordinates: [number, number];
+      };
+      locationMeta?: {
+        accuracy?: number;
+        altitude?: number;
+        altitudeAccuracy?: number;
+        heading?: number;
+        speed?: number;
+        source?: string;
+        permissionState?: string;
+        clientTimestamp?: Date;
+      };
+      plantingImages: typeof uploadedImages;
+      plantingNotes: string;
+      completedAt: Date;
+    } = {
+      plantedAt: new Date(),
+      plantingImages: uploadedImages,
+      plantingNotes: plantingNotes || '',
+      completedAt: completedAt
+    };
+
+    // Only add location if coordinates are available
+    if (latitude !== undefined && longitude !== undefined) {
+      plantingDetailsData.plantingLocation = {
+        type: 'Point' as const,
+        coordinates: [longitude, latitude] as [number, number]
       };
 
-      // Update order status if all tasks are completed
-      const allTasksCompleted = order.wellwisherTasks?.every(task => task.status === 'completed');
-      if (allTasksCompleted) {
-        order.status = 'completed';
-      }
+      plantingDetailsData.locationMeta = {
+        accuracy: accuracyStr ? parseFloat(accuracyStr) : undefined,
+        altitude: altitudeStr ? parseFloat(altitudeStr) : undefined,
+        altitudeAccuracy: altitudeAccuracyStr ? parseFloat(altitudeAccuracyStr) : undefined,
+        heading: headingStr ? parseFloat(headingStr) : undefined,
+        speed: speedStr ? parseFloat(speedStr) : undefined,
+        source: source || undefined,
+        permissionState: permissionState || undefined,
+        clientTimestamp: clientTimestampStr ? new Date(parseInt(clientTimestampStr, 10)) : undefined
+      };
+    }
 
-      await order.save();
+    // Use atomic update to ensure consistency and prevent race conditions
+    // Only update if task is still in_progress (prevents double-completion)
+    const updateResult = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        assignedWellwisher: session.user.id,
+        'wellwisherTasks.taskId': taskId,
+        'wellwisherTasks.status': 'in_progress' // Ensure task is still in_progress
+      },
+      {
+        $set: {
+          'wellwisherTasks.$.status': 'completed',
+          'wellwisherTasks.$.plantingDetails': plantingDetailsData,
+          'wellwisherTasks.$.nextGrowthUpdateDue': nextGrowthUpdateDue
+        }
+      },
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updateResult) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found, not in progress, or status has changed. Please refresh and try again.' },
+        { status: 400 }
+      );
+    }
+
+    // Check if all tasks are completed and update order status if needed
+    const allTasksCompleted = updateResult.wellwisherTasks?.every(task => task.status === 'completed');
+    if (allTasksCompleted && updateResult.status !== 'completed') {
+      await Order.findByIdAndUpdate(orderId, { status: 'completed' });
+    }
+
+    const responseData: {
+      taskId: string;
+      plantedAt: Date;
+      imagesCount: number;
+      location?: { latitude: number; longitude: number };
+      locationMeta?: {
+        accuracy?: number;
+        altitude?: number;
+        altitudeAccuracy?: number;
+        heading?: number;
+        speed?: number;
+        source?: string;
+        permissionState?: string;
+        clientTimestamp?: Date;
+      };
+    } = {
+      taskId,
+      plantedAt: new Date(),
+      imagesCount: uploadedImages.length
+    };
+
+    // Only include location data if available
+    if (latitude !== undefined && longitude !== undefined) {
+      responseData.location = { latitude, longitude };
+      responseData.locationMeta = {
+        accuracy: accuracyStr ? parseFloat(accuracyStr) : undefined,
+        altitude: altitudeStr ? parseFloat(altitudeStr) : undefined,
+        altitudeAccuracy: altitudeAccuracyStr ? parseFloat(altitudeAccuracyStr) : undefined,
+        heading: headingStr ? parseFloat(headingStr) : undefined,
+        speed: speedStr ? parseFloat(speedStr) : undefined,
+        source: source || undefined,
+        permissionState: permissionState || undefined,
+        clientTimestamp: clientTimestampStr ? new Date(parseInt(clientTimestampStr, 10)) : undefined
+      };
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Planting details uploaded successfully',
-      data: {
-        taskId,
-        plantedAt: new Date(),
-        imagesCount: uploadedImages.length,
-        location: { latitude, longitude },
-        locationMeta: {
-          accuracy: accuracyStr ? parseFloat(accuracyStr) : undefined,
-          altitude: altitudeStr ? parseFloat(altitudeStr) : undefined,
-          altitudeAccuracy: altitudeAccuracyStr ? parseFloat(altitudeAccuracyStr) : undefined,
-          heading: headingStr ? parseFloat(headingStr) : undefined,
-          speed: speedStr ? parseFloat(speedStr) : undefined,
-          source: source || undefined,
-          permissionState: permissionState || undefined,
-          clientTimestamp: clientTimestampStr ? new Date(parseInt(clientTimestampStr, 10)) : undefined
-        }
-      }
+      message: latitude !== undefined && longitude !== undefined 
+        ? 'Planting details uploaded successfully with location'
+        : 'Planting details uploaded successfully (location not available)',
+      data: responseData
     });
 
   } catch (error: unknown) {

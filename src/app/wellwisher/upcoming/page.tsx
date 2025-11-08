@@ -149,67 +149,67 @@ export default function UpcomingPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {tasks.map((task, index) => (
             <motion.div
               key={task.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <ClockIcon className="h-6 w-6 text-blue-600" />
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <ClockIcon className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{task.task}</h3>
-                    <p className="text-sm text-gray-600">Task ID: {task.id}</p>
+                    <h3 className="text-base font-semibold text-gray-900">{task.task}</h3>
+                    <p className="text-xs text-gray-600">Task ID: {task.id}</p>
                     {task.orderDetails.isGift && (
-                      <div className="flex items-center text-sm text-purple-600 mt-1">
-                        <GiftIcon className="h-4 w-4 mr-1" />
+                      <div className="flex items-center text-xs text-purple-600 mt-0.5">
+                        <GiftIcon className="h-3 w-3 mr-1" />
                         <span>Gift for: {task.orderDetails.giftRecipientName}</span>
                       </div>
                     )}
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
                   {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <MapPinIcon className="h-4 w-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div className="flex items-center space-x-1.5 text-xs text-gray-600">
+                  <MapPinIcon className="h-3.5 w-3.5" />
                   <span>{task.location}</span>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <CalendarIcon className="h-4 w-4" />
+                <div className="flex items-center space-x-1.5 text-xs text-gray-600">
+                  <CalendarIcon className="h-3.5 w-3.5" />
                   <span>{new Date(task.scheduledDate).toLocaleDateString()}</span>
                 </div>
               </div>
 
-              <p className="text-gray-700 mb-4">{task.description}</p>
+              <p className="text-sm text-gray-700 mb-3">{task.description}</p>
 
               {task.orderDetails.isGift && task.orderDetails.giftMessage && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center mb-2">
-                    <HeartIcon className="h-4 w-4 text-purple-600 mr-2" />
-                    <span className="text-sm font-medium text-purple-800">Gift Message</span>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+                  <div className="flex items-center mb-1.5">
+                    <HeartIcon className="h-3.5 w-3.5 text-purple-600 mr-1.5" />
+                    <span className="text-xs font-medium text-purple-800">Gift Message</span>
                   </div>
-                  <p className="text-sm text-purple-700 italic">&ldquo;{task.orderDetails.giftMessage}&rdquo;</p>
+                  <p className="text-xs text-purple-700 italic">&ldquo;{task.orderDetails.giftMessage}&rdquo;</p>
                 </div>
               )}
 
-              <div className="flex space-x-3">
+              <div className="flex space-x-2">
                 <button 
                   onClick={() => handleStartTask(task.id, task.orderId)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium"
                 >
                   Start Task
                 </button>
-                <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                <button className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs font-medium">
                   View Details
                 </button>
               </div>

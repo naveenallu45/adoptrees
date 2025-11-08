@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { 
@@ -11,7 +11,8 @@ import {
   GiftIcon,
   HeartIcon,
   MapPinIcon,
-  DocumentArrowDownIcon
+  DocumentArrowDownIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
@@ -67,7 +68,7 @@ interface WellwisherTask {
   location: string;
   plantingDetails?: {
     plantedAt: string;
-    plantingLocation: {
+    plantingLocation?: {
       type: string;
       coordinates: [number, number];
     };
@@ -80,6 +81,18 @@ interface WellwisherTask {
     plantingNotes?: string;
     completedAt: string;
   };
+  growthUpdates?: Array<{
+    updateId: string;
+    uploadedAt: string;
+    images: Array<{
+      url: string;
+      publicId: string;
+      caption?: string;
+      uploadedAt: string;
+    }>;
+    notes?: string;
+    daysSincePlanting: number;
+  }>;
 }
 
 interface Order {
@@ -110,6 +123,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const isTransactionsPage = pathname.includes('/transactions');
 
   const formatAdoptedDate = (isoDateString: string) => {
@@ -332,16 +346,29 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                             </div>
                             
                             <div className="flex flex-col sm:flex-col items-center sm:items-end space-y-2">
-                              {getStatusText(order) === 'Certificate' && order.orderId && (
+                              <div className="flex flex-col sm:flex-row items-center gap-2">
                                 <button
-                                  onClick={() => handleDownloadCertificate(order.orderId!)}
-                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                                  onClick={() => {
+                                    const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
+                                    router.push(`${basePath}/${order.orderId || order._id}/${itemIndex}`);
+                                  }}
+                                  className="inline-flex items-center px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors shadow-sm"
                                   type="button"
                                 >
-                                  <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
-                                  Certificate
+                                  View More
+                                  <ArrowRightIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1.5" />
                                 </button>
-                              )}
+                                {getStatusText(order) === 'Certificate' && order.orderId && (
+                                  <button
+                                    onClick={() => handleDownloadCertificate(order.orderId!)}
+                                    className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                                    type="button"
+                                  >
+                                    <DocumentArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                    Certificate
+                                  </button>
+                                )}
+                              </div>
                               <span className="text-xs sm:text-sm text-gray-500">
                                 Adopted on {formatAdoptedDate(order.createdAt)}
                               </span>

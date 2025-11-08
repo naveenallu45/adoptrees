@@ -28,21 +28,38 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'pending';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const needsGrowthUpdate = searchParams.get('needsGrowthUpdate') === 'true';
 
     // Find orders assigned to this wellwisher that have tasks with the specified status
     // Use aggregation to filter tasks by status more precisely
+    // First unwind to get individual tasks, then filter by status to ensure accuracy
+    const matchConditions: Record<string, unknown> = {
+      assignedWellwisher: session.user.id,
+      wellwisherTasks: { $exists: true, $ne: [] }
+    };
+
+    // If fetching tasks needing growth updates, filter differently
+    if (needsGrowthUpdate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      matchConditions['wellwisherTasks.status'] = 'completed';
+      matchConditions['wellwisherTasks.nextGrowthUpdateDue'] = { $lte: today };
+    } else {
+      matchConditions['wellwisherTasks.status'] = status;
+    }
+
     const tasksAggregation = await Order.aggregate([
       {
-        $match: {
-          assignedWellwisher: session.user.id,
-          'wellwisherTasks.status': status
-        }
+        $match: matchConditions
       },
       {
         $unwind: '$wellwisherTasks'
       },
       {
-        $match: {
+        $match: needsGrowthUpdate ? {
+          'wellwisherTasks.status': 'completed',
+          'wellwisherTasks.nextGrowthUpdateDue': { $lte: new Date(new Date().setHours(0, 0, 0, 0)) }
+        } : {
           'wellwisherTasks.status': status
         }
       },
@@ -56,6 +73,9 @@ export async function GET(request: NextRequest) {
           priority: '$wellwisherTasks.priority',
           status: '$wellwisherTasks.status',
           location: '$wellwisherTasks.location',
+          plantingDetails: '$wellwisherTasks.plantingDetails',
+          nextGrowthUpdateDue: '$wellwisherTasks.nextGrowthUpdateDue',
+          growthUpdates: '$wellwisherTasks.growthUpdates',
           isGift: 1,
           giftRecipientName: 1,
           giftRecipientEmail: 1,
@@ -86,6 +106,34 @@ export async function GET(request: NextRequest) {
       priority: string;
       status: string;
       location?: string;
+      plantingDetails?: {
+        plantedAt: Date;
+        plantingLocation: {
+          type: string;
+          coordinates: [number, number];
+        };
+        plantingImages: Array<{
+          url: string;
+          publicId: string;
+          caption?: string;
+          uploadedAt: Date;
+        }>;
+        plantingNotes?: string;
+        completedAt: Date;
+      };
+      nextGrowthUpdateDue?: Date;
+      growthUpdates?: Array<{
+        updateId: string;
+        uploadedAt: Date;
+        images: Array<{
+          url: string;
+          publicId: string;
+          caption?: string;
+          uploadedAt: Date;
+        }>;
+        notes?: string;
+        daysSincePlanting: number;
+      }>;
       isGift: boolean;
       giftRecipientName?: string;
       giftRecipientEmail?: string;
@@ -103,6 +151,15 @@ export async function GET(request: NextRequest) {
       priority: taskDoc.priority,
       status: taskDoc.status,
       location: taskDoc.location || 'To be determined',
+      plantingDetails: taskDoc.plantingDetails ? {
+        plantedAt: taskDoc.plantingDetails.plantedAt,
+        plantingLocation: taskDoc.plantingDetails.plantingLocation,
+        plantingImages: taskDoc.plantingDetails.plantingImages,
+        plantingNotes: taskDoc.plantingDetails.plantingNotes,
+        completedAt: taskDoc.plantingDetails.completedAt
+      } : undefined,
+      nextGrowthUpdateDue: taskDoc.nextGrowthUpdateDue,
+      growthUpdates: taskDoc.growthUpdates || [],
       orderDetails: {
         isGift: taskDoc.isGift,
         giftRecipientName: taskDoc.giftRecipientName,
@@ -114,18 +171,33 @@ export async function GET(request: NextRequest) {
     }));
 
     // Count total tasks with the specified status
+    // Use same logic as main query to ensure consistency
+    const countMatchConditions: Record<string, unknown> = {
+      assignedWellwisher: session.user.id,
+      wellwisherTasks: { $exists: true, $ne: [] }
+    };
+
+    if (needsGrowthUpdate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      countMatchConditions['wellwisherTasks.status'] = 'completed';
+      countMatchConditions['wellwisherTasks.nextGrowthUpdateDue'] = { $lte: today };
+    } else {
+      countMatchConditions['wellwisherTasks.status'] = status;
+    }
+
     const totalCountResult = await Order.aggregate([
       {
-        $match: {
-          assignedWellwisher: session.user.id,
-          'wellwisherTasks.status': status
-        }
+        $match: countMatchConditions
       },
       {
         $unwind: '$wellwisherTasks'
       },
       {
-        $match: {
+        $match: needsGrowthUpdate ? {
+          'wellwisherTasks.status': 'completed',
+          'wellwisherTasks.nextGrowthUpdateDue': { $lte: new Date(new Date().setHours(0, 0, 0, 0)) }
+        } : {
           'wellwisherTasks.status': status
         }
       },
@@ -186,7 +258,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update the task status
+    // Validate status value
+    const validStatuses = ['pending', 'in_progress', 'completed'];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Find the order and task first to check current status
     const order = await Order.findOne({ 
       _id: orderId, 
       assignedWellwisher: session.user.id 
@@ -199,7 +280,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update the specific task
+    // Find the specific task
     const taskIndex = order.wellwisherTasks?.findIndex(task => task.taskId === taskId);
     if (taskIndex === -1 || taskIndex === undefined) {
       return NextResponse.json(
@@ -208,9 +289,58 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (order.wellwisherTasks) {
-      order.wellwisherTasks[taskIndex].status = status;
-      await order.save();
+    const currentTask = order.wellwisherTasks?.[taskIndex];
+    if (!currentTask) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentStatus = currentTask.status;
+
+    // Validate status transitions - prevent invalid transitions
+    // Only allow: pending -> in_progress -> completed
+    // Prevent: completed -> pending or completed -> in_progress
+    if (currentStatus === 'completed' && status !== 'completed') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot change status of a completed task' },
+        { status: 400 }
+      );
+    }
+
+    // Prevent: in_progress -> pending (tasks should only move forward)
+    if (currentStatus === 'in_progress' && status === 'pending') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot move task back to pending once it is in progress' },
+        { status: 400 }
+      );
+    }
+
+    // Use atomic update to ensure consistency
+    const updateResult = await Order.findOneAndUpdate(
+      { 
+        _id: orderId, 
+        assignedWellwisher: session.user.id,
+        'wellwisherTasks.taskId': taskId,
+        'wellwisherTasks.status': currentStatus // Ensure we're updating the task with the expected current status
+      },
+      {
+        $set: {
+          [`wellwisherTasks.$.status`]: status
+        }
+      },
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updateResult) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found or status has changed. Please refresh and try again.' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
@@ -219,6 +349,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (_error) {
+    console.error('Error updating task status:', _error);
     return NextResponse.json(
       { success: false, error: 'Failed to update task status' },
       { status: 500 }

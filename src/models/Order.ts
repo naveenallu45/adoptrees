@@ -38,6 +38,44 @@ export interface IOrder extends Document {
     priority: 'low' | 'medium' | 'high';
     status: 'pending' | 'in_progress' | 'completed';
     location?: string;
+    plantingDetails?: {
+      plantedAt?: Date;
+      plantingLocation?: {
+        type: string;
+        coordinates: [number, number];
+      };
+      locationMeta?: {
+        accuracy?: number;
+        altitude?: number;
+        altitudeAccuracy?: number;
+        heading?: number;
+        speed?: number;
+        source?: string;
+        permissionState?: string;
+        clientTimestamp?: Date;
+      };
+      plantingImages?: Array<{
+        url: string;
+        publicId: string;
+        caption?: string;
+        uploadedAt: Date;
+      }>;
+      plantingNotes?: string;
+      completedAt?: Date;
+    };
+    nextGrowthUpdateDue?: Date;
+    growthUpdates?: Array<{
+      updateId: string;
+      uploadedAt: Date;
+      images: Array<{
+        url: string;
+        publicId: string;
+        caption?: string;
+        uploadedAt: Date;
+      }>;
+      notes?: string;
+      daysSincePlanting: number;
+    }>;
   }[];
   // Admin fields
   adminNotes?: string;
@@ -239,7 +277,48 @@ const OrderSchema: Schema = new Schema({
       completedAt: {
         type: Date
       }
-    }
+    },
+    // Growth updates - required every 30 days after completion
+    nextGrowthUpdateDue: {
+      type: Date,
+      index: true
+    },
+    growthUpdates: [{
+      updateId: {
+        type: String,
+        required: true
+      },
+      uploadedAt: {
+        type: Date,
+        required: true,
+        default: Date.now
+      },
+      images: [{
+        url: {
+          type: String,
+          required: true
+        },
+        publicId: {
+          type: String,
+          required: true
+        },
+        caption: {
+          type: String
+        },
+        uploadedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }],
+      notes: {
+        type: String,
+        maxlength: [500, 'Growth update notes cannot exceed 500 characters']
+      },
+      daysSincePlanting: {
+        type: Number,
+        required: true
+      }
+    }]
   }],
   adminNotes: {
     type: String,
@@ -259,5 +338,6 @@ OrderSchema.index({ status: 1, createdAt: -1 });
 OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ assignedWellwisher: 1 });
 OrderSchema.index({ 'items.treeId': 1 });
+OrderSchema.index({ 'wellwisherTasks.nextGrowthUpdateDue': 1 });
 
 export default (mongoose.models?.Order || mongoose.model<IOrder>('Order', OrderSchema)) as mongoose.Model<IOrder>;

@@ -43,8 +43,8 @@ export default function OngoingPage() {
   const previewUrlsRef = useRef<Record<string, string>>({}); // Store preview URLs for cleanup
   const [fastMode] = useState<boolean>(true); // Faster location with lower accuracy
   const [prewarmedLocation, setPrewarmedLocation] = useState<{
-    latitude: number;
-    longitude: number;
+    latitude?: number;
+    longitude?: number;
     accuracy?: number;
     altitude?: number | null;
     altitudeAccuracy?: number | null;
@@ -187,10 +187,11 @@ export default function OngoingPage() {
       return;
     }
 
-    // Get current device location using Google Geolocation API first, browser as fallback
+    // Get current device location using browser geolocation API, Google API as fallback
+    // Location is optional - if all methods fail, submission can proceed without location
     const getLocation = (): Promise<{ 
-      latitude: number; 
-      longitude: number; 
+      latitude?: number; 
+      longitude?: number; 
       accuracy?: number; 
       altitude?: number | null; 
       altitudeAccuracy?: number | null; 
@@ -200,42 +201,91 @@ export default function OngoingPage() {
       source?: string;
     }> => {
       return new Promise((resolve) => {
-        (async () => {
-          try {
-            const res = await fetch('/api/geolocation/google', { method: 'POST' });
-            const data = await res.json();
-            if (data?.success && typeof data?.data?.latitude === 'number' && typeof data?.data?.longitude === 'number') {
-              return resolve({
-                latitude: data.data.latitude,
-                longitude: data.data.longitude,
-                accuracy: data.data.accuracy,
-                source: 'google_geolocation_api',
+        // Try browser geolocation first (most accurate)
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                altitude: position.coords.altitude ?? null,
+                altitudeAccuracy: position.coords.altitudeAccuracy ?? null,
+                heading: position.coords.heading ?? null,
+                speed: position.coords.speed ?? null,
+                timestamp: position.timestamp,
+                source: 'browser_geolocation'
+              });
+            },
+            async () => {
+              // Browser geolocation failed, try Google API
+              try {
+                const res = await fetch('/api/geolocation/google', { method: 'POST' });
+                const data = await res.json();
+                if (data?.success && typeof data?.data?.latitude === 'number' && typeof data?.data?.longitude === 'number') {
+                  return resolve({
+                    latitude: data.data.latitude,
+                    longitude: data.data.longitude,
+                    accuracy: data.data.accuracy,
+                    source: 'google_geolocation_api',
+                    timestamp: Date.now(),
+                  });
+                }
+              } catch (_e) {
+                // Google API also failed
+              }
+              // All location methods failed - allow submission without location
+              resolve({
+                source: 'location_unavailable',
                 timestamp: Date.now(),
               });
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
             }
-          } catch (_e) {
-            // No network/browser fallback right now
-          }
-
-          // Temporary bypass: allow submission without location
-          return resolve({
-            latitude: 0,
-            longitude: 0,
-            accuracy: undefined,
-            source: 'bypass_no_location',
-            timestamp: Date.now(),
-          });
-        })();
+          );
+        } else {
+          // Browser geolocation not available, try Google API
+          (async () => {
+            try {
+              const res = await fetch('/api/geolocation/google', { method: 'POST' });
+              const data = await res.json();
+              if (data?.success && typeof data?.data?.latitude === 'number' && typeof data?.data?.longitude === 'number') {
+                return resolve({
+                  latitude: data.data.latitude,
+                  longitude: data.data.longitude,
+                  accuracy: data.data.accuracy,
+                  source: 'google_geolocation_api',
+                  timestamp: Date.now(),
+                });
+              }
+            } catch (_e) {
+              // Google API failed
+            }
+            // All location methods failed - allow submission without location
+            resolve({
+              source: 'location_unavailable',
+              timestamp: Date.now(),
+            });
+          })();
+        }
       });
     };
 
     try {
       setUploading(task.id);
       
-      // Use prewarmed location if recent and fast mode is enabled
+      // Use prewarmed location if recent and fast mode is enabled and has valid coordinates
       const now = Date.now();
       const recentMs = 2 * 60 * 1000; // 2 minutes
-      const canUsePrewarm = fastMode && prewarmedLocation && prewarmedLocation.timestamp && (now - prewarmedLocation.timestamp) <= recentMs;
+      const canUsePrewarm = fastMode && 
+        prewarmedLocation && 
+        prewarmedLocation.timestamp && 
+        (now - prewarmedLocation.timestamp) <= recentMs &&
+        prewarmedLocation.latitude !== undefined &&
+        prewarmedLocation.longitude !== undefined;
 
       // Get current location automatically and capture permission state
       const permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
@@ -247,17 +297,25 @@ export default function OngoingPage() {
       const formData = new FormData();
       formData.append('taskId', task.id);
       formData.append('orderId', task.orderId);
-      formData.append('latitude', location.latitude.toString());
-      formData.append('longitude', location.longitude.toString());
       formData.append('plantingNotes', ''); // Empty notes
-      if (typeof location.accuracy === 'number') formData.append('accuracy', String(location.accuracy));
-      if (typeof location.altitude === 'number') formData.append('altitude', String(location.altitude));
-      if (typeof location.altitudeAccuracy === 'number') formData.append('altitudeAccuracy', String(location.altitudeAccuracy));
-      if (typeof location.heading === 'number') formData.append('heading', String(location.heading));
-      if (typeof location.speed === 'number') formData.append('speed', String(location.speed));
-      if (location.timestamp) formData.append('clientTimestamp', String(location.timestamp));
-      if (location.source) formData.append('source', location.source);
-      if (permissionState) formData.append('permissionState', permissionState);
+      
+      // Only add location data if available
+      if (location.latitude !== undefined && location.longitude !== undefined) {
+        formData.append('latitude', location.latitude.toString());
+        formData.append('longitude', location.longitude.toString());
+        if (typeof location.accuracy === 'number') formData.append('accuracy', String(location.accuracy));
+        if (typeof location.altitude === 'number') formData.append('altitude', String(location.altitude));
+        if (typeof location.altitudeAccuracy === 'number') formData.append('altitudeAccuracy', String(location.altitudeAccuracy));
+        if (typeof location.heading === 'number') formData.append('heading', String(location.heading));
+        if (typeof location.speed === 'number') formData.append('speed', String(location.speed));
+        if (location.timestamp) formData.append('clientTimestamp', String(location.timestamp));
+        if (location.source) formData.append('source', location.source);
+        if (permissionState) formData.append('permissionState', permissionState);
+      } else {
+        // Log that location is not available but submission will proceed
+        console.log('Location not available, proceeding without location data');
+        if (location.source) formData.append('source', location.source);
+      }
       
       images.forEach((image) => {
         formData.append('images', image);
@@ -295,24 +353,7 @@ export default function OngoingPage() {
           } catch (error: unknown) {
             console.error('Planting upload exception:', error);
             const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error');
-            
-            if (errorMessage.includes('location') || errorMessage.includes('Location') || errorMessage.includes('Geolocation') || errorMessage.includes('permissions policy')) {
-              // Format multi-line error messages for toast
-              const formattedMessage = errorMessage.includes('\n') 
-                ? errorMessage.split('\n')[0] + ' Check console for details.'
-                : errorMessage;
-              toast.error(formattedMessage || 'Unable to get location. Please enable location access in your browser settings.', {
-                duration: 8000, // Longer duration for important messages
-              });
-              if (process.env.NODE_ENV !== 'production') {
-                // Keep detailed logs only during development
-                console.debug('Location error details:', errorMessage);
-              }
-            } else if (errorMessage === '[object Object]') {
-              toast.error('Failed to get location. Please check your browser settings and try again.');
-            } else {
-              toast.error(`Failed to upload planting details: ${errorMessage}`);
-            }
+            toast.error(`Failed to upload planting details: ${errorMessage}`);
           } finally {
             setUploading(null);
           }
@@ -357,47 +398,47 @@ export default function OngoingPage() {
           <p className="text-gray-600">All tasks are either pending or completed</p>
         </div>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {tasks.map((task, index) => (
             <motion.div
               key={task.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-yellow-50 rounded-lg">
-                    <ArrowPathIcon className="h-6 w-6 text-yellow-600" />
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 bg-yellow-50 rounded-lg">
+                    <ArrowPathIcon className="h-5 w-5 text-yellow-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{task.task}</h3>
-                    <p className="text-sm text-gray-600">Order ID: {task.orderId}</p>
+                    <h3 className="text-base font-semibold text-gray-900">{task.task}</h3>
+                    <p className="text-xs text-gray-600">Order ID: {task.orderId}</p>
                   </div>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
                   In Progress
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <MapPinIcon className="h-4 w-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div className="flex items-center space-x-1.5 text-xs text-gray-600">
+                  <MapPinIcon className="h-3.5 w-3.5" />
                   <span>{task.location}</span>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <ClockIcon className="h-4 w-4" />
+                <div className="flex items-center space-x-1.5 text-xs text-gray-600">
+                  <ClockIcon className="h-3.5 w-3.5" />
                   <span>Scheduled: {new Date(task.scheduledDate).toLocaleDateString()}</span>
                 </div>
               </div>
 
-              <p className="text-gray-700 mb-4">{task.description}</p>
+              <p className="text-sm text-gray-700 mb-3">{task.description}</p>
 
               {/* Order Details */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">Trees to Plant</h4>
-                <div className="space-y-1 text-sm text-gray-600">
+              <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                <h4 className="text-sm font-medium text-gray-900 mb-1.5">Trees to Plant</h4>
+                <div className="space-y-0.5 text-xs text-gray-600">
                   {task.orderDetails.items.map((item, idx) => (
                     <div key={idx}>
                       <span>{item.treeName} x{item.quantity}</span>
@@ -405,12 +446,12 @@ export default function OngoingPage() {
                   ))}
                 </div>
                 {task.orderDetails.isGift && (
-                  <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                    <p className="text-sm text-green-800">
+                  <div className="mt-1.5 p-1.5 bg-green-50 rounded border border-green-200">
+                    <p className="text-xs text-green-800">
                       <strong>Gift for:</strong> {task.orderDetails.giftRecipientName}
                     </p>
                     {task.orderDetails.giftMessage && (
-                      <p className="text-sm text-green-700 mt-1">
+                      <p className="text-xs text-green-700 mt-0.5">
                         &ldquo;{task.orderDetails.giftMessage}&rdquo;
                       </p>
                     )}
@@ -419,9 +460,9 @@ export default function OngoingPage() {
               </div>
 
               {/* Image Upload Section */}
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
                     Upload Planting Images (Max 5) - Use Camera
                   </label>
                   <input
@@ -430,16 +471,16 @@ export default function OngoingPage() {
                     capture="environment"
                     multiple
                     onChange={(e) => handleImageChange(task.id, e)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-xs"
                     disabled={uploading === task.id}
                   />
                   {taskImages[task.id] && taskImages[task.id].length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm text-green-600 mb-2">
+                    <div className="mt-2">
+                      <p className="text-xs text-green-600 mb-1.5">
                         {taskImages[task.id].length} image(s) selected
                       </p>
                       {/* Image Previews */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                         {taskImages[task.id].map((image, idx) => {
                           // Create or reuse preview URL
                           const urlKey = `${task.id}-${idx}`;
@@ -453,16 +494,16 @@ export default function OngoingPage() {
                             <img
                               src={previewUrlsRef.current[urlKey]}
                               alt={`Preview ${idx + 1}`}
-                              className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                              className="w-full h-16 object-cover rounded-lg border border-gray-200"
                             />
                             <button
                               onClick={() => removeImage(task.id, idx)}
-                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                              className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                               type="button"
                               disabled={uploading === task.id}
                               title="Remove image"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             </button>
@@ -478,16 +519,16 @@ export default function OngoingPage() {
                   <button
                     onClick={() => handleCompletePlanting(task)}
                     disabled={uploading === task.id || !taskImages[task.id] || taskImages[task.id].length === 0}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium flex items-center space-x-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {uploading === task.id ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                         <span>Uploading...</span>
                       </>
                     ) : (
                       <>
-                        <CheckCircleIcon className="h-4 w-4" />
+                        <CheckCircleIcon className="h-3.5 w-3.5" />
                         <span>Complete Planting</span>
                       </>
                     )}
