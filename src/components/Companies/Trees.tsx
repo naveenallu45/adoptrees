@@ -27,8 +27,6 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
   const { addToCart } = useCart();
   const { data: session } = useSession();
 
-  
-
   const handleAddToCart = (tree: Tree) => {
     // Check if user is logged in
     if (!session) {
@@ -57,93 +55,117 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
     toast.success(`Corporate Program: ${tree.name} (₹${displayPrice}) added to cart!`);
   };
 
-
   return (
-    <section className="py-8 sm:py-12 md:py-16 lg:py-10 bg-gradient-to-br from-blue-50 to-indigo-50">
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+    <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-white via-gray-50 to-green-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div className="text-center mb-12 sm:mb-16">
+          <div className="inline-block mb-4">
+            <span className="text-sm font-semibold text-green-600 uppercase tracking-wider bg-green-50 px-4 py-2 rounded-full">
+              Corporate Programs
+            </span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
+            Choose Your Corporate Program
+          </h2>
+          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+            Select from our curated corporate tree adoption programs and enhance your sustainability initiatives
+          </p>
+        </div>
+
         {error && (
-          <div className="text-center mb-4 sm:mb-6 md:mb-8">
-            <p className="text-red-600 text-sm sm:text-base">{error}</p>
+          <div className="text-center mb-8">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-md mx-auto">
+              <p className="text-red-600 text-base font-medium">{error}</p>
+            </div>
           </div>
         )}
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {trees.map((tree) => (
-              <div key={tree._id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
-                {/* Tree Image */}
-                <div className="relative aspect-square">
-                  <Image
-                    src={tree.imageUrl}
-                    alt={tree.name}
-                    fill
-                    className="object-cover"
-                    loading="lazy"
-                    quality={85}
-                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    placeholder="blur"
-                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-                  />
-                </div>
+            <div 
+              key={tree._id} 
+              className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-green-300 transform hover:-translate-y-2"
+            >
+              {/* Tree Image */}
+              <div className="relative aspect-[5/3] overflow-hidden bg-gray-100">
+                <Image
+                  src={tree.imageUrl}
+                  alt={tree.name}
+                  fill
+                  className="object-cover group-hover:scale-110 transition-transform duration-500"
+                  loading="lazy"
+                  quality={85}
+                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                />
+                {/* Overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </div>
 
-                {/* Product Information */}
-                <div className="p-3 sm:p-4">
-                  {/* Tree Name */}
-                  <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-2 sm:mb-3 line-clamp-2">
-                     {tree.name}
-                  </h3>
+              {/* Product Information */}
+              <div className="p-3 sm:p-4">
+                {/* Tree Name */}
+                <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 line-clamp-2">
+                  {tree.name}
+                </h3>
 
-                  {/* Price and Package Information */}
-                  <div className="mb-3 sm:mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-black-500">
+                {/* Price and Package Information */}
+                <div className="mb-3 pb-3 border-b border-gray-100">
+                  <div className="flex justify-between items-center mb-2">
+                    <div>
+                      <p className="text-xs text-gray-900 mb-0.5">Price</p>
+                      <span className="text-lg sm:text-xl font-bold text-gray-900">
                         {tree.packagePrice ? `₹${tree.packagePrice}` : `₹${tree.price}`}
                       </span>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">Oxygen</p>
-                        <p className="text-xs sm:text-sm font-semibold text-green-600">{tree.oxygenKgs} kg/year</p>
-                      </div>
                     </div>
-                    {tree.packageQuantity && tree.packageQuantity > 1 && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-                        <p className="text-xs text-blue-700 font-medium">
-                          Package: {tree.packageQuantity} trees
-                          {tree.packagePrice && (
-                            <span className="ml-1 sm:ml-2">
-                              (₹{Math.round(tree.packagePrice / tree.packageQuantity)} per tree)
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    )}
+                    <div className="text-right bg-green-50 rounded-lg px-2 py-1">
+                      <p className="text-xs text-gray-900 mb-0.5">Oxygen Production</p>
+                      <p className="text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
+                    </div>
                   </div>
+                  {tree.packageQuantity && tree.packageQuantity > 1 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-1.5 mt-1.5">
+                      <p className="text-xs text-gray-900 font-medium">
+                        Package: {tree.packageQuantity} trees
+                        {tree.packagePrice && (
+                          <span className="ml-2">
+                            (₹{Math.round(tree.packagePrice / tree.packageQuantity)} per tree)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col gap-2">
-                    {!session ? (
-                      <a
-                        href="/login?redirect=/companies"
-                        className="w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs sm:text-sm font-medium transition-colors duration-200 flex items-center justify-center"
-                      >
-                        Add to Cart
-                      </a>
-                    ) : session.user.userType !== 'company' ? (
-                      <button
-                        disabled
-                        className="w-full bg-gray-400 text-white px-3 py-2 rounded text-xs sm:text-sm font-medium cursor-not-allowed flex items-center justify-center"
-                      >
-                        Company Only
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleAddToCart(tree)}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs sm:text-sm font-medium transition-colors duration-200 flex items-center justify-center"
-                      >
-                        Add to Cart
-                      </button>
-                    )}
-                  </div>
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2">
+                  {!session ? (
+                    <a
+                      href="/login?redirect=/companies"
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105"
+                    >
+                      Add to Cart
+                    </a>
+                  ) : session.user.userType !== 'company' ? (
+                    <button
+                      disabled
+                      className="w-full bg-gray-300 text-gray-500 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold cursor-not-allowed flex items-center justify-center"
+                    >
+                      Company Only
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleAddToCart(tree)}
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105"
+                    >
+                      Add to Cart
+                    </button>
+                  )}
                 </div>
               </div>
+            </div>
           ))}
         </div>
       </div>

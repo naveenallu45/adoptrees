@@ -21,7 +21,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-gradient-to-br from-purple-900 to-purple-600 text-white">
+    <footer className="bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12">
           {/* Brand Section */}
@@ -29,7 +29,7 @@ export default function Footer() {
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
               <h3 className="text-xl sm:text-2xl font-bold">Adoptrees</h3>
             </div>
-            <p className="text-purple-200 mb-6 sm:mb-8 leading-relaxed max-w-md text-sm sm:text-base">
+            <p className="text-green-100 mb-6 sm:mb-8 leading-relaxed max-w-md text-sm sm:text-base">
               Making the world greener, one tree at a time. Join our mission to create a sustainable future for generations to come.
             </p>
             
@@ -38,15 +38,15 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg bg-purple-700/50 border border-purple-600/50 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent backdrop-blur-sm text-sm sm:text-base"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg bg-green-800/50 border border-green-700/50 text-white placeholder-green-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent backdrop-blur-sm text-sm sm:text-base"
               />
-              <button className="bg-green-500 hover:bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 text-sm sm:text-base">
+              <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 text-sm sm:text-base">
                 Subscribe
               </button>
             </div>
 
             {/* Copyright */}
-            <p className="text-purple-300 text-xs sm:text-sm">
+            <p className="text-green-200 text-xs sm:text-sm">
               © 2024 All rights reserved Adoptrees
             </p>
           </div>
@@ -61,7 +61,7 @@ export default function Footer() {
                   <li key={link.name}>
                     <a
                       href={link.href}
-                      className="text-purple-200 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                      className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
                     >
                       {link.name}
                     </a>
@@ -78,7 +78,7 @@ export default function Footer() {
                   <li key={link.name}>
                     <a
                       href={link.href}
-                      className="text-purple-200 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                      className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
                     >
                       {link.name}
                     </a>
@@ -95,7 +95,7 @@ export default function Footer() {
                   <li key={link.name}>
                     <a
                       href={link.href}
-                      className="text-purple-200 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                      className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
                     >
                       {link.name}
                     </a>
