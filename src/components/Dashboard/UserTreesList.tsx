@@ -12,21 +12,23 @@ import {
   HeartIcon,
   MapPinIcon,
   DocumentArrowDownIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  PlusCircleIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
 function LocationToggle({ latitude, longitude, treeName }: { latitude: number; longitude: number; treeName: string }) {
   const [show, setShow] = useState(false);
   return (
-    <div className="mt-4">
+    <div>
       <button
         type="button"
         onClick={() => setShow(!show)}
-        className="inline-flex items-center text-sm text-green-700 hover:text-green-900"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
       >
-        <MapPinIcon className="h-4 w-4 mr-1" />
-        {show ? 'Hide location' : 'View location'}
+        <MapPinIcon className="h-4 w-4 flex-shrink-0" />
+        <span>{show ? 'Hide location' : 'View location'}</span>
       </button>
       {show && (
         <div className="mt-3">
@@ -34,7 +36,7 @@ function LocationToggle({ latitude, longitude, treeName }: { latitude: number; l
             latitude={latitude}
             longitude={longitude}
             treeName={treeName}
-            className="w-full h-64 rounded-lg border border-gray-200"
+            className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
           />
           <p className="mt-2 text-xs text-gray-500 text-center">
             Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
@@ -276,102 +278,136 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
       {/* Content - Show trees if not on transactions page, otherwise show transactions */}
       {!isTransactionsPage ? (
         <motion.div
-          className="bg-white rounded-lg shadow"
+          className="bg-gradient-to-br from-white via-green-50/30 to-emerald-50/20 rounded-lg shadow-sm border border-green-100/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
           <div className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              {userType === 'individual' ? 'Your Adopted Trees' : 'Company Adopted Trees'}
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">
+                  {userType === 'individual' ? 'Your Adopted Trees' : 'Company Adopted Trees'}
+                </h2>
+              </div>
+              {!publicId && (
+                <motion.button
+                  onClick={() => router.push(userType === 'individual' ? '/individuals' : '/companies')}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <PlusCircleIcon className="h-5 w-5" />
+                  <span>Adopt New Tree</span>
+                </motion.button>
+              )}
+            </div>
           
             {orders.length === 0 ? (
               <div className="text-center py-12">
-                <HeartIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No trees adopted yet</h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mb-4">
+                  <HeartIcon className="h-10 w-10 text-green-500" />
+                </div>
+                <h3 className="mt-2 text-base font-semibold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">No trees adopted yet</h3>
+                <p className="mt-1 text-sm text-gray-600 mb-6">
                   {userType === 'individual' 
                     ? 'Get started by adopting your first tree to make a positive impact on the environment.'
                     : 'Start your company\'s environmental journey by adopting trees for your team.'
                   }
                 </p>
+                {!publicId && (
+                  <motion.button
+                    onClick={() => router.push(userType === 'individual' ? '/individuals' : '/companies')}
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl font-medium"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <PlusCircleIcon className="h-5 w-5" />
+                    <span>Adopt Your First Tree</span>
+                  </motion.button>
+                )}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {orders.flatMap((order, orderIndex) => 
                   order.items.map((item, itemIndex) => (
                     <motion.div
                       key={`${order._id}-${itemIndex}`}
-                      className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow w-full"
+                      className="bg-gradient-to-br from-green-100/80 via-emerald-100/60 to-green-100/70 border border-green-300/80 rounded-lg p-5 hover:shadow-lg hover:border-green-400 hover:from-green-100 hover:via-emerald-100/80 hover:to-green-100/90 transition-all duration-300 w-full backdrop-blur-sm"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 * (orderIndex + itemIndex) }}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 mx-auto sm:mx-0">
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Tree Image */}
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm">
                           {item.treeImageUrl ? (
                             <Image
                               src={item.treeImageUrl}
                               alt={item.treeName}
-                              width={80}
-                              height={80}
+                              width={96}
+                              height={96}
                               className="w-full h-full object-cover"
                               onError={(_e) => {
                               }}
                             />
                           ) : (
-                            <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                              <span className="text-gray-500 text-xs sm:text-sm">No Image</span>
+                            <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+                              <span className="text-green-600 text-xs font-medium">No Image</span>
                             </div>
                           )}
                         </div>
                         
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0">
-                            <div className="flex-1">
-                              <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">{item.treeName}</h4>
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-1 sm:space-y-0 text-sm text-gray-600 mb-2">
-                                <span className="text-green-600 font-medium">
+                        {/* Content Section */}
+                        <div className="flex-1 min-w-0 flex flex-col">
+                          {/* Top Section: Tree Name and Stats */}
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-800 to-emerald-800 bg-clip-text text-transparent mb-2">
+                                {item.treeName}
+                              </h4>
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs sm:text-sm whitespace-nowrap">
+                                  <SparklesIcon className="h-3.5 w-3.5 flex-shrink-0" />
                                   {item.oxygenKgs} kg/year oxygen
                                 </span>
-                              </div>
-                              
-                              {item.adoptionType === 'gift' && (
-                                <div className="flex items-center text-sm text-purple-600 mb-2">
-                                  <GiftIcon className="h-4 w-4 mr-1" />
-                                  <span>Gift for: {item.recipientName}</span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex flex-col sm:flex-col items-center sm:items-end space-y-2">
-                              <div className="flex flex-col sm:flex-row items-center gap-2">
-                                <button
-                                  onClick={() => {
-                                    const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
-                                    router.push(`${basePath}/${order.orderId || order._id}/${itemIndex}`);
-                                  }}
-                                  className="inline-flex items-center px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors shadow-sm"
-                                  type="button"
-                                >
-                                  View More
-                                  <ArrowRightIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1.5" />
-                                </button>
-                                {getStatusText(order) === 'Certificate' && order.orderId && (
-                                  <button
-                                    onClick={() => handleDownloadCertificate(order.orderId!)}
-                                    className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
-                                    type="button"
-                                  >
-                                    <DocumentArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                    Certificate
-                                  </button>
+                                {item.adoptionType === 'gift' && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs sm:text-sm whitespace-nowrap">
+                                    <GiftIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                    Gift for {item.recipientName}
+                                  </span>
                                 )}
                               </div>
-                              <span className="text-xs sm:text-sm text-gray-500">
-                                Adopted on {formatAdoptedDate(order.createdAt)}
-                              </span>
+                              {/* Adoption Date - Moved here, closer to stats */}
+                              <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500">
+                                <ClockIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span>Adopted on {formatAdoptedDate(order.createdAt)}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Action Buttons - Stacked vertically */}
+                            <div className="flex flex-col items-end gap-3 flex-shrink-0">
+                              <button
+                                onClick={() => {
+                                  const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
+                                  router.push(`${basePath}/${order.orderId || order._id}/${itemIndex}`);
+                                }}
+                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap w-full sm:w-auto"
+                                type="button"
+                              >
+                                View More
+                                <ArrowRightIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              </button>
+                              {getStatusText(order) === 'Certificate' && order.orderId && (
+                                <button
+                                  onClick={() => handleDownloadCertificate(order.orderId!)}
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-200/50 shadow-sm whitespace-nowrap w-full sm:w-auto"
+                                  type="button"
+                                >
+                                  <DocumentArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                  Certificate
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -387,11 +423,13 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                         if (completedTask?.plantingDetails?.plantingLocation) {
                           const coords = completedTask.plantingDetails.plantingLocation.coordinates;
                           return (
-                            <LocationToggle
-                              latitude={coords[1]}
-                              longitude={coords[0]}
-                              treeName={item.treeName}
-                            />
+                            <div className="mt-1 pt-1.5 border-t border-green-100/50">
+                              <LocationToggle
+                                latitude={coords[1]}
+                                longitude={coords[0]}
+                                treeName={item.treeName}
+                              />
+                            </div>
                           );
                         }
                         return null;

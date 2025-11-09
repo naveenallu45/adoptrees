@@ -10,6 +10,7 @@ import { loginSchema } from '@/lib/validations/auth';
 interface ExtendedUser extends NextAuthUser {
   role: 'user' | 'admin' | 'wellwisher';
   userType: 'individual' | 'company';
+  image?: string;
 }
 
 interface UserWithPassword {
@@ -67,7 +68,7 @@ export const authOptions = {
           // Find user (case-insensitive email) - explicitly select passwordHash
           const user = await User.findOne({ email: email.toLowerCase() })
             .select('+passwordHash')
-            .lean() as UserWithPassword | null;
+            .lean() as (UserWithPassword & { profilePicture?: { url: string; publicId: string } }) | null;
           
           if (!user) {
             // Use same timing for invalid user to prevent email enumeration
@@ -87,6 +88,7 @@ export const authOptions = {
             name: user.name || user.companyName || undefined,
             role: user.role,
             userType: user.userType,
+            image: user.profilePicture?.url || undefined,
           } as ExtendedUser;
         } catch (_error) {
           if (process.env.NODE_ENV === 'development') {
@@ -97,13 +99,20 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session: sessionData }) {
       if (user) {
         const extendedUser = user as ExtendedUser;
         token.role = extendedUser.role;
         token.userType = extendedUser.userType;
         token.id = extendedUser.id;
+        token.image = extendedUser.image;
       }
+      
+      // Update token when session is updated (e.g., after profile picture upload)
+      if (trigger === 'update' && sessionData?.user?.image) {
+        token.image = sessionData.user.image;
+      }
+      
       return token;
     },
     async session({ session, token }) {
@@ -120,6 +129,7 @@ export const authOptions = {
           id: token.id as string,
           role: token.role as 'admin' | 'user' | 'wellwisher',
           userType: token.userType as 'individual' | 'company',
+          image: token.image as string | undefined,
         },
       };
     },

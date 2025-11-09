@@ -27,5 +27,6 @@ declare module 'next-auth/jwt' {
     id: string;
     role: 'user' | 'admin' | 'wellwisher';
     userType: 'individual' | 'company';
+    image?: string;
   }
 }

@@ -5,7 +5,6 @@ import { signOut } from 'next-auth/react';
 import {
   UserIcon,
   ArrowRightOnRectangleIcon,
-  GiftIcon,
   QuestionMarkCircleIcon,
   CreditCardIcon,
 } from '@heroicons/react/24/outline';
@@ -20,7 +19,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Your Trees', href: '/dashboard/individual/trees', icon: TreeIcon },
-  { name: 'Gifts', href: '/dashboard/individual/gift', icon: GiftIcon },
   { name: 'Support', href: '/dashboard/individual/support', icon: QuestionMarkCircleIcon },
   { name: 'Profile', href: '/dashboard/individual/profile', icon: UserIcon },
   { name: 'Transactions', href: '/dashboard/individual/transactions', icon: CreditCardIcon },

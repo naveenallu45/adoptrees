@@ -1,13 +1,18 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { BuildingOfficeIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { BuildingOfficeIcon, PencilIcon, CheckIcon, XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 export default function CompanyProfilePage() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [isEditing, setIsEditing] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     companyName: session?.user?.name || '',
     email: session?.user?.email || '',
@@ -16,6 +21,27 @@ export default function CompanyProfilePage() {
     gstNumber: '',
     website: '',
   });
+
+  // Fetch user profile picture on mount
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      if (!session?.user?.id) return;
+      
+      try {
+        const response = await fetch(`/api/users/${session.user.id}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data?.profilePicture?.url) {
+            setProfilePicture(result.data.profilePicture.url);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile picture:', error);
+      }
+    };
+
+    fetchProfilePicture();
+  }, [session?.user?.id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -28,6 +54,112 @@ export default function CompanyProfilePage() {
   const handleSave = () => {
     // Here you would typically save the data to your backend
     setIsEditing(false);
+  };
+
+  const handleFileSelect = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
+    
+    console.log('File selected:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    });
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image size must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      console.log('Uploading file:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+
+      const response = await fetch('/api/users/profile-picture', {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header, let browser set it with boundary
+      });
+      
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to upload profile picture' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setProfilePicture(result.data.profilePicture.url);
+        // Update session with new profile picture
+        await updateSession({ image: result.data.profilePicture.url });
+      } else {
+        setUploadError(result.message || result.error || 'Failed to upload profile picture');
+      }
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload profile picture';
+      setUploadError(errorMessage);
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeletePicture = async () => {
+    if (!confirm('Are you sure you want to delete your profile picture?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/users/profile-picture', {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setProfilePicture(null);
+        // Update session to remove profile picture
+        await updateSession({ image: null });
+      } else {
+        setUploadError(result.message || 'Failed to delete profile picture');
+      }
+    } catch (error) {
+      console.error('Error deleting profile picture:', error);
+      setUploadError('Failed to delete profile picture');
+    }
   };
 
   return (
@@ -60,9 +192,71 @@ export default function CompanyProfilePage() {
           transition={{ delay: 0.1 }}
         >
           <div className="p-6 text-center">
-            <div className="mx-auto h-24 w-24 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <BuildingOfficeIcon className="h-12 w-12 text-blue-600" />
+            <div className="relative mx-auto h-24 w-24 mb-4">
+              {profilePicture ? (
+                <div 
+                  className="relative h-24 w-24 rounded-full overflow-hidden border-4 border-blue-200 cursor-pointer group"
+                  onClick={!isEditing ? (e) => handleFileSelect(e) : undefined}
+                  title={!isEditing ? "Click to change profile picture" : undefined}
+                >
+                  <Image
+                    src={profilePicture}
+                    alt="Profile"
+                    fill
+                    className="object-cover"
+                  />
+                  {!isEditing && (
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                      <ArrowUpTrayIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  )}
+                  {isEditing && (
+                    <button
+                      onClick={handleDeletePicture}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors z-10"
+                      title="Delete profile picture"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div 
+                  className="h-24 w-24 bg-blue-100 rounded-full flex items-center justify-center border-4 border-blue-200 cursor-pointer hover:bg-blue-200 transition-colors relative"
+                  onClick={handleFileSelect}
+                  title="Click to upload profile picture"
+                >
+                  <BuildingOfficeIcon className="h-12 w-12 text-blue-600" />
+                </div>
+              )}
+              <button
+                onClick={handleFileSelect}
+                disabled={isUploading}
+                className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                title="Upload profile picture"
+              >
+                {isUploading ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <ArrowUpTrayIcon className="h-5 w-5" />
+                )}
+              </button>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            {uploadError && (
+              <div className="mb-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                {uploadError}
+              </div>
+            )}
+            {isUploading && (
+              <div className="mb-2 text-sm text-blue-600">Uploading...</div>
+            )}
             <h2 className="text-xl font-semibold text-gray-900">
               {session?.user?.name || 'Company Name'}
             </h2>

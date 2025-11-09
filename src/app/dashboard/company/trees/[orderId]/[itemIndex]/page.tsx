@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -103,10 +103,6 @@ export default function TreeDetailPage() {
   const [wellwisherName, setWellwisherName] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  useEffect(() => {
-    fetchOrder();
-  }, [orderId]);
-
   // Update time every minute for real-time calculations
   useEffect(() => {
     const interval = setInterval(() => {
@@ -149,7 +145,7 @@ export default function TreeDetailPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedImage, allImagesForModal]);
 
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/orders');
@@ -188,9 +184,13 @@ export default function TreeDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId, itemIndex]);
 
-  const handleDownloadCertificate = async (orderId: string) => {
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  const _handleDownloadCertificate = async (orderId: string) => {
     try {
       const response = await fetch(`/api/certificates/${orderId}`);
       
