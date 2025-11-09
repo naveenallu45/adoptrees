@@ -46,7 +46,7 @@ export default function Navbar() {
         ? 'bg-white shadow-md' 
         : 'bg-transparent'
     }`}>
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-0 sm:py-[1.25px]">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-0 sm:py-[1px]">
         <div className="flex items-center justify-between h-auto">
           {/* Logo and Navigation Items */}
           <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-8">

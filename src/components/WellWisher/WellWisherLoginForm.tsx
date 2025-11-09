@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
@@ -28,8 +28,25 @@ export default function WellWisherLoginForm() {
         setError('Invalid well-wisher credentials');
       } else {
         // Check if user is well-wisher after successful login
-        // This will be handled by the AuthGuard component
-        router.push('/wellwisher');
+        try {
+          const sessionResponse = await fetch('/api/auth/session');
+          const sessionData = await sessionResponse.json();
+          
+          // Reject non-wellwisher users - they must use the regular login route
+          if (sessionData?.user?.role !== 'wellwisher') {
+            // Sign out the user and show error
+            await signOut({ redirect: false });
+            setError('Only well-wisher users can login here. Please use the regular login page.');
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // User is wellwisher - redirect to wellwisher dashboard
+          router.push('/wellwisher');
+        } catch (_error) {
+          setError('Failed to verify user role. Please try again.');
+          setIsSubmitting(false);
+        }
       }
     } catch {
       setError('Login failed. Please try again.');

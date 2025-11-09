@@ -23,12 +23,15 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
         router.push(redirectTo);
       } else {
         // User is already logged in, redirect to appropriate dashboard
-        if (session.user.userType === 'individual') {
+        // Check role first (admin and wellwisher should be checked before userType)
+        if (session.user.role === 'admin') {
+          router.push('/admin');
+        } else if (session.user.role === 'wellwisher') {
+          router.push('/wellwisher');
+        } else if (session.user.userType === 'individual') {
           router.push('/dashboard/individual/trees');
         } else if (session.user.userType === 'company') {
           router.push('/dashboard/company/trees');
-        } else if (session.user.role === 'admin') {
-          router.push('/admin');
         } else {
           router.push('/');
         }
