@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
@@ -19,9 +20,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Your Trees', href: '/dashboard/company/trees', icon: TreeIcon },
-  { name: 'Support', href: '/dashboard/company/support', icon: QuestionMarkCircleIcon },
   { name: 'Profile', href: '/dashboard/company/profile', icon: BuildingOfficeIcon },
   { name: 'Transactions', href: '/dashboard/company/transactions', icon: CreditCardIcon },
+  { name: 'Support', href: '/dashboard/company/support', icon: QuestionMarkCircleIcon },
 ];
 
 export default function CompanySidebar() {
@@ -45,10 +46,13 @@ export default function CompanySidebar() {
     <div className="flex h-screen w-64 flex-col bg-gradient-to-b from-blue-900 to-blue-800 text-white">
       {/* Logo/Header */}
       <div className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 border-b border-blue-700">
-        <div className="flex items-center gap-2 sm:gap-3">
+        <Link 
+          href="/" 
+          className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <TreeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-300" />
           <h1 className="text-lg sm:text-xl lg:text-2xl font-bold">Adoptrees</h1>
-        </div>
+        </Link>
         
         {/* Mobile close button */}
         <button
@@ -104,7 +108,7 @@ export default function CompanySidebar() {
       <div className="border-t border-blue-700 p-3 sm:p-4">
         <motion.button
           onClick={handleLogout}
-          className="flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium text-blue-100 transition-all duration-200 hover:bg-red-600 hover:text-white"
+          className="flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium bg-black text-white transition-all duration-200 hover:bg-gray-800"
           whileHover={{ x: 4 }}
           whileTap={{ scale: 0.98 }}
         >

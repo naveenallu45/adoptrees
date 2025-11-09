@@ -158,7 +158,9 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
 
   const getForestName = () => {
     const name = getUserDisplayName();
-    return `${name} Forest`;
+    // Capitalize first letter dynamically
+    if (!name) return name;
+    return name.charAt(0).toUpperCase() + name.slice(1);
   };
 
   const getLastPlantingText = () => {
@@ -229,51 +231,51 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-6">
+        <div className="flex flex-row overflow-x-auto gap-3 sm:gap-4 sm:grid sm:grid-cols-3 md:grid-cols-5 mt-6 scrollbar-hide">
           {/* Trees Planted */}
-          <div className="text-center">
+          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
             <div className="flex justify-center mb-2">
               <TreeIcon className="h-6 w-6 text-green-300" />
             </div>
-            <div className="text-3xl font-bold mb-1">{stats.treesPlanted}</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.treesPlanted}</div>
             <div className="text-xs text-green-200">Trees planted</div>
           </div>
 
           {/* CO2 Absorbed */}
-          <div className="text-center">
+          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
             <div className="flex justify-center mb-2">
               <CloudIcon className="h-6 w-6 text-green-300" />
             </div>
-            <div className="text-3xl font-bold mb-1">
+            <div className="text-2xl sm:text-3xl font-bold mb-1">
               {stats.co2Absorbed.toFixed(2)} t*
             </div>
             <div className="text-xs text-green-200">CO₂ absorbed</div>
           </div>
 
           {/* Forests */}
-          <div className="text-center">
+          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
             <div className="flex justify-center mb-2">
               <MapIcon className="h-6 w-6 text-green-300" />
             </div>
-            <div className="text-3xl font-bold mb-1">{stats.forests}</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.forests}</div>
             <div className="text-xs text-green-200">Forests</div>
           </div>
 
           {/* Countries */}
-          <div className="text-center">
+          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
             <div className="flex justify-center mb-2">
               <GlobeAltIcon className="h-6 w-6 text-green-300" />
             </div>
-            <div className="text-3xl font-bold mb-1">{stats.countries}</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.countries}</div>
             <div className="text-xs text-green-200">Countries</div>
           </div>
 
           {/* Impacts */}
-          <div className="text-center">
+          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
             <div className="flex justify-center mb-2">
               <ImpactIcon className="h-6 w-6 text-green-300" />
             </div>
-            <div className="text-3xl font-bold mb-1">{stats.impacts}</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.impacts}</div>
             <div className="text-xs text-green-200">Impacts</div>
           </div>
         </div>

@@ -4,7 +4,12 @@ import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
+
+import { useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
 import { useState } from 'react';
+
 
 interface Tree {
   _id: string;
@@ -27,21 +32,73 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
   const error = trees.length === 0 ? 'No trees available' : null;
   const { addToCart } = useCart();
   const { data: session } = useSession();
+
+  const [addingTreeId, setAddingTreeId] = useState<string | null>(null);
+  const [flyingTree, setFlyingTree] = useState<{ id: string; imageUrl: string; startPos: { x: number; y: number }; endPos: { x: number; y: number } } | null>(null);
+  const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
 
-  const handleAddToCart = (tree: Tree) => {
-    // Allow adding to cart without login - login will be required at checkout
-    addToCart({
+
+  const getCartIconPosition = useCallback(() => {
+    // Try to find the cart icon in the navbar
+    const cartLink = document.querySelector('a[href="/cart"]');
+    if (cartLink) {
+      const rect = cartLink.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    }
+    // Fallback to top right corner
+    return {
+      x: window.innerWidth - 80,
+      y: 60
+    };
+  }, []);
+
+  const handleAddToCart = (tree: Tree, event: React.MouseEvent<HTMLButtonElement>) => {
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const startPos = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+
+    const endPos = getCartIconPosition();
+
+    setAddingTreeId(tree._id);
+    setFlyingTree({
       id: tree._id,
-      name: `Corporate ${tree.name}`,
-      price: tree.packagePrice || tree.price,
       imageUrl: tree.imageUrl,
-      info: tree.info,
-      oxygenKgs: tree.oxygenKgs,
-      type: 'company',
-      packageQuantity: tree.packageQuantity,
-      packagePrice: tree.packagePrice
+      startPos,
+      endPos
     });
+
+
+    // Add to cart after animation starts
+    setTimeout(() => {
+      addToCart({
+        id: tree._id,
+        name: `Corporate ${tree.name}`,
+        price: tree.packagePrice || tree.price,
+        imageUrl: tree.imageUrl,
+        info: tree.info,
+        oxygenKgs: tree.oxygenKgs,
+        type: 'company',
+        packageQuantity: tree.packageQuantity,
+        packagePrice: tree.packagePrice
+      });
+      
+      // Complete animation and show toast
+      setTimeout(() => {
+        setFlyingTree(null);
+        setAddingTreeId(null);
+        const displayPrice = tree.packagePrice || tree.price;
+        toast.success(`Corporate Program: ${tree.name} (₹${displayPrice}) added to cart!`);
+      }, 800);
+    }, 50);
+
     
     // Trigger animation
     setAddedItems(prev => new Set(prev).add(tree._id));
@@ -55,6 +112,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
     
     const displayPrice = tree.packagePrice || tree.price;
     toast.success(`Corporate Program: ${tree.name} (₹${displayPrice}) added to cart!`);
+
   };
 
   return (
@@ -152,6 +210,23 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                     </button>
                   ) : (
                     <button
+
+                      ref={(el) => (buttonRefs.current[tree._id] = el)}
+                      onClick={(e) => handleAddToCart(tree, e)}
+                      disabled={addingTreeId === tree._id}
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+                    >
+                      {addingTreeId === tree._id ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Adding...
+                        </span>
+                      ) : (
+                        'Add to Cart'
+
                       onClick={() => handleAddToCart(tree)}
                       className={`w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg relative overflow-hidden bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white ${
                         addedItems.has(tree._id)
@@ -180,6 +255,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                       </span>
                       {addedItems.has(tree._id) && (
                         <div className="absolute inset-0 bg-green-400/30 animate-pulse rounded-xl"></div>
+
                       )}
                     </button>
                   )}
@@ -189,6 +265,51 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
           ))}
         </div>
       </div>
+
+      {/* Flying Tree Animation */}
+      <AnimatePresence>
+        {flyingTree && (
+          <motion.div
+            className="fixed z-[99999] pointer-events-none"
+            style={{
+              left: `${flyingTree.startPos.x}px`,
+              top: `${flyingTree.startPos.y}px`,
+            }}
+            initial={{
+              x: -40,
+              y: -40,
+              scale: 1,
+              opacity: 1,
+              rotate: 0
+            }}
+            animate={{
+              x: flyingTree.endPos.x - flyingTree.startPos.x - 40,
+              y: flyingTree.endPos.y - flyingTree.startPos.y - 40,
+              scale: 0.3,
+              opacity: 0.9,
+              rotate: 360
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0
+            }}
+            transition={{
+              duration: 0.8,
+              ease: [0.25, 0.1, 0.25, 1]
+            }}
+          >
+            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-green-500 shadow-2xl bg-white">
+              <Image
+                src={flyingTree.imageUrl}
+                alt="Flying tree"
+                width={80}
+                height={80}
+                className="object-cover w-full h-full"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
