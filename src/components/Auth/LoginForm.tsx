@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginForm() {
@@ -28,27 +28,41 @@ export default function LoginForm() {
       if (res?.error) {
         setError('Invalid email or password');
       } else {
-        // Check if there's a redirect parameter (e.g., from cart page)
-        if (redirectTo) {
-          router.push(redirectTo);
-        } else {
-          // Fetch the updated session to get user type
-          try {
-            const sessionResponse = await fetch('/api/auth/session');
-            const sessionData = await sessionResponse.json();
-            
+        // Fetch the updated session to check user role
+        try {
+          const sessionResponse = await fetch('/api/auth/session');
+          const sessionData = await sessionResponse.json();
+          
+          // Reject admin and wellwisher users - they must use their respective login routes
+          if (sessionData?.user?.role === 'admin') {
+            // Sign out the user and show error
+            await signOut({ redirect: false });
+            setError('Admin users must login through /admin/login');
+            setIsSubmitting(false);
+            return;
+          } else if (sessionData?.user?.role === 'wellwisher') {
+            // Sign out the user and show error
+            await signOut({ redirect: false });
+            setError('Well-wisher users must login through /wellwisher/login');
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // Check if there's a redirect parameter (e.g., from cart page)
+          if (redirectTo) {
+            router.push(redirectTo);
+          } else {
+            // Regular users - redirect based on userType
             if (sessionData?.user?.userType === 'individual') {
               router.push('/dashboard/individual/trees');
             } else if (sessionData?.user?.userType === 'company') {
               router.push('/dashboard/company/trees');
-            } else if (sessionData?.user?.role === 'admin') {
-              router.push('/admin');
             } else {
               router.push('/');
             }
-          } catch (_error) {
-            router.push('/');
           }
+        } catch (_error) {
+          router.push('/');
         }
       }
     } catch {

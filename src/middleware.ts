@@ -77,13 +77,19 @@ export async function middleware(request: NextRequest) {
     const userType = (session.user as { userType?: string }).userType;
     const userRole = (session.user as { role?: string }).role;
     
+    // Check role first (admin and wellwisher should be redirected to their pages)
+    if (userRole === 'admin') {
+      const url = new URL('/admin', request.url);
+      return NextResponse.redirect(url);
+    } else if (userRole === 'wellwisher') {
+      const url = new URL('/wellwisher', request.url);
+      return NextResponse.redirect(url);
+    }
+    
     // Redirect to appropriate dashboard based on user type
     if (pathname.startsWith('/dashboard/individual') && userType !== 'individual') {
       if (userType === 'company') {
         const url = new URL('/dashboard/company/trees', request.url);
-        return NextResponse.redirect(url);
-      } else if (userRole === 'admin') {
-        const url = new URL('/admin', request.url);
         return NextResponse.redirect(url);
       } else {
         const url = new URL('/', request.url);
@@ -94,9 +100,6 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/dashboard/company') && userType !== 'company') {
       if (userType === 'individual') {
         const url = new URL('/dashboard/individual/trees', request.url);
-        return NextResponse.redirect(url);
-      } else if (userRole === 'admin') {
-        const url = new URL('/admin', request.url);
         return NextResponse.redirect(url);
       } else {
         const url = new URL('/', request.url);
@@ -113,8 +116,12 @@ export async function middleware(request: NextRequest) {
       const userType = (session.user as { userType?: string }).userType;
       const userRole = (session.user as { role?: string }).role;
       
+      // Check role first (admin and wellwisher should be checked before userType)
       if (userRole === 'admin') {
         const url = new URL('/admin', request.url);
+        return NextResponse.redirect(url);
+      } else if (userRole === 'wellwisher') {
+        const url = new URL('/wellwisher', request.url);
         return NextResponse.redirect(url);
       } else if (userType === 'individual') {
         const url = new URL('/dashboard/individual/trees', request.url);

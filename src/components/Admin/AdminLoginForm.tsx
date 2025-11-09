@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
@@ -28,8 +28,25 @@ export default function AdminLoginForm() {
         setError('Invalid admin credentials');
       } else {
         // Check if user is admin after successful login
-        // This will be handled by the AuthGuard component
-        router.push('/admin');
+        try {
+          const sessionResponse = await fetch('/api/auth/session');
+          const sessionData = await sessionResponse.json();
+          
+          // Reject non-admin users - they must use the regular login route
+          if (sessionData?.user?.role !== 'admin') {
+            // Sign out the user and show error
+            await signOut({ redirect: false });
+            setError('Only admin users can login here. Please use the regular login page.');
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // User is admin - redirect to admin dashboard
+          router.push('/admin');
+        } catch (_error) {
+          setError('Failed to verify user role. Please try again.');
+          setIsSubmitting(false);
+        }
       }
     } catch {
       setError('Login failed. Please try again.');
