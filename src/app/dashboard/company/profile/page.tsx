@@ -397,36 +397,6 @@ export default function CompanyProfilePage() {
           </div>
         </motion.div>
       </div>
-
-      {/* Company Statistics */}
-      <motion.div
-        className="bg-white rounded-lg shadow"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Company Statistics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600 mb-2">0</div>
-              <div className="text-sm text-gray-600">Trees Adopted</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 mb-2">0</div>
-              <div className="text-sm text-gray-600">Corporate Gifts</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600 mb-2">1</div>
-              <div className="text-sm text-gray-600">Team Members</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600 mb-2">0</div>
-              <div className="text-sm text-gray-600">CO₂ Offset (kg)</div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
     </div>
   );
 }

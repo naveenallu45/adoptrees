@@ -1,18 +1,11 @@
 'use client';
 
-import { QuestionMarkCircleIcon, ChatBubbleLeftRightIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
-import { motion } from 'framer-motion';
+import { PhoneIcon, EnvelopeIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 
 export default function IndividualSupportPage() {
-  const [selectedCategory, setSelectedCategory] = useState('general');
-
-  const supportCategories = [
-    { id: 'general', name: 'General Support', icon: QuestionMarkCircleIcon },
-    { id: 'trees', name: 'Tree Management', icon: QuestionMarkCircleIcon },
-    { id: 'gifts', name: 'Gift Issues', icon: QuestionMarkCircleIcon },
-    { id: 'account', name: 'Account Issues', icon: QuestionMarkCircleIcon },
-  ];
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   const faqs = [
     {
@@ -44,7 +37,7 @@ export default function IndividualSupportPage() {
       </div>
 
       {/* Contact Options */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <motion.div
           className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer"
           initial={{ opacity: 0, y: 20 }}
@@ -53,14 +46,17 @@ export default function IndividualSupportPage() {
           whileHover={{ scale: 1.02 }}
         >
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-              <ChatBubbleLeftRightIcon className="h-6 w-6 text-green-600" />
+            <div className="mx-auto h-12 w-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mb-4">
+              <PhoneIcon className="h-6 w-6 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Live Chat</h3>
-            <p className="text-gray-600 mb-4">Get instant help from our support team</p>
-            <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
-              Start Chat
-            </button>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Phone Support</h3>
+            <p className="text-gray-600 mb-4">Call us at +91 9989479158</p>
+            <a 
+              href="tel:+919989479158"
+              className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium text-center"
+            >
+              Call Now
+            </a>
           </div>
         </motion.div>
 
@@ -72,92 +68,77 @@ export default function IndividualSupportPage() {
           whileHover={{ scale: 1.02 }}
         >
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-              <PhoneIcon className="h-6 w-6 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Phone Support</h3>
-            <p className="text-gray-600 mb-4">Call us at +1 (555) 123-4567</p>
-            <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-              Call Now
-            </button>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-              <EnvelopeIcon className="h-6 w-6 text-purple-600" />
+            <div className="mx-auto h-12 w-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mb-4">
+              <EnvelopeIcon className="h-6 w-6 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Email Support</h3>
-            <p className="text-gray-600 mb-4">Send us an email at support@adoptrees.com</p>
-            <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+            <p className="text-gray-600 mb-4">Send us an email at katikolakarthik@gmail.com</p>
+            <a 
+              href="mailto:katikolakarthik@gmail.com"
+              className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium text-center"
+            >
               Send Email
-            </button>
+            </a>
           </div>
         </motion.div>
       </div>
-
-      {/* Support Categories */}
-      <motion.div
-        className="bg-white rounded-lg shadow"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Support Categories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {supportCategories.map((category) => {
-              const Icon = category.icon;
-              return (
-                <motion.button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    selectedCategory === category.id
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Icon className="h-8 w-8 mx-auto mb-2 text-gray-600" />
-                  <p className="text-sm font-medium text-gray-900">{category.name}</p>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      </motion.div>
 
       {/* FAQ Section */}
       <motion.div
         className="bg-white rounded-lg shadow"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.3 }}
       >
         <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <motion.div
-                key={index}
-                className="border border-gray-200 rounded-lg p-4"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + index * 0.1 }}
-              >
-                <h3 className="font-semibold text-gray-900 mb-2">{faq.question}</h3>
-                <p className="text-gray-600">{faq.answer}</p>
-              </motion.div>
-            ))}
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent mb-6">Frequently Asked Questions</h2>
+          <div className="space-y-3">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaqIndex === index;
+              return (
+                <motion.div
+                  key={index}
+                  className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-green-300 transition-colors"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                >
+                  <button
+                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                    className="w-full p-5 flex items-center justify-between hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all"
+                  >
+                    <h3 className="text-lg font-bold text-gray-900 text-left pr-4">{faq.question}</h3>
+                    <motion.div
+                      initial={false}
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex-shrink-0"
+                    >
+                      {isOpen ? (
+                        <MinusIcon className="h-7 w-7 text-green-600" />
+                      ) : (
+                        <PlusIcon className="h-7 w-7 text-green-600" />
+                      )}
+                    </motion.div>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-5 pb-5">
+                          <p className="text-base text-gray-700 leading-relaxed">{faq.answer}</p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </motion.div>

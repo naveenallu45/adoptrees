@@ -290,7 +290,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                   {userType === 'individual' ? 'Your Adopted Trees' : 'Company Adopted Trees'}
                 </h2>
               </div>
-              {!publicId && (
+              {!publicId && orders.length > 0 && (
                 <motion.button
                   onClick={() => router.push(userType === 'individual' ? '/individuals' : '/companies')}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium"
