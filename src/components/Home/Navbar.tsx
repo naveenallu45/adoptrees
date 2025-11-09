@@ -16,7 +16,7 @@ export default function Navbar() {
   const { getTotalItems } = useCart();
 
   // Pages that should always have white navbar background
-  const fixedWhitePages = ['/individuals', '/companies', '/about'];
+  const fixedWhitePages = ['/individuals', '/companies', '/about', '/login', '/register'];
   const shouldUseWhiteBg = fixedWhitePages.includes(pathname) || isScrolled;
   // Pages where buttons should have green background
   const shouldUseGreenBg = fixedWhitePages.includes(pathname) || (mounted && isScrolled);

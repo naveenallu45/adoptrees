@@ -27,18 +27,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
   const { data: session } = useSession();
 
   const handleAddToCart = useCallback((tree: Tree) => {
-    // Check if user is logged in
-    if (!session) {
-      toast.error('Please login to add items to cart');
-      return;
-    }
-
-    // Check if user is an individual user
-    if (session.user.userType !== 'individual') {
-      toast.error('Only individual users can add individual trees to cart');
-      return;
-    }
-
+    // Allow adding to cart without login - login will be required at checkout
     addToCart({
       id: tree._id,
       name: tree.name,
@@ -50,7 +39,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
       adoptionType: 'self' // Default to self, can be changed in cart
     });
     toast.success(`${tree.name} (₹${tree.price}) added to cart!`);
-  }, [session, addToCart]);
+  }, [addToCart]);
 
   return (
     <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-white via-gray-50 to-green-50">
@@ -122,14 +111,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
 
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-2">
-                  {!session ? (
-                    <a
-                      href="/login?redirect=/individuals"
-                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105"
-                    >
-                      Add to Cart
-                    </a>
-                  ) : session.user.userType !== 'individual' ? (
+                  {session && session.user.userType !== 'individual' ? (
                     <button
                       disabled
                       className="w-full bg-gray-300 text-gray-500 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold cursor-not-allowed flex items-center justify-center"

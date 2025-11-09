@@ -290,7 +290,7 @@ export default function CartContent() {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-20 sm:pt-24 pb-16">
+    <div className="min-h-screen bg-white pt-20 sm:pt-24 md:pt-28 lg:pt-32 xl:pt-36 pb-16">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {cartItems.length === 0 ? (
           <div className="text-center py-12 sm:py-16">
@@ -389,7 +389,7 @@ export default function CartContent() {
 
             {/* Order Summary */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 sticky top-20 sm:top-24">
+              <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 sticky top-20 sm:top-24 md:top-28 lg:top-32 xl:top-36">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Order Summary</h3>
                 <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
                   <div className="flex justify-between text-sm sm:text-base">
