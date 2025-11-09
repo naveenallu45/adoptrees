@@ -208,12 +208,12 @@ export default function TreesManagement() {
         accessorKey: 'imageUrl',
         header: 'Image',
         cell: ({ row }) => (
-          <div className="relative h-12 w-12 overflow-hidden rounded-lg">
+          <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
             <Image
               src={row.original.imageUrl}
               alt={row.original.name}
               fill
-              className="object-cover"
+              className="object-contain"
             />
           </div>
         ),

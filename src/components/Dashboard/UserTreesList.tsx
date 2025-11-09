@@ -340,14 +340,14 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                     >
                       <div className="flex flex-col sm:flex-row gap-4">
                         {/* Tree Image */}
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm flex items-center justify-center">
                           {item.treeImageUrl ? (
                             <Image
                               src={item.treeImageUrl}
                               alt={item.treeName}
                               width={96}
                               height={96}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain"
                               onError={(_e) => {
                               }}
                             />
