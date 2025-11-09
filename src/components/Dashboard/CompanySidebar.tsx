@@ -79,7 +79,7 @@ export default function CompanySidebar() {
                 closeMobileSidebar();
               }}
               className={`
-                relative flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium
+                relative flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-bold
                 transition-all duration-200
                 ${
                   isActive
@@ -108,7 +108,7 @@ export default function CompanySidebar() {
       <div className="border-t border-blue-700 p-3 sm:p-4">
         <motion.button
           onClick={handleLogout}
-          className="flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium bg-black text-white transition-all duration-200 hover:bg-gray-800"
+          className="flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-bold bg-white text-black transition-all duration-200 hover:bg-gray-100"
           whileHover={{ x: 4 }}
           whileTap={{ scale: 0.98 }}
         >

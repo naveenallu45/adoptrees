@@ -36,8 +36,13 @@ interface Order {
   updatedAt: string;
   wellwisherTasks?: Array<{
     status: 'pending' | 'in_progress' | 'completed';
+    location?: string;
     plantingDetails?: {
       plantedAt: string;
+      plantingLocation?: {
+        type: string;
+        coordinates: [number, number];
+      };
     };
   }>;
 }
@@ -73,30 +78,77 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     let totalTrees = 0;
     let totalOxygen = 0; // in kg
     let lastPlantingDate: Date | null = null;
+    const uniqueLocations = new Set<string>();
+    const uniqueCountries = new Set<string>();
+    let completedOrdersCount = 0;
 
     ordersData.forEach((order) => {
-      // Count trees from completed/planted orders or orders with completed planting tasks
+      // Count trees from confirmed/paid orders (adopted trees)
+      // Also count planted/completed orders
       const hasCompletedPlanting = order.wellwisherTasks?.some(
         task => task.status === 'completed' && task.plantingDetails?.plantedAt
       );
       
-      const isPlanted = order.status === 'planted' || 
-                       order.status === 'completed' || 
-                       hasCompletedPlanting;
+      // Include confirmed orders (adopted trees) and planted/completed orders
+      const isAdoptedOrPlanted = order.paymentStatus === 'paid' && (
+        order.status === 'confirmed' || 
+        order.status === 'planted' || 
+        order.status === 'completed' || 
+        hasCompletedPlanting
+      );
 
-      if (isPlanted) {
+      if (isAdoptedOrPlanted) {
+        // Only count as "completed" for impacts if actually planted
+        const isActuallyPlanted = order.status === 'planted' || 
+                                  order.status === 'completed' || 
+                                  hasCompletedPlanting;
+        
+        if (isActuallyPlanted) {
+          completedOrdersCount++;
+        }
+        
         order.items.forEach((item) => {
           totalTrees += item.quantity;
-          totalOxygen += item.oxygenKgs * item.quantity;
+          // Only count oxygen/CO2 for actually planted trees
+          if (isActuallyPlanted) {
+            totalOxygen += item.oxygenKgs * item.quantity;
+          }
         });
 
-        // Find the latest planting date
+        // Find the latest planting date and collect location data
         if (order.wellwisherTasks) {
           order.wellwisherTasks.forEach((task) => {
             if (task.plantingDetails?.plantedAt) {
               const plantingDate = new Date(task.plantingDetails.plantedAt);
               if (!lastPlantingDate || plantingDate > lastPlantingDate) {
                 lastPlantingDate = plantingDate;
+              }
+
+              // Collect unique locations
+              if (task.location) {
+                uniqueLocations.add(task.location);
+              } else if (task.plantingDetails?.plantingLocation?.coordinates) {
+                // Use coordinates as location identifier (rounded to ~1km precision)
+                const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
+                const locationKey = `${Math.round(lat * 10) / 10},${Math.round(lng * 10) / 10}`;
+                uniqueLocations.add(locationKey);
+              }
+
+              // For countries, we'll use a simple heuristic based on coordinates
+              // India is roughly between 6.5°N to 35.5°N and 68°E to 97°E
+              if (task.plantingDetails?.plantingLocation?.coordinates) {
+                const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
+                // Simple country detection based on coordinates
+                if (lat >= 6.5 && lat <= 35.5 && lng >= 68 && lng <= 97) {
+                  uniqueCountries.add('India');
+                } else if (lat >= 24 && lat <= 36 && lng >= -125 && lng <= -66) {
+                  uniqueCountries.add('USA');
+                } else if (lat >= 35 && lat <= 72 && lng >= -10 && lng <= 40) {
+                  uniqueCountries.add('Europe');
+                } else {
+                  // Default to a generic country identifier
+                  uniqueCountries.add('Other');
+                }
               }
             }
           });
@@ -109,13 +161,22 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     // Converting to tonnes (divide by 1000)
     const co2Absorbed = (totalOxygen * 0.715) / 1000;
 
+    // Calculate forests (unique locations)
+    const forestsCount = uniqueLocations.size > 0 ? uniqueLocations.size : 0;
+
+    // Calculate countries (default to 1 for India if no location data)
+    const countriesCount = uniqueCountries.size > 0 ? uniqueCountries.size : 1;
+
+    // Calculate impacts (number of completed orders)
+    const impactsCount = completedOrdersCount;
+
     setStats({
       treesPlanted: totalTrees,
       co2Absorbed: co2Absorbed,
       lastPlanting: lastPlantingDate,
-      forests: 0, // Can be calculated based on location clusters in future
-      countries: 1, // Default to 1 for now
-      impacts: 0, // Can be calculated based on impact metrics in future
+      forests: forestsCount,
+      countries: countriesCount,
+      impacts: impactsCount,
     });
   }, []);
 
@@ -195,18 +256,18 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
 
   return (
     <motion.div
-      className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg shadow-xl overflow-hidden"
+      className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg shadow-xl overflow-hidden w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="p-6 text-white">
+      <div className="p-4 sm:p-5 md:p-6 text-white">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {/* Logo placeholder - circular */}
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-green-800 font-bold text-xs text-center px-2">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
                 {getUserDisplayName()
                   .split(' ')
                   .map(n => n[0])
@@ -216,14 +277,14 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
               </span>
             </div>
             <div>
-              <h2 className="text-2xl font-bold mb-1">{getForestName()}</h2>
-              <p className="text-green-200 text-sm">{getLastPlantingText()}</p>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-1">{getForestName()}</h2>
+              <p className="text-green-200 text-xs sm:text-sm">{getLastPlantingText()}</p>
             </div>
           </div>
         </div>
 
         {/* Description */}
-        <div className="mb-6 text-green-100 text-sm leading-relaxed">
+        <div className="mb-4 sm:mb-6 text-green-100 text-xs sm:text-sm leading-relaxed">
           <p>
             Every adoption contributes to environmental sustainability and helps restore our planet. 
             Together we are planting trees and making a positive impact on our environment.
@@ -231,52 +292,52 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
         </div>
 
         {/* Stats Grid */}
-        <div className="flex flex-row overflow-x-auto gap-3 sm:gap-4 sm:grid sm:grid-cols-3 md:grid-cols-5 mt-6 scrollbar-hide">
+        <div className="flex flex-row overflow-x-auto gap-2 sm:gap-3 md:gap-4 sm:grid sm:grid-cols-3 md:grid-cols-5 mt-4 sm:mt-6 scrollbar-hide pb-2 sm:pb-0">
           {/* Trees Planted */}
-          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
-            <div className="flex justify-center mb-2">
-              <TreeIcon className="h-6 w-6 text-green-300" />
+          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
+            <div className="flex justify-center mb-1 sm:mb-2">
+              <TreeIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.treesPlanted}</div>
-            <div className="text-xs text-green-200">Trees planted</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.treesPlanted}</div>
+            <div className="text-[10px] sm:text-xs text-green-200">Trees planted</div>
           </div>
 
           {/* CO2 Absorbed */}
-          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
-            <div className="flex justify-center mb-2">
-              <CloudIcon className="h-6 w-6 text-green-300" />
+          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
+            <div className="flex justify-center mb-1 sm:mb-2">
+              <CloudIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">
               {stats.co2Absorbed.toFixed(2)} t*
             </div>
-            <div className="text-xs text-green-200">CO₂ absorbed</div>
+            <div className="text-[10px] sm:text-xs text-green-200">CO₂ absorbed</div>
           </div>
 
           {/* Forests */}
-          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
-            <div className="flex justify-center mb-2">
-              <MapIcon className="h-6 w-6 text-green-300" />
+          <div className="hidden sm:block text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
+            <div className="flex justify-center mb-1 sm:mb-2">
+              <MapIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.forests}</div>
-            <div className="text-xs text-green-200">Forests</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.forests}</div>
+            <div className="text-[10px] sm:text-xs text-green-200">Forests</div>
           </div>
 
           {/* Countries */}
-          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
-            <div className="flex justify-center mb-2">
-              <GlobeAltIcon className="h-6 w-6 text-green-300" />
+          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
+            <div className="flex justify-center mb-1 sm:mb-2">
+              <GlobeAltIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.countries}</div>
-            <div className="text-xs text-green-200">Countries</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.countries}</div>
+            <div className="text-[10px] sm:text-xs text-green-200">Countries</div>
           </div>
 
           {/* Impacts */}
-          <div className="text-center flex-shrink-0 min-w-[80px] sm:min-w-0">
-            <div className="flex justify-center mb-2">
-              <ImpactIcon className="h-6 w-6 text-green-300" />
+          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
+            <div className="flex justify-center mb-1 sm:mb-2">
+              <ImpactIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">{stats.impacts}</div>
-            <div className="text-xs text-green-200">Impacts</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.impacts}</div>
+            <div className="text-[10px] sm:text-xs text-green-200">Impacts</div>
           </div>
         </div>
       </div>

@@ -12,9 +12,6 @@ export default function Banner() {
                 Our Story
               </span>
             </div>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-8">
-              Planting Hope, One Tree at a Time
-          </h2>
           </div>
           
           <div className="bg-white rounded-3xl shadow-2xl p-8 sm:p-12 md:p-16 border border-gray-100">
@@ -26,13 +23,13 @@ export default function Banner() {
             
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 sm:p-10 my-10 border-l-4 border-green-500">
               <p className="text-2xl sm:text-3xl text-green-800 font-semibold text-center italic leading-relaxed">
-                "Green is the Colour of Safety."
+                &ldquo;Green is the Colour of Safety.&rdquo;
               </p>
             </div>
             
             <p className="text-xl sm:text-2xl text-gray-700 leading-relaxed font-light">
               Today, Adoptrees unites people across generations — from young dreamers who wish to heal the world 
-              to wise elders who wish to give back. Together, we're building a living legacy that stands tall, 
+              to wise elders who wish to give back. Together, we&apos;re building a living legacy that stands tall, 
               gives shade, and sustains hope for centuries.
             </p>
           </div>
@@ -68,7 +65,7 @@ export default function Banner() {
                   </svg>
                 </div>
                 <blockquote className="text-2xl sm:text-3xl md:text-4xl text-white italic mb-6 leading-relaxed font-light">
-                  "When you save a life, you create a story. When you plant a tree, you create a future."
+                  &ldquo;When you save a life, you create a story. When you plant a tree, you create a future.&rdquo;
                 </blockquote>
                 <div className="border-t border-green-400/50 pt-6">
                   <p className="text-xl sm:text-2xl font-bold text-white mb-2">
@@ -88,7 +85,7 @@ export default function Banner() {
           <div className="text-center mb-12">
             <div className="inline-block mb-4">
               <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider bg-blue-50 px-4 py-2 rounded-full">
-                Founder's Message
+                Founder&apos;s Message
               </span>
             </div>
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-4">
@@ -98,7 +95,7 @@ export default function Banner() {
           
           <div className="bg-gradient-to-br from-green-100 via-emerald-100 to-green-100 rounded-3xl p-8 sm:p-12 md:p-16 shadow-2xl border border-green-300 relative">
             {/* Decorative Quote Mark */}
-            <div className="absolute top-8 left-8 text-green-200 text-9xl font-serif leading-none">"</div>
+            <div className="absolute top-8 left-8 text-green-200 text-9xl font-serif leading-none">&ldquo;</div>
             
             <div className="relative z-10 space-y-6">
               <p className="text-xl sm:text-2xl text-gray-700 leading-relaxed font-light pl-8">
@@ -111,7 +108,7 @@ export default function Banner() {
               </p>
               <p className="text-xl sm:text-2xl text-gray-700 leading-relaxed font-light pl-8">
                 Adoptrees is my way of teaching the world to give back — not through talk, but through roots. 
-                When you plant a tree, you don't just grow wood and leaves — you grow faith. 
+                When you plant a tree, you don&apos;t just grow wood and leaves — you grow faith. 
                 And when we have faith in the Earth, the Earth heals us back.
               </p>
             </div>
@@ -196,7 +193,7 @@ export default function Banner() {
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-bold text-amber-800 mb-4">Our Philosophy</h3>
                 <p className="text-gray-700 leading-relaxed mb-4 text-base font-light">
-                  We believe that planting trees is not an event — it's a relationship.
+                  We believe that planting trees is not an event — it&apos;s a relationship.
                 </p>
                 <div className="bg-amber-100/50 rounded-xl p-4 border-l-4 border-amber-400">
                   <p className="text-gray-700 text-base italic leading-relaxed">

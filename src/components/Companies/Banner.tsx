@@ -21,7 +21,7 @@ export default function Banner() {
           
           <p className="text-lg sm:text-xl md:text-2xl text-blue-50 max-w-3xl mx-auto mb-8 sm:mb-10 leading-relaxed font-light">
             Join leading companies in creating a sustainable future. Partner with us to make a meaningful impact on the environment and your brand. 
-            Your corporate commitment today shapes tomorrow's world.
+            Your corporate commitment today shapes tomorrow&apos;s world.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

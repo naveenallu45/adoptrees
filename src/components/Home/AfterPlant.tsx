@@ -76,8 +76,8 @@ export default function AfterPlant() {
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-8 leading-tight">
-            And after you plant, what happens?
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-8 leading-tight">
+            After plant what happens?
           </h2>
           
           {/* Toggle Switch */}
@@ -164,10 +164,10 @@ export default function AfterPlant() {
           <div className="lg:hidden mt-16 space-y-8">
             {currentContent.features.map((feature, index) => (
               <div key={index} className="bg-white rounded-2xl p-6 shadow-lg">
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                   {feature.description}
                 </p>
               </div>

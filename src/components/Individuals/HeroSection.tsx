@@ -1,6 +1,6 @@
 export default function HeroSection() {
   return (
-    <section id="individuals-hero" className="min-h-[70vh] relative overflow-hidden bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
+    <section id="individuals-hero" className="mt-16 sm:mt-20 md:mt-24 min-h-[50vh] sm:min-h-[60vh] md:min-h-[60vh] relative overflow-hidden bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-10 w-72 h-72 bg-green-400 rounded-full blur-3xl"></div>
@@ -9,7 +9,7 @@ export default function HeroSection() {
       </div>
 
       {/* Content */}
-      <div className="relative z-20 min-h-[70vh] flex items-center justify-center pt-12 sm:pt-14 md:pt-16 lg:pt-18">
+      <div className="relative z-20 min-h-[50vh] sm:min-h-[60vh] md:min-h-[60vh] flex items-center justify-center pt-8 sm:pt-12 md:pt-14 lg:pt-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {/* Main Heading */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-white mb-6 sm:mb-8 drop-shadow-2xl tracking-tight">

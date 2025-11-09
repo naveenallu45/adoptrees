@@ -8,8 +8,6 @@ import toast from 'react-hot-toast';
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { useState } from 'react';
-
 
 interface Tree {
   _id: string;
@@ -211,7 +209,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                   ) : (
                     <button
 
-                      ref={(el) => (buttonRefs.current[tree._id] = el)}
+                      ref={(el) => { buttonRefs.current[tree._id] = el; }}
                       onClick={(e) => handleAddToCart(tree, e)}
                       disabled={addingTreeId === tree._id}
                       className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
@@ -225,37 +223,28 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                           Adding...
                         </span>
                       ) : (
-                        'Add to Cart'
-
-                      onClick={() => handleAddToCart(tree)}
-                      className={`w-full px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg relative overflow-hidden bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white ${
-                        addedItems.has(tree._id)
-                          ? 'scale-105'
-                          : 'transform hover:scale-105'
-                      }`}
-                    >
-                      <span className={`flex items-center gap-2 transition-all duration-300 ${
-                        addedItems.has(tree._id) ? 'text-white' : 'text-white'
-                      }`}>
-                        {addedItems.has(tree._id) ? (
-                          <>
-                            <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>Added!</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
-                            </svg>
-                            <span>Add to Cart</span>
-                          </>
-                        )}
-                      </span>
+                        <span className={`flex items-center gap-2 transition-all duration-300 ${
+                          addedItems.has(tree._id) ? 'text-white' : 'text-white'
+                        }`}>
+                          {addedItems.has(tree._id) ? (
+                            <>
+                              <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span>Added!</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
+                              </svg>
+                              <span>Add to Cart</span>
+                            </>
+                          )}
+                        </span>
+                      )}
                       {addedItems.has(tree._id) && (
                         <div className="absolute inset-0 bg-green-400/30 animate-pulse rounded-xl"></div>
-
                       )}
                     </button>
                   )}

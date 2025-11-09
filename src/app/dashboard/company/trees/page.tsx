@@ -8,12 +8,16 @@ export default function CompanyTreesPage() {
   const searchParams = useSearchParams();
   const publicId = searchParams.get('publicId') || undefined;
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Forest Profile Card */}
-      <ForestProfileCard userType="company" publicId={publicId} />
+      <div className="w-full">
+        <ForestProfileCard userType="company" publicId={publicId} />
+      </div>
 
       {/* User Trees List Component */}
-      <UserTreesList userType="company" publicId={publicId} />
+      <div className="w-full">
+        <UserTreesList userType="company" publicId={publicId} />
+      </div>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export default function CompanyorPerson() {
               
               {/* CTA Button */}
               <div className="pt-4">
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full font-semibold hover:bg-white/30 transition-all duration-300 group-hover:scale-105 shadow-lg">
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-base font-semibold hover:bg-white/30 transition-all duration-300 group-hover:scale-105 shadow-lg">
                   <span>Explore Individual Plans</span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -58,7 +58,7 @@ export default function CompanyorPerson() {
 
             {/* Content */}
             <div className="space-y-3 sm:space-y-4">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight tracking-tight group-hover:scale-105 transition-transform duration-300">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 leading-tight tracking-tight group-hover:scale-105 transition-transform duration-300 whitespace-nowrap">
                 Are you a company?
               </h2>
               <p className="text-base sm:text-lg md:text-xl text-gray-800 leading-relaxed font-medium max-w-lg">
@@ -67,7 +67,7 @@ export default function CompanyorPerson() {
               
               {/* CTA Button */}
               <div className="pt-4">
-                <div className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-all duration-300 group-hover:scale-105 shadow-lg">
+                <div className="inline-flex items-center gap-2 bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-base font-semibold hover:bg-green-700 transition-all duration-300 group-hover:scale-105 shadow-lg">
                   <span>Explore Corporate Programs</span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />

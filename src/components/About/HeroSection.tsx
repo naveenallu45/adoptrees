@@ -41,7 +41,7 @@ export default function HeroSection() {
           {/* Subtitle */}
           <p className="text-lg sm:text-xl md:text-2xl text-white/95 max-w-4xl mx-auto mb-8 sm:mb-10 drop-shadow-lg px-4 leading-relaxed font-light">
             The greatest monument one can leave behind is a living tree — because trees remember. 
-            They breathe your love, carry your name, and tell your story to the wind long after you're gone.
+            They breathe your love, carry your name, and tell your story to the wind long after you&apos;re gone.
           </p>
 
           {/* Scroll Indicator */}
