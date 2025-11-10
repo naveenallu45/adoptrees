@@ -330,13 +330,13 @@ export default function TreeDetailPage() {
             className="flex justify-center lg:justify-start"
           >
             <div className="relative w-full max-w-xs">
-              <div className="relative aspect-square rounded-lg overflow-hidden shadow-xl bg-gray-100 flex items-center justify-center">
+              <div className="relative aspect-square rounded-lg overflow-hidden shadow-xl">
                 {item.treeImageUrl ? (
                   <Image
                     src={item.treeImageUrl}
                     alt={item.treeName}
                     fill
-                    className="object-contain"
+                    className="object-cover"
                     sizes="(max-width: 768px) 100vw, 25vw"
                   />
                 ) : (
@@ -508,7 +508,7 @@ export default function TreeDetailPage() {
                     src={img.url}
                     alt={img.caption || 'Tree photo'}
                     fill
-                    className="object-contain"
+                    className="object-cover"
                     sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
                   />
                   {img.type === 'planting' && (
