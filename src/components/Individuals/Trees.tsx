@@ -124,7 +124,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
           {trees.map((tree) => (
             <div 
               key={tree._id} 
-              className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-green-300 transform hover:-translate-y-2"
+              className="group bg-green-100 rounded-2xl shadow-lg overflow-hidden border-[3.08px] border-green-500"
             >
               {/* Tree Image */}
               <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
@@ -132,33 +132,31 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
                   src={tree.imageUrl}
                   alt={tree.name}
                   fill
-                  className="object-contain object-center group-hover:scale-110 transition-transform duration-500"
+                  className="object-contain object-center"
                   loading="lazy"
                   quality={85}
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   placeholder="blur"
                   blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
                 />
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
 
               {/* Product Information */}
               <div className="p-4 sm:p-5">
                 {/* Tree Name */}
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-green-700 transition-colors">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 line-clamp-2">
                   {tree.name}
                 </h3>
 
                 {/* Price and Oxygen Contribution */}
                 <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Price</p>
-                    <span className="text-xl sm:text-2xl font-bold text-green-600">₹{tree.price}</span>
+                    <p className="text-xs text-gray-900 mb-1">Price</p>
+                    <span className="text-xl sm:text-2xl font-bold text-gray-900">₹{tree.price}</span>
                   </div>
                   <div className="text-right bg-green-50 rounded-lg px-2.5 py-1.5">
-                    <p className="text-xs text-gray-600 mb-1">Oxygen Production</p>
-                    <p className="text-xs sm:text-sm font-bold text-green-700">{tree.oxygenKgs} kg/year</p>
+                    <p className="text-xs text-gray-900 mb-1">Oxygen Production</p>
+                    <p className="text-xs sm:text-sm font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                   </div>
                 </div>
 
@@ -177,7 +175,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
                       ref={(el) => { buttonRefs.current[tree._id] = el; }}
                       onClick={(e) => handleAddToCart(tree, e)}
                       disabled={addingTreeId === tree._id}
-                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
                     >
                       {addingTreeId === tree._id ? (
                         <span className="flex items-center gap-2">

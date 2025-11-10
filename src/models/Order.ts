@@ -280,8 +280,7 @@ const OrderSchema: Schema = new Schema({
     },
     // Growth updates - required every 30 days after completion
     nextGrowthUpdateDue: {
-      type: Date,
-      index: true
+      type: Date
     },
     growthUpdates: [{
       updateId: {
