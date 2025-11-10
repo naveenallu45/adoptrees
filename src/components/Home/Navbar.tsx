@@ -70,7 +70,7 @@ export default function Navbar() {
                 className="flex items-center transition-transform duration-300 hover:scale-105 active:scale-95"
                 aria-label="Adoptrees Home"
               >
-                <div className="relative w-[74px] h-[74px] sm:w-[74px] sm:h-[74px] md:w-[88px] md:h-[88px] lg:w-[102px] lg:h-[102px] xl:w-[116px] xl:h-[116px] 2xl:w-[130px] 2xl:h-[130px] flex-shrink-0">
+                <div className="relative w-[56px] h-[56px] sm:w-[56px] sm:h-[56px] md:w-[67px] md:h-[67px] lg:w-[78px] lg:h-[78px] xl:w-[88px] xl:h-[88px] 2xl:w-[99px] 2xl:h-[99px] flex-shrink-0">
                   <Image
                     src={isMobile || shouldUseWhiteBg 
                       ? "https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
@@ -79,7 +79,7 @@ export default function Navbar() {
                     alt="Adoptrees Logo"
                     fill
                     className="object-contain object-center transition-opacity duration-300"
-                    sizes="(max-width: 640px) 74px, (max-width: 768px) 74px, (max-width: 1024px) 88px, (max-width: 1280px) 102px, (max-width: 1536px) 116px, 130px"
+                    sizes="(max-width: 640px) 56px, (max-width: 768px) 56px, (max-width: 1024px) 67px, (max-width: 1280px) 78px, (max-width: 1536px) 88px, 99px"
                     priority
                     quality={90}
                   />
