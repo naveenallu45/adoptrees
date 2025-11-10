@@ -310,46 +310,49 @@ export default function TreeDetailPage() {
   allImages.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-900 rounded-lg shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-900">
       {/* Main Content */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Back Button */}
         <button
           onClick={() => router.back()}
-          className="mb-5 inline-flex items-center bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+          className="mb-6 inline-flex items-center bg-green-700 hover:bg-green-600 text-white border-2 border-green-600 px-5 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md font-medium"
           type="button"
         >
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
-          <span className="font-medium">Back to Trees</span>
+          <span>Back to Trees</span>
         </button>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        {/* Hero Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
           {/* Left Side - Tree Photo */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex justify-center lg:justify-start"
           >
-            <div className="relative w-full max-w-xs">
-              <div className="relative aspect-square rounded-lg overflow-hidden shadow-xl">
-                {item.treeImageUrl ? (
-                  <Image
-                    src={item.treeImageUrl}
-                    alt={item.treeName}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 25vw"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                    <span className="text-gray-500">No Image</span>
-                  </div>
-                )}
-              </div>
-              {/* Adopted Name/ID */}
-              <div className="mt-2.5 bg-green-800 text-white text-center py-2 px-4 rounded-lg">
-                <span className="font-mono text-sm font-semibold">
-                  {order.orderId ? order.orderId.slice(-8).toUpperCase() : order._id.slice(-8).toUpperCase()}
-                </span>
+            <div className="relative w-full max-w-sm">
+              <div className="bg-amber-50 rounded-2xl p-3 border-2 border-amber-200 shadow-xl">
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-white">
+                  {item.treeImageUrl ? (
+                    <Image
+                      src={item.treeImageUrl}
+                      alt={item.treeName}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 25vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <span className="text-gray-400">No Image</span>
+                    </div>
+                  )}
+                </div>
+                {/* Tree ID */}
+                <div className="mt-3 text-center">
+                  <p className="text-green-800 font-semibold text-sm">
+                    ID: {order.orderId ? order.orderId.slice(-8).toUpperCase() : order._id.slice(-8).toUpperCase()}
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -358,41 +361,56 @@ export default function TreeDetailPage() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="space-y-5"
+            className="space-y-6 flex flex-col justify-center"
           >
-            {/* Header with Share Button */}
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-4xl sm:text-5xl font-bold text-white mb-1.5 drop-shadow-lg">
-                  {item.treeName}
-                </h1>
-                <p className="text-xl sm:text-2xl text-green-100 italic font-light">
-                  {scientificName}
-                </p>
+            {/* Header */}
+            <div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-3 drop-shadow-lg">
+                {item.treeName}
+              </h1>
+              <p className="text-xl sm:text-2xl text-green-100 italic font-light mb-4">
+                {scientificName}
+              </p>
+              
+              {/* Pill Tags */}
+              <div className="flex flex-wrap gap-3 mb-6">
+                <div className="bg-green-800 rounded-full px-4 py-2 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="text-white text-sm font-medium">Photo</span>
+                </div>
+                <div className="bg-green-800 rounded-full px-4 py-2 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="text-white text-sm font-medium">Location</span>
+                </div>
+                <div className="bg-green-800 rounded-full px-4 py-2 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                  </svg>
+                  <span className="text-white text-sm font-medium">Weather</span>
+                </div>
               </div>
-              <button
-                className="bg-green-700 hover:bg-green-600 text-white p-3 rounded-lg shadow-lg transition-colors"
-                type="button"
-                title="Share"
-              >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-              </button>
             </div>
 
             {/* My Connections */}
             {order.assignedWellwisher && (
-              <div className="bg-green-800 rounded-lg p-4 shadow-sm">
-                <h3 className="text-white font-semibold mb-2.5">My connections</h3>
-                <div className="bg-green-900 rounded-lg p-3">
-                  <p className="text-green-100 text-sm mb-1.5">Planted by</p>
+              <div>
+                <h3 className="text-white font-semibold mb-3 text-lg">My connections</h3>
+                <div className="bg-amber-50 rounded-2xl p-5 border-2 border-amber-200 shadow-lg">
+                  <p className="text-green-800 font-semibold mb-2">Planted by</p>
                   <div className="flex items-center">
-                    <div className="bg-white rounded-lg p-2 mr-3">
-                      <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                    <div className="bg-white rounded-xl p-3 mr-4 shadow-md">
+                      <CheckCircleIcon className="h-7 w-7 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-white font-semibold">{wellwisherName || 'Wellwisher'}</p>
+                      <p className="text-green-800 font-bold text-lg">
+                        {wellwisherName || 'Wellwisher'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -406,135 +424,196 @@ export default function TreeDetailPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10"
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
         >
           {/* Oxygen Production */}
-          <div className="bg-amber-100 rounded-2xl shadow-xl p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-3 text-center">Oxygen Production</h3>
-            <div className="flex items-center justify-center">
-              <div className="relative w-40 h-40">
-                <svg className="transform -rotate-90 w-40 h-40">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative overflow-hidden">
+            {/* Percentage Indicator - Top Right */}
+            <div className="absolute top-6 right-6">
+              <div className="relative w-20 h-20">
+                <svg className="transform -rotate-90 w-20 h-20">
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="68"
+                    cx="40"
+                    cy="40"
+                    r="36"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="none"
-                    className="text-green-100"
+                    className="text-gray-200"
                   />
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="68"
+                    cx="40"
+                    cy="40"
+                    r="36"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="none"
-                    strokeDasharray={`${Math.min((currentOxygen / 50) * 427.3, 427.3)} 427.3`}
-                    className="text-green-600"
+                    strokeDasharray={`${Math.min((currentOxygen / item.oxygenKgs) * 226, 226)} 226`}
+                    className="text-emerald-600"
                     strokeLinecap="round"
                   />
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold text-gray-900">{currentOxygen.toFixed(2)}</span>
-                  <span className="text-base text-gray-900 font-medium">kg/year</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold text-emerald-600">
+                    {Math.round((currentOxygen / item.oxygenKgs) * 100)}%
+                  </span>
                 </div>
               </div>
             </div>
-            <p className="text-center text-gray-900 mt-3 text-sm">
-              This tree produces {currentOxygen.toFixed(2)} kg of oxygen annually, contributing to cleaner air.
-            </p>
+
+            <div className="pr-24">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Oxygen Production</h3>
+              
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-4xl font-bold text-gray-900">{currentOxygen.toFixed(2)}</span>
+                  <span className="text-lg text-gray-600 font-medium">kg/year</span>
+                </div>
+                <p className="text-sm text-gray-500">Annual production rate</p>
+              </div>
+            </div>
+            
+            <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-100">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                This tree produces <span className="font-semibold text-emerald-700">{currentOxygen.toFixed(2)} kg</span> of oxygen annually, equivalent to <span className="font-semibold text-emerald-700">{Math.round(currentOxygen * 2.2)}</span> people's annual oxygen needs, contributing to cleaner air and healthier environment.
+              </p>
+            </div>
           </div>
 
           {/* CO2 Absorption */}
-          <div className="bg-amber-100 rounded-2xl shadow-xl p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-3 text-center">CO₂ Absorption</h3>
-            <div className="flex items-center justify-center">
-              <div className="relative w-40 h-40">
-                <svg className="transform -rotate-90 w-40 h-40">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative overflow-hidden">
+            {/* Percentage Indicator - Top Right */}
+            <div className="absolute top-6 right-6">
+              <div className="relative w-20 h-20">
+                <svg className="transform -rotate-90 w-20 h-20">
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="68"
+                    cx="40"
+                    cy="40"
+                    r="36"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="none"
-                    className="text-blue-100"
+                    className="text-gray-200"
                   />
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="68"
+                    cx="40"
+                    cy="40"
+                    r="36"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="none"
-                    strokeDasharray={`${Math.min((currentCO2 / 35) * 427.3, 427.3)} 427.3`}
-                    className="text-blue-600"
+                    strokeDasharray={`${Math.min((currentCO2 / (item.oxygenKgs * 0.7)) * 226, 226)} 226`}
+                    className="text-cyan-600"
                     strokeLinecap="round"
                   />
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold text-gray-900">{currentCO2.toFixed(2)}</span>
-                  <span className="text-base text-gray-900 font-medium">kg/year</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold text-cyan-600">
+                    {Math.round((currentCO2 / (item.oxygenKgs * 0.7)) * 100)}%
+                  </span>
                 </div>
               </div>
             </div>
-            <p className="text-center text-gray-900 mt-3 text-sm">
-              This tree absorbs {currentCO2.toFixed(2)} kg of CO₂ annually, helping combat climate change.
-            </p>
+
+            <div className="pr-24">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">CO₂ Absorption</h3>
+              
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-4xl font-bold text-gray-900">{currentCO2.toFixed(2)}</span>
+                  <span className="text-lg text-gray-600 font-medium">kg/year</span>
+                </div>
+                <p className="text-sm text-gray-500">Annual absorption rate</p>
+              </div>
+            </div>
+            
+            <div className="bg-cyan-50 rounded-xl p-5 border border-cyan-100">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                This tree absorbs <span className="font-semibold text-cyan-700">{currentCO2.toFixed(2)} kg</span> of CO₂ annually, offsetting emissions from <span className="font-semibold text-cyan-700">{Math.round(currentCO2 / 4.6)}</span> cars per year, helping combat climate change and reduce carbon footprint.
+              </p>
+            </div>
           </div>
         </motion.div>
 
-        {/* Tree Gallery */}
-        {allImages.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mb-10"
-          >
-            <h2 className="text-3xl font-bold text-gray-900 mb-5">Tree Gallery</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {allImages.map((img, idx) => (
-                <div
-                  key={idx}
-                  className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group shadow-md"
-                  onClick={() => {
-                    setAllImagesForModal(allImages);
-                    setSelectedImage({ url: img.url, caption: img.caption, index: idx });
-                  }}
-                >
-                  <Image
-                    src={img.url}
-                    alt={img.caption || 'Tree photo'}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                  />
-                  {img.type === 'planting' && (
-                    <div className="absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded">
-                      Planting
-                    </div>
-                  )}
-                  {img.type === 'growth' && (
-                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                      Growth
-                    </div>
-                  )}
-                </div>
-              ))}
+        {/* Your Trees Gallery */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-12"
+        >
+          <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Your Trees Gallery</h2>
+                <p className="text-gray-600 text-lg">
+                  {allImages.length > 0 
+                    ? `Photos uploaded by your wellwisher (${allImages.length} ${allImages.length === 1 ? 'photo' : 'photos'})`
+                    : 'No photos uploaded yet. Your wellwisher will share updates here soon!'
+                  }
+                </p>
+              </div>
             </div>
-          </motion.section>
-        )}
+            
+            {allImages.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {allImages.map((img, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden cursor-pointer hover:scale-105 transition-all duration-300 group shadow-lg hover:shadow-2xl"
+                    onClick={() => {
+                      setAllImagesForModal(allImages);
+                      setSelectedImage({ url: img.url, caption: img.caption, index: idx });
+                    }}
+                  >
+                    <Image
+                      src={img.url}
+                      alt={img.caption || 'Tree photo'}
+                      fill
+                      className="object-cover group-hover:brightness-110 transition-all duration-300"
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        {img.caption && (
+                          <p className="text-white text-xs font-medium truncate">{img.caption}</p>
+                        )}
+                      </div>
+                    </div>
+                    {img.type === 'planting' && (
+                      <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm">
+                        🌱 Planting
+                      </div>
+                    )}
+                    {img.type === 'growth' && (
+                      <div className="absolute top-3 left-3 bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm">
+                        📸 Growth Update
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-dashed border-green-200">
+                <p className="text-gray-600 text-lg font-medium">Gallery will appear here</p>
+                <p className="text-gray-500 text-sm mt-2">Your wellwisher will upload photos of your tree's journey</p>
+              </div>
+            )}
+          </div>
+        </motion.section>
 
         {/* Tree Benefits */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mb-10"
+          className="mb-12"
         >
-          <h2 className="text-3xl font-bold text-gray-900 mb-5">My Benefits</h2>
+          <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-gray-100">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8">My Benefits</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Food Security */}
             <div className="bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl p-6 shadow-lg">
@@ -683,6 +762,7 @@ export default function TreeDetailPage() {
                 The trees are planted in agroforestry systems that favor the virtuous interaction between the different species and their positive impact on the environment and on the land.
               </p>
             </div>
+          </div>
           </div>
         </motion.section>
       </div>

@@ -68,7 +68,7 @@ export const authOptions = {
           // Find user (case-insensitive email) - explicitly select passwordHash
           const user = await User.findOne({ email: email.toLowerCase() })
             .select('+passwordHash')
-            .lean() as (UserWithPassword & { profilePicture?: { url: string; publicId: string } }) | null;
+            .lean() as UserWithPassword | null;
           
           if (!user) {
             // Use same timing for invalid user to prevent email enumeration
@@ -88,7 +88,6 @@ export const authOptions = {
             name: user.name || user.companyName || undefined,
             role: user.role,
             userType: user.userType,
-            image: user.profilePicture?.url || undefined,
           } as ExtendedUser;
         } catch (_error) {
           if (process.env.NODE_ENV === 'development') {

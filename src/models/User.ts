@@ -7,16 +7,13 @@ export interface IUser {
   companyName?: string;
   email: string;
   phone?: string;
+  address?: string;
   gstNumber?: string;
   passwordHash: string;
   userType: UserType;
   role: 'user' | 'admin' | 'wellwisher';
   publicId?: string;
   qrCode?: string; // QR code data URL stored at registration
-  profilePicture?: {
-    url: string;
-    publicId: string;
-  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,16 +37,13 @@ const UserSchema = new Schema<IUser>(
       }
     },
     phone: { type: String },
+    address: { type: String },
     gstNumber: { type: String },
     passwordHash: { type: String, required: true, select: false },
     userType: { type: String, enum: ['individual', 'company'], required: true },
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
     publicId: { type: String, unique: true, index: true, sparse: true },
     qrCode: { type: String }, // QR code data URL stored at registration
-    profilePicture: {
-      url: { type: String },
-      publicId: { type: String },
-    },
   },
   { timestamps: true }
 );
