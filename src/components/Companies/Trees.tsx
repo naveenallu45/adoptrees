@@ -146,12 +146,12 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
               className="group bg-green-100 rounded-2xl shadow-lg overflow-hidden border-[3.08px] border-green-500"
             >
               {/* Tree Image */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+              <div className="relative aspect-[4/4] overflow-hidden bg-white">
                 <Image
                   src={tree.imageUrl}
                   alt={tree.name}
                   fill
-                  className="object-contain object-center"
+                  className="object-cover object-top"
                   loading="lazy"
                   quality={85}
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -161,15 +161,15 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
               </div>
 
               {/* Product Information */}
-              <div className="p-3 sm:p-4">
+              <div className="p-2.5 sm:p-3">
                 {/* Tree Name */}
-                <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 line-clamp-2">
+                <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1.5 line-clamp-2">
                   {tree.name}
                 </h3>
 
                 {/* Price and Package Information */}
-                <div className="mb-3 pb-3 border-b border-gray-100">
-                  <div className="flex justify-between items-center mb-2">
+                <div className="mb-2 pb-2 border-b border-gray-100">
+                  <div className="flex justify-between items-center mb-1.5">
                     <div>
                       <p className="text-xs text-gray-900 mb-0.5">Price</p>
                       <span className="text-lg sm:text-xl font-bold text-gray-900">
@@ -182,7 +182,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                     </div>
                   </div>
                   {tree.packageQuantity && tree.packageQuantity > 1 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-1.5 mt-1.5">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-1 mt-1">
                       <p className="text-xs text-gray-900 font-medium">
                         Package: {tree.packageQuantity} trees
                         {tree.packagePrice && (

@@ -33,7 +33,7 @@ export default function AdminSidebar() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await signOut({ redirect: true, callbackUrl: '/' });
+    await signOut({ redirect: true, callbackUrl: '/admin/login' });
   };
 
   return (
@@ -83,7 +83,7 @@ export default function AdminSidebar() {
       <div className="border-t border-green-700 p-4">
         <motion.button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium text-green-100 transition-all duration-200 hover:bg-red-600 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-bold bg-white text-black transition-all duration-200 hover:bg-gray-100"
           whileHover={{ x: 4 }}
           whileTap={{ scale: 0.98 }}
         >

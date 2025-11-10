@@ -109,15 +109,6 @@ export default function WellWisherLoginForm() {
           {isSubmitting ? 'Signing in...' : 'Access Well-Wisher Dashboard'}
         </button>
       </form>
-
-      <div className="mt-6 text-center">
-        <button
-          onClick={() => router.push('/')}
-          className="text-gray-600 hover:text-gray-800 text-sm underline"
-        >
-          ← Back to Home
-        </button>
-      </div>
     </motion.div>
   );
 }

@@ -145,6 +145,48 @@ export async function middleware(request: NextRequest) {
       );
     }
   }
+
+  // Prevent admin and wellwisher users from accessing user routes
+  const userRoutes = ['/', '/individuals', '/companies', '/about', '/cart', '/u'];
+  const isUserRoute = userRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+
+  // Prevent admin and wellwisher users from accessing user API routes
+  const userApiRoutes = ['/api/orders', '/api/payments', '/api/certificates', '/api/trees'];
+  const isUserApiRoute = userApiRoutes.some(route => pathname.startsWith(route));
+
+  if (isUserRoute || isUserApiRoute) {
+    const session = await auth();
+    
+    if (session?.user) {
+      const userRole = (session.user as { role?: string }).role;
+      
+      // Redirect admin users to admin dashboard
+      if (userRole === 'admin') {
+        if (isUserApiRoute) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized - Admin users cannot access user API routes' },
+            { status: 403 }
+          );
+        }
+        const url = new URL('/admin', request.url);
+        return NextResponse.redirect(url);
+      }
+      
+      // Redirect wellwisher users to wellwisher dashboard
+      if (userRole === 'wellwisher') {
+        if (isUserApiRoute) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized - Wellwisher users cannot access user API routes' },
+            { status: 403 }
+          );
+        }
+        const url = new URL('/wellwisher', request.url);
+        return NextResponse.redirect(url);
+      }
+    }
+  }
   
   return response;
 }

@@ -127,12 +127,12 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
               className="group bg-green-100 rounded-2xl shadow-lg overflow-hidden border-[3.08px] border-green-500"
             >
               {/* Tree Image */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+              <div className="relative aspect-[4/4] overflow-hidden bg-white">
                 <Image
                   src={tree.imageUrl}
                   alt={tree.name}
                   fill
-                  className="object-contain object-center"
+                  className="object-cover object-top"
                   loading="lazy"
                   quality={85}
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -142,26 +142,26 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
               </div>
 
               {/* Product Information */}
-              <div className="p-4 sm:p-5">
+              <div className="p-2.5 sm:p-3">
                 {/* Tree Name */}
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 line-clamp-2">
+                <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1.5 line-clamp-2">
                   {tree.name}
                 </h3>
 
                 {/* Price and Oxygen Contribution */}
-                <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
+                <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-100">
                   <div>
-                    <p className="text-xs text-gray-900 mb-1">Price</p>
-                    <span className="text-xl sm:text-2xl font-bold text-gray-900">₹{tree.price}</span>
+                    <p className="text-xs text-gray-900 mb-0.5">Price</p>
+                    <span className="text-lg sm:text-xl font-bold text-gray-900">₹{tree.price}</span>
                   </div>
-                  <div className="text-right bg-green-50 rounded-lg px-2.5 py-1.5">
-                    <p className="text-xs text-gray-900 mb-1">Oxygen Production</p>
-                    <p className="text-xs sm:text-sm font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
+                  <div className="text-right bg-green-50 rounded-lg px-2 py-1">
+                    <p className="text-xs text-gray-900 mb-0.5">Oxygen Production</p>
+                    <p className="text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   {session && session.user.userType !== 'individual' ? (
                     <button
                       disabled

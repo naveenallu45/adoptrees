@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       folder: 'adoptrees/trees',
       resource_type: 'image',
       transformation: [
-        { width: 800, height: 600, crop: 'fill', quality: 'auto' },
+        { width: 2000, height: 2000, crop: 'limit', quality: 'auto' },
         { format: 'auto' }
       ]
     });

@@ -470,6 +470,15 @@ export default function TreesManagement() {
                   onChange={(e) => setFormData({ ...formData, image: e.target.files?.[0] || null })}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
+                <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3">
+                  <p className="text-xs font-semibold text-blue-900 mb-1.5">📸 Image Size Guidelines:</p>
+                  <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                    <li><strong>Recommended Aspect Ratio:</strong> 1:1 (square) or 4:4 (width:height)</li>
+                    <li><strong>Recommended Dimensions:</strong> 1200x1200px or 1600x1600px</li>
+                    <li><strong>Maximum File Size:</strong> 5MB</li>
+                    <li><strong>Note:</strong> Images with 1:1 (square) aspect ratio will fit perfectly in the card without cropping. Other ratios may be cropped to fit.</li>
+                  </ul>
+                </div>
               </div>
               <div className="flex gap-4">
                 <button
