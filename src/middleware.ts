@@ -5,8 +5,43 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  // CORS configuration
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://adoptrees.com',
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  ].filter(Boolean) as string[];
+
+  const origin = request.headers.get('origin');
+  const isAllowedOrigin = origin && allowedOrigins.some(allowed => 
+    origin === allowed || origin.startsWith(allowed)
+  );
+
+  // Handle CORS preflight requests for API routes
+  if (pathname.startsWith('/api/') && request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : allowedOrigins[0] || '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+  
   // Security headers for all responses
   const response = NextResponse.next();
+  
+  // Add CORS headers to API routes
+  if (pathname.startsWith('/api/') && isAllowedOrigin) {
+    response.headers.set('Access-Control-Allow-Origin', origin!);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  }
   
   // Add security headers
   response.headers.set('X-DNS-Prefetch-Control', 'on');
