@@ -50,9 +50,9 @@ export default function IndividualSupportPage() {
               <PhoneIcon className="h-6 w-6 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Phone Support</h3>
-            <p className="text-gray-600 mb-4">Call us at +91 9989479158</p>
+            <p className="text-gray-600 mb-4">Call us at +91 91414 19131</p>
             <a 
-              href="tel:+919989479158"
+              href="tel:+919141419131"
               className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium text-center"
             >
               Call Now
@@ -72,9 +72,9 @@ export default function IndividualSupportPage() {
               <EnvelopeIcon className="h-6 w-6 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Email Support</h3>
-            <p className="text-gray-600 mb-4">Send us an email at katikolakarthik@gmail.com</p>
+            <p className="text-gray-600 mb-4">Send us an email at adoptrees@gmail.com</p>
             <a 
-              href="mailto:katikolakarthik@gmail.com"
+              href="mailto:adoptrees@gmail.com"
               className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium text-center"
             >
               Send Email

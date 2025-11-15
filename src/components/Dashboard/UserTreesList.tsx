@@ -338,9 +338,9 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 * (orderIndex + itemIndex) }}
                     >
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                      <div className="flex flex-row gap-3 sm:gap-4">
                         {/* Tree Image */}
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm mx-auto sm:mx-0">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm">
                           {item.treeImageUrl ? (
                             <Image
                               src={item.treeImageUrl}
@@ -359,13 +359,13 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                         </div>
                         
                         {/* Content Section with Buttons on Right */}
-                        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0 flex flex-row items-start gap-3 sm:gap-4">
                           {/* Left: Tree Info */}
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-green-800 to-emerald-800 bg-clip-text text-transparent mb-2 text-center sm:text-left">
+                            <h4 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-green-800 to-emerald-800 bg-clip-text text-transparent mb-2 text-left">
                               {item.treeName}
                             </h4>
-                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
+                            <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
                               <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
                                 <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                                 {item.oxygenKgs} kg/year oxygen
@@ -378,14 +378,14 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                               )}
                             </div>
                             {/* Adoption Date */}
-                            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-gray-500">
+                            <div className="flex items-center justify-start gap-1.5 text-xs text-gray-500">
                               <ClockIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                               <span>Adopted on {formatAdoptedDate(order.createdAt)}</span>
                             </div>
                           </div>
                           
                           {/* Right: Action Buttons */}
-                          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-center sm:justify-end gap-2 sm:gap-3 flex-shrink-0">
+                          <div className="flex flex-col items-end justify-end gap-2 sm:gap-3 flex-shrink-0">
                             <button
                               onClick={() => {
                                 const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
