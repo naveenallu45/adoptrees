@@ -1,6 +1,6 @@
 export default function HeroSection() {
   return (
-    <section id="individuals-hero" className="mt-16 sm:mt-20 md:mt-24 min-h-[50vh] sm:min-h-[60vh] md:min-h-[60vh] relative overflow-hidden bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
+    <section id="individuals-hero" className="mt-16 sm:mt-20 md:mt-24 min-h-[40vh] sm:min-h-[60vh] md:min-h-[60vh] relative overflow-hidden bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-10 w-72 h-72 bg-green-400 rounded-full blur-3xl"></div>
@@ -9,30 +9,36 @@ export default function HeroSection() {
       </div>
 
       {/* Content */}
-      <div className="relative z-20 min-h-[50vh] sm:min-h-[60vh] md:min-h-[60vh] flex items-center justify-center pt-8 sm:pt-12 md:pt-14 lg:pt-16">
+      <div className="relative z-20 min-h-[40vh] sm:min-h-[60vh] md:min-h-[60vh] flex items-center justify-center pt-8 sm:pt-12 md:pt-14 lg:pt-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {/* Main Heading */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-white mb-6 sm:mb-8 drop-shadow-2xl tracking-tight">
-            <span className="block mb-3 bg-gradient-to-r from-white via-green-100 to-emerald-100 bg-clip-text text-transparent">
-              For Individuals
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 drop-shadow-2xl tracking-tight">
+            <span className="block">
+              Plant Your Future,
             </span>
-            <span className="block text-green-300 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light mt-4">
-              Plant Your Future
+            <span className="block text-green-300 mt-2">
+              Grow Your Legacy
             </span>
           </h1>
 
-          {/* Decorative Divider */}
-          <div className="flex items-center justify-center mb-8 sm:mb-10">
-            <div className="w-24 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent"></div>
-            <div className="mx-4 w-2 h-2 rounded-full bg-green-400"></div>
-            <div className="w-24 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent"></div>
-          </div>
-
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl md:text-2xl text-white/95 max-w-3xl mx-auto drop-shadow-lg px-4 leading-relaxed font-light">
+          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-lg px-4 leading-relaxed mb-6 sm:mb-8">
             Adopt a tree and make a personal contribution to a greener tomorrow. 
             Every tree you plant becomes a living legacy that grows with you.
           </p>
+
+          {/* CTA Button */}
+          <div className="flex justify-center">
+            <a 
+              href="#trees" 
+              className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-sm sm:text-base font-semibold hover:bg-white/30 transition-all duration-300 shadow-lg hover:scale-105 border border-white/30"
+            >
+              Browse Trees
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </a>
+          </div>
         </div>
       </div>
     </section>
