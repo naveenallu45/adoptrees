@@ -368,7 +368,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                             <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
                               <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
                                 <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                {item.oxygenKgs} kg/year oxygen
+                                {item.oxygenKgs} kg/year O₂
                               </span>
                               {item.adoptionType === 'gift' && (
                                 <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
@@ -525,7 +525,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                               ₹{item.price} each
                             </p>
                             <p className="text-xs text-green-600">
-                              {item.oxygenKgs} kg/year oxygen
+                              {item.oxygenKgs} kg/year O₂
                             </p>
                             {item.adoptionType === 'gift' && (
                               <p className="text-xs text-purple-600 truncate">

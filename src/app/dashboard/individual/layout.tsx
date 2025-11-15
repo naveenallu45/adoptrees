@@ -4,6 +4,7 @@ import IndividualSidebar from '@/components/Dashboard/IndividualSidebar';
 import AuthGuard from '@/components/Dashboard/AuthGuard';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import Image from 'next/image';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -70,7 +71,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Adoptrees</h1>
+            <div className="relative w-12 h-12 flex-shrink-0">
+              <Image
+                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
+                alt="Adoptrees Logo"
+                fill
+                className="object-contain object-center"
+                sizes="48px"
+                priority
+              />
+            </div>
           </div>
           
           {/* Page content */}

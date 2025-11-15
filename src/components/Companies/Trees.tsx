@@ -177,7 +177,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                       </span>
                     </div>
                     <div className="text-right bg-green-50 rounded-lg px-2 py-1">
-                      <p className="text-xs text-gray-900 mb-0.5">Oxygen Production</p>
+                      <p className="text-xs text-gray-900 mb-0.5">Oxygen</p>
                       <p className="text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                     </div>
                   </div>
