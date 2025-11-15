@@ -76,7 +76,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, companyName, email, phone, address, gstNumber, website } = body;
+    const { name, companyName, email, phone, address, gstNumber } = body;
 
     await connectDB();
 

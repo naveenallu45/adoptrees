@@ -66,7 +66,7 @@ export default function CompanyProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [session?.user?.id]); // Only depend on user ID to prevent unnecessary re-fetches
+  }, [session?.user?.id, session?.user?.email, session?.user?.name]); // Depend on user ID, email, and name
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -196,7 +196,7 @@ export default function CompanyProfilePage() {
             )}
             {!saveError && !isSaving && isEditing && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-600">
-                Make your changes and click "Save Changes" to update your profile.
+                Make your changes and click &quot;Save Changes&quot; to update your profile.
               </div>
             )}
             

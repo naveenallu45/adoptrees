@@ -37,7 +37,14 @@ export async function POST(request: NextRequest) {
       logPaymentEvent('payment_verification_failed', { reason: 'authentication_required' });
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -51,7 +58,14 @@ export async function POST(request: NextRequest) {
       logPaymentEvent('payment_verification_failed', { reason: 'missing_verification_data' });
       return NextResponse.json(
         { success: false, error: 'Payment verification data is required' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -80,7 +94,14 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         { success: false, error: 'Payment verification failed' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -94,7 +115,14 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json(
         { success: false, error: 'Order not found' },
-        { status: 404 }
+        { 
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -138,6 +166,12 @@ export async function POST(request: NextRequest) {
           paymentStatus: order.paymentStatus,
           totalAmount: order.totalAmount
         }
+      }, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
       });
     }
 
@@ -213,13 +247,26 @@ export async function POST(request: NextRequest) {
         totalAmount: order.totalAmount,
         items: order.items.length
       }
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
     });
 
   } catch (_error) {
     logError('Error verifying payment', _error as Error);
     return NextResponse.json(
       { success: false, error: 'Failed to verify payment' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
     );
   }
 }

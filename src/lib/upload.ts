@@ -23,11 +23,11 @@ export async function uploadToCloudinary(
     const dataUri = `data:${file.type};base64,${base64String}`;
     
     // Build transformation array for Cloudinary
-    const transformation: any[] = [];
+    const transformation: Array<Record<string, string | number>> = [];
     
     if (options?.width || options?.height || options?.crop || options?.quality || options?.format) {
       // Create transformation object with provided options
-      const transform: any = {};
+      const transform: Record<string, string | number> = {};
       if (options.width) transform.width = options.width;
       if (options.height) transform.height = options.height;
       if (options.crop) transform.crop = options.crop;
@@ -37,7 +37,7 @@ export async function uploadToCloudinary(
     }
     
     // Upload to Cloudinary with proper configuration
-    const uploadOptions: any = {
+    const uploadOptions: Record<string, unknown> = {
       folder,
       resource_type: 'image',
       use_filename: true,

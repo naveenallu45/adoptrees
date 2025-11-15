@@ -16,7 +16,9 @@ const nextConfig: NextConfig = {
   ],
   
   // Turbopack configuration (replaces deprecated turbo)
+  // Explicitly set root to avoid lockfile detection issues
   turbopack: {
+    root: process.cwd(),
     rules: {
       '*.svg': {
         loaders: ['@svgr/webpack'],

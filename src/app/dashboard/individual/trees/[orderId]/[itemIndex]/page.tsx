@@ -475,7 +475,7 @@ export default function TreeDetailPage() {
             
             <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-100">
               <p className="text-sm text-gray-700 leading-relaxed">
-                This tree produces <span className="font-semibold text-emerald-700">{currentOxygen.toFixed(2)} kg</span> of oxygen annually, equivalent to <span className="font-semibold text-emerald-700">{Math.round(currentOxygen * 2.2)}</span> people's annual oxygen needs, contributing to cleaner air and healthier environment.
+                This tree produces <span className="font-semibold text-emerald-700">{currentOxygen.toFixed(2)} kg</span> of oxygen annually, equivalent to <span className="font-semibold text-emerald-700">{Math.round(currentOxygen * 2.2)}</span> people&apos;s annual oxygen needs, contributing to cleaner air and healthier environment.
               </p>
             </div>
           </div>
@@ -599,7 +599,7 @@ export default function TreeDetailPage() {
             ) : (
               <div className="text-center py-16 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-dashed border-green-200">
                 <p className="text-gray-600 text-lg font-medium">Gallery will appear here</p>
-                <p className="text-gray-500 text-sm mt-2">Your wellwisher will upload photos of your tree's journey</p>
+                <p className="text-gray-500 text-sm mt-2">Your wellwisher will upload photos of your tree&apos;s journey</p>
               </div>
             )}
           </div>

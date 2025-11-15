@@ -44,7 +44,14 @@ export async function POST(request: NextRequest) {
       logPaymentEvent('payment_order_creation_failed', { reason: 'authentication_required' });
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -53,7 +60,14 @@ export async function POST(request: NextRequest) {
       logError('Razorpay credentials missing', new Error('Missing credentials'));
       return NextResponse.json(
         { success: false, error: 'Payment gateway configuration error' },
-        { status: 500 }
+        { 
+          status: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -66,7 +80,14 @@ export async function POST(request: NextRequest) {
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Items are required' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -74,7 +95,14 @@ export async function POST(request: NextRequest) {
     if (isGift && (!giftRecipientName || !giftRecipientEmail)) {
       return NextResponse.json(
         { success: false, error: 'Gift recipient name and email are required for gift orders' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -85,7 +113,14 @@ export async function POST(request: NextRequest) {
     if (trees.length !== treeIds.length) {
       return NextResponse.json(
         { success: false, error: 'One or more trees not found or inactive' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -173,6 +208,12 @@ export async function POST(request: NextRequest) {
         currency: 'INR',
         razorpayKeyId: process.env.RAZORPAY_KEY_ID!
       }
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
     });
 
   } catch (_error) {
@@ -189,14 +230,28 @@ export async function POST(request: NextRequest) {
       if (razorpayError.statusCode === 401) {
         return NextResponse.json(
           { success: false, error: 'Invalid Razorpay credentials. Please check your API keys.' },
-          { status: 500 }
+          { 
+            status: 500,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
         );
       }
     }
     
     return NextResponse.json(
       { success: false, error: 'Failed to create payment order' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
     );
   }
 }

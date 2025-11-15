@@ -166,10 +166,27 @@ export default function CartContent() {
         body: JSON.stringify(orderData),
       });
 
+      if (!response.ok) {
+        let errorMessage = 'Failed to create order';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        setPaymentStatus('failed');
+        setPaymentMessage(errorMessage);
+        setShowPaymentDialog(true);
+        setIsPlacingOrder(false);
+        return;
+      }
+
       const result = await response.json();
 
       if (!result.success) {
-        alert('Failed to create order: ' + result.error);
+        setPaymentStatus('failed');
+        setPaymentMessage('Failed to create order: ' + (result.error || 'Unknown error'));
+        setShowPaymentDialog(true);
         setIsPlacingOrder(false);
         return;
       }
@@ -214,6 +231,21 @@ export default function CartContent() {
               }),
             });
 
+            if (!verifyResponse.ok) {
+              let errorMessage = 'Payment verification failed';
+              try {
+                const errorData = await verifyResponse.json();
+                errorMessage = errorData.error || errorMessage;
+              } catch {
+                errorMessage = `Server error: ${verifyResponse.status} ${verifyResponse.statusText}`;
+              }
+              setPaymentStatus('failed');
+              setPaymentMessage(errorMessage);
+              setShowPaymentDialog(true);
+              setIsPlacingOrder(false);
+              return;
+            }
+
             const verifyResult = await verifyResponse.json();
 
             if (verifyResult.success) {
@@ -227,12 +259,13 @@ export default function CartContent() {
               setShowPaymentDialog(true);
             } else {
               setPaymentStatus('failed');
-              setPaymentMessage('Payment verification failed: ' + verifyResult.error);
+              setPaymentMessage('Payment verification failed: ' + (verifyResult.error || 'Unknown error'));
               setShowPaymentDialog(true);
             }
           } catch (_error) {
+            console.error('Payment verification error:', _error);
             setPaymentStatus('failed');
-            setPaymentMessage('Failed to verify payment. Please contact support.');
+            setPaymentMessage('Failed to verify payment. Please contact support with your order ID: ' + orderId);
             setShowPaymentDialog(true);
           } finally {
             setIsPlacingOrder(false);
