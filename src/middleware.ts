@@ -5,7 +5,7 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // CORS configuration
+  // CORS configuration - only add headers, don't handle OPTIONS (let route handlers do it)
   const allowedOrigins = [
     'http://localhost:5173',
     'https://adoptrees.com',
@@ -17,26 +17,13 @@ export async function middleware(request: NextRequest) {
   const isAllowedOrigin = origin && allowedOrigins.some(allowed => 
     origin === allowed || origin.startsWith(allowed)
   );
-
-  // Handle CORS preflight requests for API routes
-  if (pathname.startsWith('/api/') && request.method === 'OPTIONS') {
-    return new NextResponse(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : allowedOrigins[0] || '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Max-Age': '86400',
-      },
-    });
-  }
   
   // Security headers for all responses
   const response = NextResponse.next();
   
-  // Add CORS headers to API routes
-  if (pathname.startsWith('/api/') && isAllowedOrigin) {
+  // Add CORS headers to API routes (but don't handle OPTIONS - let route handlers do it)
+  // This ensures POST/GET requests get CORS headers without interfering with OPTIONS handling
+  if (pathname.startsWith('/api/') && isAllowedOrigin && request.method !== 'OPTIONS') {
     response.headers.set('Access-Control-Allow-Origin', origin!);
     response.headers.set('Access-Control-Allow-Credentials', 'true');
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
