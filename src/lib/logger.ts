@@ -1,4 +1,17 @@
 import winston from 'winston';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+
+// Ensure logs directory exists
+const logsDir = join(process.cwd(), 'logs');
+if (!existsSync(logsDir)) {
+  try {
+    mkdirSync(logsDir, { recursive: true });
+  } catch (error) {
+    // If we can't create the directory, log to console only
+    console.warn('Could not create logs directory:', error);
+  }
+}
 
 // Create logger instance
 const logger = winston.createLogger({
