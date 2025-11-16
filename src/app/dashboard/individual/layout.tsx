@@ -30,7 +30,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen overflow-hidden bg-gray-50">
         {/* Mobile sidebar overlay */}
         <div 
-          className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50 hidden" 
+          className="lg:hidden fixed inset-0 z-40 bg-gray-900/10 hidden" 
           id="sidebar-overlay"
           onClick={() => {
             const sidebar = document.getElementById('mobile-sidebar');
@@ -53,7 +53,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         
         {/* Main content */}
-        <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+        <div className="flex-1 lg:pl-64 flex flex-col min-h-screen relative z-10">
           {/* Mobile header */}
           <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
             <div className="relative w-12 h-12 flex-shrink-0">
