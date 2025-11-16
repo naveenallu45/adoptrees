@@ -43,21 +43,21 @@ export default function CompanySidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-gradient-to-b from-blue-900 to-blue-800 text-white">
+    <div className="flex h-screen w-64 flex-col bg-gradient-to-b from-green-900 to-green-800 text-white">
       {/* Logo/Header */}
-      <div className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 border-b border-blue-700">
+      <div className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 border-b border-green-700">
         <Link 
           href="/" 
           className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
         >
-          <TreeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-300" />
+          <TreeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-300" />
           <h1 className="text-lg sm:text-xl lg:text-2xl font-bold">Adoptrees</h1>
         </Link>
         
         {/* Mobile close button */}
         <button
           onClick={closeMobileSidebar}
-          className="lg:hidden p-1 rounded-md text-blue-300 hover:text-white hover:bg-blue-700/50"
+          className="lg:hidden p-1 rounded-md text-green-300 hover:text-white hover:bg-green-700/50"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -83,8 +83,8 @@ export default function CompanySidebar() {
                 transition-all duration-200
                 ${
                   isActive
-                    ? 'bg-blue-700 text-white shadow-lg'
-                    : 'text-blue-100 hover:bg-blue-700/50'
+                    ? 'bg-green-700 text-white shadow-lg'
+                    : 'text-green-100 hover:bg-green-700/50'
                 }
               `}
               whileHover={{ x: 4 }}
@@ -105,7 +105,7 @@ export default function CompanySidebar() {
       </nav>
 
       {/* Logout Button */}
-      <div className="border-t border-blue-700 p-3 sm:p-4">
+      <div className="border-t border-green-700 p-3 sm:p-4">
         <motion.button
           onClick={handleLogout}
           className="flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-bold bg-white text-black transition-all duration-200 hover:bg-gray-100"

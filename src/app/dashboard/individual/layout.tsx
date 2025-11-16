@@ -43,7 +43,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         ></div>
         
         {/* Sidebar */}
-        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
+        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-30">
           <IndividualSidebar />
         </div>
         
