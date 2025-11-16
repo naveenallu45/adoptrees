@@ -36,7 +36,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             const sidebar = document.getElementById('mobile-sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             if (sidebar && overlay) {
-              sidebar.classList.add('-translate-x-full');
+              sidebar.classList.add('translate-x-full');
               overlay.classList.add('hidden');
             }
           }}
@@ -48,7 +48,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         
         {/* Mobile sidebar */}
-        <div className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 transform -translate-x-full transition-transform duration-300 ease-in-out" id="mobile-sidebar">
+        <div className="lg:hidden fixed inset-y-0 right-0 z-50 w-64 transform translate-x-full transition-transform duration-300 ease-in-out" id="mobile-sidebar">
           <IndividualSidebar />
         </div>
         
@@ -71,7 +71,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 const sidebar = document.getElementById('mobile-sidebar');
                 const overlay = document.getElementById('sidebar-overlay');
                 if (sidebar && overlay) {
-                  sidebar.classList.remove('-translate-x-full');
+                  sidebar.classList.remove('translate-x-full');
                   overlay.classList.remove('hidden');
                 }
               }}

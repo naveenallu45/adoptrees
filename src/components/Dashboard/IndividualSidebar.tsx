@@ -37,7 +37,7 @@ export default function IndividualSidebar() {
     const sidebar = document.getElementById('mobile-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     if (sidebar && overlay) {
-      sidebar.classList.add('-translate-x-full');
+      sidebar.classList.add('translate-x-full');
       overlay.classList.add('hidden');
     }
   };
