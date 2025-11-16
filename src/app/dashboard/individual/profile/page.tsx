@@ -1,12 +1,15 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
+import { PencilIcon, CheckIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 export default function IndividualProfilePage() {
   const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: session?.user?.name || '',
@@ -14,17 +17,20 @@ export default function IndividualProfilePage() {
     phone: '',
     address: '',
   });
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [initialFormData, setInitialFormData] = useState(formData);
-
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch user profile data on mount - only once
   useEffect(() => {
     let isMounted = true;
     
-    const fetchUserData = async () => {
+    const loadUserData = async () => {
       if (!session?.user?.id) {
         setIsLoading(false);
         return;
@@ -46,6 +52,7 @@ export default function IndividualProfilePage() {
             };
             setFormData(fetchedData);
             setInitialFormData(fetchedData);
+            setProfileImage(userData.image || session?.user?.image || null);
           }
         }
       } catch (error) {
@@ -57,12 +64,19 @@ export default function IndividualProfilePage() {
       }
     };
 
-    fetchUserData();
+    loadUserData();
 
     return () => {
       isMounted = false;
     };
-  }, [session?.user?.id, session?.user?.email, session?.user?.name]); // Depend on user ID, email, and name
+  }, [session?.user?.id, session?.user?.email, session?.user?.name, session?.user?.image]); // Depend on user ID, email, name, and image
+
+  // Sync profile image with session image
+  useEffect(() => {
+    if (session?.user?.image && !profileImage) {
+      setProfileImage(session.user.image);
+    }
+  }, [session?.user?.image, profileImage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -70,6 +84,39 @@ export default function IndividualProfilePage() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setSaveError('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setSaveError('Image size must be less than 5MB');
+        return;
+      }
+
+      setProfileImageFile(file);
+      setSaveError(null);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageClick = () => {
+    if (isEditing && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const handleSave = async () => {
@@ -82,18 +129,36 @@ export default function IndividualProfilePage() {
     setSaveError(null);
 
     try {
-      const response = await fetch(`/api/users/${session.user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-        }),
-      });
+      let response: Response;
+      
+      // If there's an image file, use FormData
+      if (profileImageFile) {
+        const formDataToSend = new FormData();
+        formDataToSend.append('name', formData.name);
+        formDataToSend.append('email', formData.email);
+        formDataToSend.append('phone', formData.phone);
+        formDataToSend.append('address', formData.address);
+        formDataToSend.append('image', profileImageFile);
+
+        response = await fetch(`/api/users/${session.user.id}`, {
+          method: 'PUT',
+          body: formDataToSend,
+        });
+      } else {
+        // Otherwise, use JSON
+        response = await fetch(`/api/users/${session.user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+          }),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to update profile' }));
@@ -103,16 +168,67 @@ export default function IndividualProfilePage() {
       const result = await response.json();
 
       if (result.success) {
-        // Update session with new name/email if changed
+        // Always use the image from the API response if it exists
+        const newImage = result.data?.image || null;
+        
+        console.log('Profile update response:', { 
+          hasImage: !!newImage, 
+          imageUrl: newImage,
+          resultData: result.data 
+        });
+        
+        // Update profile image state FIRST - before session update
+        // This ensures the UI updates immediately
+        setProfileImage(newImage);
+        setImagePreview(null);
+        setProfileImageFile(null);
+        
+        console.log('Profile image state updated:', {
+          newImage,
+          profileImageState: newImage
+        });
+        
+        // Update session with new name/email/image
+        console.log('Updating session with image:', newImage);
         await updateSession({
           name: formData.name,
           email: formData.email,
+          image: newImage,
         });
+        
+        // Wait a bit for session to propagate
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Update initial form data
         setInitialFormData(formData);
         setSaveError(null);
         setIsEditing(false);
+        
+        // Refetch user data to sync everything, but preserve the new image
+        const refetchedData = await fetch(`/api/users/${session.user.id}`);
+        if (refetchedData.ok) {
+          const refetchResult = await refetchedData.json();
+          if (refetchResult.success && refetchResult.data) {
+            const userData = refetchResult.data;
+            // Only update form data, but keep the new image we just set
+            const fetchedData = {
+              name: userData.name || session?.user?.name || '',
+              email: userData.email || session?.user?.email || '',
+              phone: userData.phone || '',
+              address: userData.address || '',
+            };
+            setFormData(fetchedData);
+            setInitialFormData(fetchedData);
+            // Only update profileImage if we got a new one from the refetch
+            // Otherwise keep the one we just set
+            if (userData.image) {
+              setProfileImage(userData.image);
+            }
+          }
+        }
+        
+        // Force a router refresh to ensure all components get the updated session
+        router.refresh();
       } else {
         setSaveError(result.message || 'Failed to update profile');
       }
@@ -130,6 +246,11 @@ export default function IndividualProfilePage() {
     setFormData(initialFormData);
     setSaveError(null);
     setIsEditing(false);
+    setProfileImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
 
@@ -164,6 +285,47 @@ export default function IndividualProfilePage() {
           transition={{ delay: 0.1 }}
         >
           <div className="p-6 text-center">
+            {/* Profile Image */}
+            <div className="relative inline-block mb-4">
+              <div 
+                className={`relative w-24 h-24 rounded-full overflow-hidden border-4 ${
+                  isEditing ? 'border-green-500 cursor-pointer' : 'border-gray-200'
+                } transition-all`}
+                onClick={handleImageClick}
+              >
+                {imagePreview || profileImage || session?.user?.image ? (
+                  <Image
+                    key={`profile-img-${imagePreview || profileImage || session?.user?.image || 'default'}`}
+                    src={imagePreview || profileImage || session?.user?.image || ''}
+                    alt="Profile"
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                    unoptimized
+                    priority
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">
+                      {(session?.user?.name || 'U')[0].toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {isEditing && (
+                <div className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full p-2 cursor-pointer hover:bg-green-700 transition-colors">
+                  <CameraIcon className="h-4 w-4" />
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                disabled={!isEditing}
+              />
+            </div>
             <h2 className="text-xl font-semibold text-gray-900">
               {session?.user?.name || 'Individual User'}
             </h2>

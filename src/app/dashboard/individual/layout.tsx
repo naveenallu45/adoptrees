@@ -56,6 +56,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
           {/* Mobile header */}
           <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+            <div className="relative w-12 h-12 flex-shrink-0">
+              <Image
+                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
+                alt="Adoptrees Logo"
+                fill
+                className="object-contain object-center"
+                sizes="48px"
+                priority
+              />
+            </div>
             <button
               onClick={() => {
                 const sidebar = document.getElementById('mobile-sidebar');
@@ -71,16 +81,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <div className="relative w-12 h-12 flex-shrink-0">
-              <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
-                alt="Adoptrees Logo"
-                fill
-                className="object-contain object-center"
-                sizes="48px"
-                priority
-              />
-            </div>
           </div>
           
           {/* Page content */}

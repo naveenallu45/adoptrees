@@ -14,6 +14,8 @@ export interface IUser {
   role: 'user' | 'admin' | 'wellwisher';
   publicId?: string;
   qrCode?: string; // QR code data URL stored at registration
+  image?: string; // Profile image URL
+  imagePublicId?: string; // Cloudinary public ID for profile image
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +46,8 @@ const UserSchema = new Schema<IUser>(
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
     publicId: { type: String, unique: true, index: true, sparse: true },
     qrCode: { type: String }, // QR code data URL stored at registration
+    image: { type: String }, // Profile image URL
+    imagePublicId: { type: String }, // Cloudinary public ID for profile image
   },
   { timestamps: true }
 );

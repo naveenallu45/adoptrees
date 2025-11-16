@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const user = userDoc as { _id: unknown; email?: string; name?: string; companyName?: string; userType?: string };
+    const user = userDoc as { _id: unknown; email?: string; name?: string; companyName?: string; userType?: string; image?: string };
     const orders = await Order.find({
       $or: [
         { userId: String(user._id) },
@@ -44,7 +44,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json({
       success: true,
-      data: { orders: safeOrders, user: { name: user.name || user.companyName, userType: user.userType } }
+      data: { 
+        orders: safeOrders, 
+        user: { 
+          name: user.name || user.companyName, 
+          userType: user.userType,
+          image: user.image 
+        } 
+      }
     });
   } catch (_error) {
     return NextResponse.json({ success: false, error: 'Failed to fetch orders' }, { status: 500 });

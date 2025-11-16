@@ -21,6 +21,7 @@ interface UserWithPassword {
   userType: 'individual' | 'company';
   name?: string;
   companyName?: string;
+  image?: string;
 }
 
 export const authOptions = {
@@ -88,6 +89,7 @@ export const authOptions = {
             name: user.name || user.companyName || undefined,
             role: user.role,
             userType: user.userType,
+            image: user.image || undefined,
           } as ExtendedUser;
         } catch (_error) {
           if (process.env.NODE_ENV === 'development') {
@@ -108,8 +110,18 @@ export const authOptions = {
       }
       
       // Update token when session is updated (e.g., after profile picture upload)
-      if (trigger === 'update' && sessionData?.user?.image) {
-        token.image = sessionData.user.image;
+      if (trigger === 'update' && sessionData?.user) {
+        // Update image if provided (can be string or null to clear)
+        if ('image' in sessionData.user) {
+          token.image = sessionData.user.image || undefined;
+        }
+        // Also update name and email if provided
+        if (sessionData.user.name) {
+          token.name = sessionData.user.name;
+        }
+        if (sessionData.user.email) {
+          token.email = sessionData.user.email;
+        }
       }
       
       return token;

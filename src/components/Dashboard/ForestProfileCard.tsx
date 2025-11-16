@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 import { 
   SparklesIcon as TreeIcon,
   CloudArrowUpIcon as CloudIcon,
@@ -73,6 +74,7 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
   });
   const [loading, setLoading] = useState(true);
   const [publicUserName, setPublicUserName] = useState<string | null>(null);
+  const [publicUserImage, setPublicUserImage] = useState<string | null>(null);
 
   const calculateStats = useCallback((ordersData: Order[]) => {
     let totalTrees = 0;
@@ -192,9 +194,14 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
           const ordersData = publicId ? result.data.orders : result.data;
           calculateStats(ordersData);
           
-          // Store public user name if viewing public profile
-          if (publicId && result.data?.user?.name) {
-            setPublicUserName(result.data.user.name);
+          // Store public user name and image if viewing public profile
+          if (publicId && result.data?.user) {
+            if (result.data.user.name) {
+              setPublicUserName(result.data.user.name);
+            }
+            if (result.data.user.image) {
+              setPublicUserImage(result.data.user.image);
+            }
           }
         }
       } catch (_error) {
@@ -216,6 +223,31 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     if (!session?.user) return 'User';
     return session.user.name || (userType === 'company' ? 'Company' : 'Individual');
   };
+
+  const getProfileImage = () => {
+    // If viewing public profile, use the public user image
+    if (publicId && publicUserImage) {
+      console.log('ForestProfileCard: Using public user image:', publicUserImage);
+      return publicUserImage;
+    }
+    // Otherwise use session image
+    const sessionImage = session?.user?.image || null;
+    console.log('ForestProfileCard: Session image:', sessionImage, 'Session user:', session?.user);
+    return sessionImage;
+  };
+
+  // Debug: Log when session image changes
+  useEffect(() => {
+    console.log('ForestProfileCard: Session changed', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userName: session?.user?.name,
+      userImage: session?.user?.image,
+      publicId,
+      publicUserImage
+    });
+  }, [session?.user?.image, session?.user?.id, publicId, publicUserImage]);
 
   const getForestName = () => {
     const name = getUserDisplayName();
@@ -265,16 +297,29 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* Logo placeholder - circular */}
-            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
-                {getUserDisplayName()
-                  .split(' ')
-                  .map(n => n[0])
-                  .join('')
-                  .toUpperCase()
-                  .slice(0, 2)}
-              </span>
+            {/* Profile Image - circular */}
+            <div className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-green-300">
+              {getProfileImage() ? (
+                <Image
+                  key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
+                  src={getProfileImage() || ''}
+                  alt={getUserDisplayName()}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 48px, (max-width: 768px) 56px, 64px"
+                  unoptimized
+                  priority
+                />
+              ) : (
+                <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
+                  {getUserDisplayName()
+                    .split(' ')
+                    .map(n => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </span>
+              )}
             </div>
             <div>
               <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-1">{getForestName()}</h2>
