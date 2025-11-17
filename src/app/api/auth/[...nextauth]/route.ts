@@ -106,6 +106,8 @@ export const authOptions = {
         token.role = extendedUser.role;
         token.userType = extendedUser.userType;
         token.id = extendedUser.id;
+        token.name = extendedUser.name;
+        token.email = extendedUser.email;
         token.image = extendedUser.image;
       }
       
@@ -116,11 +118,11 @@ export const authOptions = {
           token.image = sessionData.user.image || undefined;
         }
         // Also update name and email if provided
-        if (sessionData.user.name) {
-          token.name = sessionData.user.name;
+        if ('name' in sessionData.user && sessionData.user.name !== undefined) {
+          token.name = sessionData.user.name || undefined;
         }
-        if (sessionData.user.email) {
-          token.email = sessionData.user.email;
+        if ('email' in sessionData.user && sessionData.user.email !== undefined) {
+          token.email = sessionData.user.email || undefined;
         }
       }
       
@@ -133,11 +135,14 @@ export const authOptions = {
       }
       
       // In NextAuth v5, we need to explicitly set user properties
+      // Include name and email from token to ensure they're up-to-date
       return {
         ...session,
         user: {
           ...session.user,
           id: token.id as string,
+          name: (token.name as string | undefined) || session.user.name,
+          email: (token.email as string | undefined) || session.user.email,
           role: token.role as 'admin' | 'user' | 'wellwisher',
           userType: token.userType as 'individual' | 'company',
           image: token.image as string | undefined,

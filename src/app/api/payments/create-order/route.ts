@@ -154,6 +154,79 @@ export async function POST(request: NextRequest) {
     const totalAmount = orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
     const amountInPaise = Math.round(totalAmount * 100); // Convert to paise
 
+    // Check for duplicate pending orders (within last 5 minutes) with same items
+    // This prevents multiple orders from being created if user clicks payment button multiple times
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const existingPendingOrder = await Order.findOne({
+      userId: session.user.id,
+      paymentStatus: 'pending',
+      status: 'pending',
+      totalAmount: totalAmount,
+      createdAt: { $gte: fiveMinutesAgo },
+      'items.0.treeId': orderItems[0]?.treeId, // Check first item matches
+      'items.0.quantity': orderItems[0]?.quantity
+    }).sort({ createdAt: -1 });
+
+    // If duplicate order found, return existing one instead of creating new
+    if (existingPendingOrder) {
+      // Verify items match exactly
+      const itemsMatch = existingPendingOrder.items.length === orderItems.length &&
+        existingPendingOrder.items.every((existingItem, idx) => {
+          const newItem = orderItems[idx];
+          return existingItem.treeId === newItem.treeId &&
+                 existingItem.quantity === newItem.quantity &&
+                 existingItem.adoptionType === newItem.adoptionType;
+        });
+
+      if (itemsMatch) {
+        logPaymentEvent('duplicate_order_prevented', { 
+          existingOrderId: existingPendingOrder.orderId,
+          userId: session.user.id 
+        });
+        
+        // Get or create Razorpay order for existing order
+        let razorpayOrderId = existingPendingOrder.paymentId; // If already has one
+        
+        if (!razorpayOrderId) {
+          // Create Razorpay order for existing order
+          const razorpay = getRazorpayInstance();
+          const razorpayOrder = await razorpay.orders.create({
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt: existingPendingOrder.orderId,
+            notes: {
+              orderId: existingPendingOrder.orderId,
+              userId: session.user.id,
+              userEmail: session.user.email || '',
+              itemsCount: orderItems.length
+            }
+          });
+          razorpayOrderId = razorpayOrder.id;
+          
+          // Update order with Razorpay order ID
+          existingPendingOrder.paymentId = razorpayOrderId;
+          await existingPendingOrder.save();
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            razorpayOrderId,
+            orderId: existingPendingOrder.orderId,
+            amount: amountInPaise,
+            currency: 'INR',
+            razorpayKeyId: process.env.RAZORPAY_KEY_ID!
+          }
+        }, {
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        });
+      }
+    }
+
     // Create a placeholder order in database first (status: pending)
     const userName = session.user.name || 'User';
     const firstThreeLetters = userName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
@@ -162,7 +235,7 @@ export async function POST(request: NextRequest) {
     
     const order = new Order({
       orderId,
-      userId: session.user.id,
+      userId: String(session.user.id), // Ensure userId is stored as string
       userEmail: session.user.email,
       userName: session.user.name || 'User',
       userType: session.user.userType,

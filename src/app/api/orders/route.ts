@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     
     const order = new Order({
       orderId,
-      userId: session.user.id,
+      userId: String(session.user.id), // Ensure userId is stored as string
       userEmail: session.user.email,
       userName: session.user.name || 'User',
       userType: session.user.userType,
@@ -149,24 +149,93 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '50'); // Increased from 10 to 50
     const status = searchParams.get('status');
 
-    const query: { userId: string; status?: string } = { userId: session.user.id };
+    // Ensure userId is explicitly converted to string for proper matching
+    // This is critical - MongoDB string fields must match exactly
+    if (!session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'User ID not found in session' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = String(session.user.id).trim();
+    const userEmail = session.user.email?.toLowerCase().trim();
+    
+    // Build query - use userId as primary filter
+    // MongoDB string fields must match exactly, so ensure proper string conversion
+    const query: { userId: string; status?: string } = {
+      userId: userId
+    };
+    
     if (status) {
       query.status = status;
     }
+
+    // Debug: Log the query being used
+    console.log('[Orders API] Fetching orders for userId:', userId, 'userEmail:', userEmail);
+    console.log('[Orders API] Query:', JSON.stringify(query, null, 2));
 
     const orders = await Order.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
+    // Debug: Log results
+    console.log('[Orders API] Found', orders.length, 'orders');
+    if (orders.length > 0) {
+      const sampleOrder = orders[0];
+      console.log('[Orders API] Sample order - userId:', sampleOrder.userId, 'userEmail:', sampleOrder.userEmail);
+      console.log('[Orders API] Query userId matches sample?', sampleOrder.userId === userId);
+      console.log('[Orders API] Query userEmail matches sample?', sampleOrder.userEmail === userEmail);
+    } else {
+      // If no orders found, check if there are ANY orders in the database
+      const totalOrders = await Order.countDocuments({});
+      console.log('[Orders API] Total orders in database:', totalOrders);
+      if (totalOrders > 0) {
+        const sampleOrder = await Order.findOne({}).lean();
+        if (sampleOrder) {
+          console.log('[Orders API] Sample order from DB - userId:', sampleOrder.userId, 'userEmail:', sampleOrder.userEmail);
+        }
+      }
+    }
+
+    // Deduplicate orders: Remove duplicate pending orders with same items
+    // Keep only the most recent one for each unique set of items
+    const deduplicatedOrders = [];
+    const seenOrderKeys = new Set<string>();
+    
+    for (const order of orders) {
+      // Create a unique key based on items and payment status
+      // For pending orders, group by items. For paid orders, show all.
+      if (order.paymentStatus === 'pending' && order.status === 'pending') {
+        const orderKey = JSON.stringify({
+          items: order.items.map(item => ({
+            treeId: item.treeId,
+            quantity: item.quantity,
+            adoptionType: item.adoptionType
+          })).sort((a, b) => a.treeId.localeCompare(b.treeId)),
+          totalAmount: order.totalAmount
+        });
+        
+        if (seenOrderKeys.has(orderKey)) {
+          // Skip duplicate pending order
+          continue;
+        }
+        seenOrderKeys.add(orderKey);
+      }
+      
+      deduplicatedOrders.push(order);
+    }
+
+    // Use same query for count
     const totalCount = await Order.countDocuments(query);
 
     return NextResponse.json({
       success: true,
-      data: orders,
+      data: deduplicatedOrders,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),

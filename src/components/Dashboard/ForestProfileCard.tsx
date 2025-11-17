@@ -75,14 +75,21 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
   const [loading, setLoading] = useState(true);
   const [publicUserName, setPublicUserName] = useState<string | null>(null);
   const [publicUserImage, setPublicUserImage] = useState<string | null>(null);
+  const [userImage, setUserImage] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date()); // For real-time updates
+  const [ordersData, setOrdersData] = useState<Order[]>([]); // Store orders to check planting status
 
   const calculateStats = useCallback((ordersData: Order[]) => {
+    // Reset stats
     let totalTrees = 0;
     let totalOxygen = 0; // in kg
     let lastPlantingDate: Date | null = null;
     const uniqueLocations = new Set<string>();
     const uniqueCountries = new Set<string>();
     let completedOrdersCount = 0;
+
+    // Debug: Log calculation start
+    console.log('[ForestProfileCard] Calculating stats from', ordersData.length, 'orders');
 
     ordersData.forEach((order) => {
       // Count trees from confirmed/paid orders (adopted trees)
@@ -111,11 +118,28 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
         
         order.items.forEach((item) => {
           totalTrees += item.quantity;
-          // Only count oxygen/CO2 for actually planted trees
-          if (isActuallyPlanted) {
-            totalOxygen += item.oxygenKgs * item.quantity;
+          // Count oxygen/CO2 for all adopted trees (not just planted ones)
+          // This shows the potential CO2 absorption even before planting
+          const itemOxygen = (item.oxygenKgs || 0) * item.quantity;
+          totalOxygen += itemOxygen;
+          
+          // Debug: Log oxygen calculation
+          if (itemOxygen > 0) {
+            console.log('[ForestProfileCard] Item oxygen:', {
+              treeName: item.treeName,
+              quantity: item.quantity,
+              oxygenKgs: item.oxygenKgs,
+              totalOxygen: itemOxygen
+            });
           }
         });
+
+        // Find the latest date - use planting date if available, otherwise use order creation date
+        // This shows "Last adoption" for newly adopted trees that haven't been planted yet
+        const orderDate = new Date(order.createdAt);
+        if (!lastPlantingDate || orderDate > lastPlantingDate) {
+          lastPlantingDate = orderDate;
+        }
 
         // Find the latest planting date and collect location data
         if (order.wellwisherTasks) {
@@ -162,6 +186,13 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     // Approximate conversion: 1 kg O2 produced ≈ 0.715 kg CO2 absorbed
     // Converting to tonnes (divide by 1000)
     const co2Absorbed = (totalOxygen * 0.715) / 1000;
+    
+    // Debug: Log CO2 calculation
+    console.log('[ForestProfileCard] CO2 calculation:', {
+      totalOxygen,
+      co2Absorbed,
+      totalTrees
+    });
 
     // Calculate forests (unique locations)
     const forestsCount = uniqueLocations.size > 0 ? uniqueLocations.size : 0;
@@ -171,6 +202,16 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
 
     // Calculate impacts (number of completed orders)
     const impactsCount = completedOrdersCount;
+
+    // Debug: Log calculated stats
+    console.log('[ForestProfileCard] Calculated stats:', {
+      treesPlanted: totalTrees,
+      co2Absorbed: co2Absorbed,
+      forests: forestsCount,
+      countries: countriesCount,
+      impacts: impactsCount,
+      lastPlanting: lastPlantingDate
+    });
 
     setStats({
       treesPlanted: totalTrees,
@@ -187,11 +228,28 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
       try {
         setLoading(true);
         const endpoint = publicId ? `/api/public/users/${publicId}/orders` : '/api/orders';
-        const response = await fetch(endpoint);
+        
+        // Add cache-busting and ensure fresh data for each user
+        const response = await fetch(endpoint, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+        
         const result = await response.json();
         
         if (result.success) {
           const ordersData = publicId ? result.data.orders : result.data;
+          
+          // Debug: Log what we received
+          console.log('[ForestProfileCard] Fetched orders for:', publicId || 'current user', 'Count:', ordersData.length);
+          if (ordersData.length > 0) {
+            console.log('[ForestProfileCard] Sample order userId:', ordersData[0].userId, 'userEmail:', ordersData[0].userEmail);
+            console.log('[ForestProfileCard] Current session userId:', session?.user?.id, 'userEmail:', session?.user?.email);
+          }
+          
+          setOrdersData(ordersData); // Store orders for checking planting status
           calculateStats(ordersData);
           
           // Store public user name and image if viewing public profile
@@ -203,51 +261,84 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
               setPublicUserImage(result.data.user.image);
             }
           }
+        } else {
+          console.error('[ForestProfileCard] Failed to fetch orders:', result.error);
         }
       } catch (_error) {
-        console.error('Failed to fetch orders');
+        console.error('[ForestProfileCard] Error fetching orders:', _error);
       } finally {
         setLoading(false);
       }
     };
 
+    const fetchUserImage = async () => {
+      // Fetch user image from database to ensure it's up-to-date
+      // Only fetch if not viewing public profile
+      if (!publicId && session?.user?.id) {
+        try {
+          const response = await fetch(`/api/users/${session.user.id}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.image) {
+              setUserImage(result.data.image);
+            } else if (result.success) {
+              // Clear image if user doesn't have one
+              setUserImage(null);
+            }
+          }
+        } catch (_error) {
+          // Silently fail - will use session image or initials
+        }
+      }
+    };
+
     fetchUserOrders();
-  }, [calculateStats, publicId]);
+    fetchUserImage();
+  }, [calculateStats, publicId, session?.user?.id, session?.user?.email, session?.user?.name, session?.user?.image]);
 
   const getUserDisplayName = () => {
     // If viewing public profile, use the public user name
     if (publicId && publicUserName) {
       return publicUserName;
     }
-    // Otherwise use session data
+    // Otherwise use session data (which should be updated after profile changes)
     if (!session?.user) return 'User';
+    // Use name from session, which should be updated via updateSession
     return session.user.name || (userType === 'company' ? 'Company' : 'Individual');
   };
 
   const getProfileImage = () => {
-    // If viewing public profile, use the public user image
+    // Priority: public user image > fetched user image > session image
     if (publicId && publicUserImage) {
-      console.log('ForestProfileCard: Using public user image:', publicUserImage);
       return publicUserImage;
     }
-    // Otherwise use session image
-    const sessionImage = session?.user?.image || null;
-    console.log('ForestProfileCard: Session image:', sessionImage, 'Session user:', session?.user);
-    return sessionImage;
+    // Use fetched user image if available (more up-to-date than session)
+    if (userImage) {
+      return userImage;
+    }
+    // Fallback to session image
+    return session?.user?.image || null;
   };
 
-  // Debug: Log when session image changes
+  // Update user image when session image changes
   useEffect(() => {
-    console.log('ForestProfileCard: Session changed', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userName: session?.user?.name,
-      userImage: session?.user?.image,
-      publicId,
-      publicUserImage
-    });
-  }, [session?.user?.image, session?.user?.id, publicId, publicUserImage]);
+    if (session?.user?.image && !publicId) {
+      setUserImage(session.user.image);
+    }
+  }, [session?.user?.image, publicId]);
+
+  // Update current time for real-time "last planting" display
+  useEffect(() => {
+    // Update immediately on mount
+    setCurrentTime(new Date());
+    
+    // Update every 30 seconds for more responsive real-time updates
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getForestName = () => {
     const name = getUserDisplayName();
@@ -258,23 +349,42 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
 
   const getLastPlantingText = () => {
     if (!stats.lastPlanting) {
-      return 'No plantings yet';
+      return 'No adoptions yet';
     }
 
-    const now = new Date();
+    // Use currentTime state for real-time updates
+    const now = currentTime;
     const diffTime = Math.abs(now.getTime() - stats.lastPlanting.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const diffMonths = Math.floor(diffDays / 30);
     const diffYears = Math.floor(diffDays / 365);
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
 
+    // Check if the lastPlanting date matches an actual planting date (plantedAt)
+    // If not, it's from order creation date (adoption)
+    const isActualPlanting = ordersData.some(order => 
+      order.wellwisherTasks?.some(task => 
+        task.plantingDetails?.plantedAt && 
+        Math.abs(new Date(task.plantingDetails.plantedAt).getTime() - stats.lastPlanting!.getTime()) < 1000 // Within 1 second
+      )
+    );
+
+    const prefix = isActualPlanting ? 'Last planting' : 'Last adoption';
+
+    // Show more granular time for recent adoptions/plantings
     if (diffYears > 0) {
-      return `Last planting: ${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
+      return `${prefix}: ${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
     } else if (diffMonths > 0) {
-      return `Last planting: ${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
+      return `${prefix}: ${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
     } else if (diffDays > 0) {
-      return `Last planting: ${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      return `${prefix}: ${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else if (diffHours > 0) {
+      return `${prefix}: ${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else if (diffMinutes > 0) {
+      return `${prefix}: ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
     } else {
-      return 'Last planting: today';
+      return `${prefix}: just now`;
     }
   };
 

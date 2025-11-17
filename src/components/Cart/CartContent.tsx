@@ -118,6 +118,11 @@ export default function CartContent() {
   };
 
   const handlePlaceTree = async () => {
+    // Prevent multiple simultaneous order placements
+    if (isPlacingOrder) {
+      return;
+    }
+
     if (!session) {
       router.push('/login?redirect=/cart');
       return;

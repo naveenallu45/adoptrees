@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -141,20 +141,84 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     fetchUserOrders();
   }, [publicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Memoize tree grouping computation - must be at top level (Rules of Hooks)
+  const groupedTrees = useMemo(() => {
+    if (isTransactionsPage || orders.length === 0) {
+      return [];
+    }
+
+    // Group items by treeId to prevent duplicate cards for the same tree
+    const treeMap = new Map<string, {
+      item: OrderItem;
+      totalQuantity: number;
+      orders: Order[];
+      earliestDate: Date;
+      firstOrderIndex: number;
+      firstItemIndex: number;
+    }>();
+
+    orders.forEach((order, orderIndex) => {
+      order.items.forEach((item, itemIndex) => {
+        const key = `${item.treeId}-${item.adoptionType || 'self'}`;
+        const existing = treeMap.get(key);
+        
+        if (existing) {
+          // Aggregate quantities and track orders
+          existing.totalQuantity += item.quantity;
+          existing.orders.push(order);
+          const itemDate = new Date(order.createdAt);
+          if (itemDate < existing.earliestDate) {
+            existing.earliestDate = itemDate;
+          }
+        } else {
+          // First occurrence of this tree
+          treeMap.set(key, {
+            item,
+            totalQuantity: item.quantity,
+            orders: [order],
+            earliestDate: new Date(order.createdAt),
+            firstOrderIndex: orderIndex,
+            firstItemIndex: itemIndex
+          });
+        }
+      });
+    });
+
+    // Convert map to array
+    return Array.from(treeMap.values());
+  }, [orders, isTransactionsPage]);
+
   const fetchUserOrders = async () => {
     try {
       setLoading(true);
       const endpoint = publicId ? `/api/public/users/${publicId}/orders` : '/api/orders';
-      const response = await fetch(endpoint);
+      
+      // Add cache-busting and ensure fresh data
+      const response = await fetch(endpoint, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      
       const result = await response.json();
       
       if (result.success) {
         const ordersData = publicId ? result.data.orders : result.data;
+        
+        // Debug: Log what we received
+        console.log('[UserTreesList] Received orders:', ordersData.length, 'for publicId:', publicId || 'current user');
+        if (ordersData.length > 0) {
+          console.log('[UserTreesList] Sample order userId:', ordersData[0].userId);
+        }
+        
+        // Server already handles deduplication, so we can use data directly
         setOrders(ordersData);
       } else {
         setError(result.error);
       }
     } catch (_error) {
+      console.error('[UserTreesList] Error fetching orders:', _error);
       setError('Failed to fetch orders');
     } finally {
       setLoading(false);
@@ -329,112 +393,122 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {orders.flatMap((order, orderIndex) => 
-                  order.items.map((item, itemIndex) => (
-                    <motion.div
-                      key={`${order._id}-${itemIndex}`}
-                      className="bg-gradient-to-br from-green-100/80 via-emerald-100/60 to-green-100/70 border border-green-300/80 rounded-lg p-3 sm:p-4 md:p-5 hover:shadow-lg hover:border-green-400 hover:from-green-100 hover:via-emerald-100/80 hover:to-green-100/90 transition-all duration-300 w-full backdrop-blur-sm"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 * (orderIndex + itemIndex) }}
-                    >
-                      <div className="flex flex-row gap-3 sm:gap-4">
-                        {/* Tree Image */}
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm">
-                          {item.treeImageUrl ? (
-                            <Image
-                              src={item.treeImageUrl}
-                              alt={item.treeName}
-                              width={96}
-                              height={96}
-                              className="w-full h-full object-cover"
-                              onError={(_e) => {
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
-                              <span className="text-green-600 text-xs font-medium">No Image</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Content Section with Buttons on Right */}
-                        <div className="flex-1 min-w-0 flex flex-row items-start gap-3 sm:gap-4">
-                          {/* Left: Tree Info */}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-green-800 to-emerald-800 bg-clip-text text-transparent mb-2 text-left">
-                              {item.treeName}
-                            </h4>
-                            <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
-                              <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
-                                <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                {item.oxygenKgs} kg/year O₂
-                              </span>
-                              {item.adoptionType === 'gift' && (
-                                <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
-                                  <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                  Gift for {item.recipientName}
-                                </span>
-                              )}
-                            </div>
-                            {/* Adoption Date */}
-                            <div className="flex items-center justify-start gap-1.5 text-xs text-gray-500">
-                              <ClockIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                              <span>Adopted on {formatAdoptedDate(order.createdAt)}</span>
-                            </div>
-                          </div>
-                          
-                          {/* Right: Action Buttons */}
-                          <div className="flex flex-col items-end justify-end gap-2 sm:gap-3 flex-shrink-0">
-                            <button
-                              onClick={() => {
-                                const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
-                                router.push(`${basePath}/${order.orderId || order._id}/${itemIndex}`);
-                              }}
-                              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
-                              type="button"
-                            >
-                              View More
-                              <ArrowRightIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </button>
-                            {!isTransactionsPage && getStatusText(order) === 'Certificate' && order.orderId && (
-                              <button
-                                onClick={() => handleDownloadCertificate(order.orderId!)}
-                                className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-200/50 shadow-sm whitespace-nowrap"
-                                type="button"
-                              >
-                                <DocumentArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                Certificate
-                              </button>
+                {groupedTrees.map((treeData, treeIndex) => {
+                    const { item, totalQuantity, orders: treeOrders, earliestDate, firstOrderIndex: _firstOrderIndex, firstItemIndex } = treeData;
+                    const primaryOrder = treeOrders[0]; // Use first order for navigation
+                    
+                    return (
+                      <motion.div
+                        key={`${item.treeId}-${treeIndex}`}
+                        className="bg-gradient-to-br from-green-100/80 via-emerald-100/60 to-green-100/70 border border-green-300/80 rounded-lg p-3 sm:p-4 md:p-5 hover:shadow-lg hover:border-green-400 hover:from-green-100 hover:via-emerald-100/80 hover:to-green-100/90 transition-all duration-300 w-full backdrop-blur-sm"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 * treeIndex }}
+                      >
+                        <div className="flex flex-row gap-3 sm:gap-4">
+                          {/* Tree Image */}
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm">
+                            {item.treeImageUrl ? (
+                              <Image
+                                src={item.treeImageUrl}
+                                alt={item.treeName}
+                                width={96}
+                                height={96}
+                                className="w-full h-full object-cover"
+                                onError={(_e) => {
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+                                <span className="text-green-600 text-xs font-medium">No Image</span>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Planting location (collapsed by default) */}
-                      {order.wellwisherTasks?.some(task => 
-                        task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
-                      ) && (() => {
-                        const completedTask = order.wellwisherTasks?.find(task => 
-                          task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
-                        );
-                        if (completedTask?.plantingDetails?.plantingLocation) {
-                          const coords = completedTask.plantingDetails.plantingLocation.coordinates;
-                          return (
-                            <div className="mt-1 pt-1.5 border-t border-green-100/50">
-                              <LocationToggle
-                                latitude={coords[1]}
-                                longitude={coords[0]}
-                                treeName={item.treeName}
-                              />
+                          
+                          {/* Content Section with Buttons on Right */}
+                          <div className="flex-1 min-w-0 flex flex-row items-start gap-3 sm:gap-4">
+                            {/* Left: Tree Info */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-green-800 to-emerald-800 bg-clip-text text-transparent mb-2 text-left">
+                                {item.treeName}
+                                {totalQuantity > 1 && (
+                                  <span className="ml-2 text-sm text-gray-600 font-normal">
+                                    (×{totalQuantity})
+                                  </span>
+                                )}
+                              </h4>
+                              <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
+                                <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
+                                  <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                  {item.oxygenKgs * totalQuantity} kg/year O₂
+                                </span>
+                                {item.adoptionType === 'gift' && (
+                                  <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
+                                    <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                    Gift for {item.recipientName}
+                                  </span>
+                                )}
+                              </div>
+                              {/* Adoption Date */}
+                              <div className="flex items-center justify-start gap-1.5 text-xs text-gray-500">
+                                <ClockIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                <span>Adopted on {formatAdoptedDate(earliestDate.toISOString())}</span>
+                              </div>
                             </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </motion.div>
-                  ))
-                )}
+                            
+                            {/* Right: Action Buttons */}
+                            <div className="flex flex-col items-end justify-end gap-2 sm:gap-3 flex-shrink-0">
+                              <button
+                                onClick={() => {
+                                  const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
+                                  router.push(`${basePath}/${primaryOrder.orderId || primaryOrder._id}/${firstItemIndex}`);
+                                }}
+                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                                type="button"
+                              >
+                                View More
+                                <ArrowRightIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              </button>
+                              {!isTransactionsPage && getStatusText(primaryOrder) === 'Certificate' && primaryOrder.orderId && (
+                                <button
+                                  onClick={() => handleDownloadCertificate(primaryOrder.orderId!)}
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-200/50 shadow-sm whitespace-nowrap"
+                                  type="button"
+                                >
+                                  <DocumentArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                  Certificate
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Planting location (collapsed by default) */}
+                        {(() => {
+                          // Check all orders for this tree for planting locations
+                          for (const treeOrder of treeOrders) {
+                            const completedTask = treeOrder.wellwisherTasks?.find(task => 
+                              task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
+                            );
+                            if (completedTask?.plantingDetails?.plantingLocation) {
+                              const coords = completedTask.plantingDetails.plantingLocation.coordinates;
+                              return (
+                                <div className="mt-1 pt-1.5 border-t border-green-100/50">
+                                  <LocationToggle
+                                    latitude={coords[1]}
+                                    longitude={coords[0]}
+                                    treeName={item.treeName}
+                                  />
+                                </div>
+                              );
+                            }
+                          }
+                          return null;
+                        })()}
+                      </motion.div>
+                    );
+                  })
+                }
               </div>
             )}
           </div>
