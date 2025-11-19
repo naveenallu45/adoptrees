@@ -366,7 +366,6 @@ export default function CartContent() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">{item.name}</h3>
-                        <p className="text-gray-600 text-xs sm:text-sm line-clamp-2">{item.info}</p>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
                           <p className="text-green-600 font-semibold text-sm sm:text-base">₹{item.price}</p>
                           <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
