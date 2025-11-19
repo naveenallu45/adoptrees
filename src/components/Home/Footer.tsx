@@ -64,14 +64,14 @@ export default function Footer() {
                     {link.href.startsWith('/') ? (
                       <Link
                         href={link.href}
-                        className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                        className={`text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base ${link.name === 'About Us' ? "font-['Calibri']" : ''}`}
                       >
                         {link.name}
                       </Link>
                     ) : (
                     <a
                       href={link.href}
-                      className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                      className={`text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base ${link.name === 'About Us' ? "font-['Calibri']" : ''}`}
                     >
                       {link.name}
                     </a>

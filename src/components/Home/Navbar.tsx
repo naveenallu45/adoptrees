@@ -57,23 +57,23 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${
+    <nav className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 overflow-visible ${
       shouldUseWhiteBg 
         ? 'bg-white shadow-md' 
         : 'bg-transparent'
     }`}>
       <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-0 sm:py-[1px]">
-        <div className="flex items-center justify-between h-auto">
+        <div className="flex items-center justify-between h-[56px] sm:h-[56px] md:h-[67px] lg:h-[78px] xl:h-[88px] 2xl:h-[99px] overflow-visible">
           {/* Logo and Navigation Items */}
           <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-8">
             {/* Logo */}
-            <div className="flex items-center">
+            <div className="flex items-center h-full">
               <Link 
                 href="/"
                 className="flex items-center transition-transform duration-300 hover:scale-105 active:scale-95"
                 aria-label="Adoptrees Home"
               >
-                <div className="relative w-[56px] h-[56px] sm:w-[56px] sm:h-[56px] md:w-[67px] md:h-[67px] lg:w-[78px] lg:h-[78px] xl:w-[88px] xl:h-[88px] 2xl:w-[99px] 2xl:h-[99px] flex-shrink-0">
+                <div className="relative w-[90px] h-[90px] sm:w-[56px] sm:h-[56px] md:w-[67px] md:h-[67px] lg:w-[121px] lg:h-[121px] xl:w-[137px] xl:h-[137px] 2xl:w-[99px] 2xl:h-[99px] flex-shrink-0 -my-[17px] sm:my-0 lg:-my-[21.5px] xl:-my-[24.5px]">
                   <Image
                     src={isMobile || shouldUseWhiteBg 
                       ? "https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
@@ -82,7 +82,7 @@ export default function Navbar() {
                     alt="Adoptrees Logo"
                     fill
                     className="object-contain object-center transition-opacity duration-300"
-                    sizes="(max-width: 640px) 56px, (max-width: 768px) 56px, (max-width: 1024px) 67px, (max-width: 1280px) 78px, (max-width: 1536px) 88px, 99px"
+                    sizes="(max-width: 640px) 90px, (max-width: 768px) 56px, (max-width: 1024px) 67px, (max-width: 1280px) 121px, (max-width: 1536px) 137px, 99px"
                     priority
                     quality={90}
                   />
@@ -96,7 +96,7 @@ export default function Navbar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`transition-all duration-300 font-bold text-xl xl:text-2xl tracking-tight relative group ${
+                  className={`transition-all duration-300 font-bold text-xl xl:text-2xl tracking-tight relative group font-['Calibri'] ${
                     shouldUseWhiteBg 
                       ? 'text-gray-900 hover:text-green-600' 
                       : 'text-white hover:text-green-200 drop-shadow-lg'
@@ -205,7 +205,7 @@ export default function Navbar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`block transition-colors duration-300 py-2 font-bold text-lg border-b last:border-b-0 ${
+                className={`block transition-colors duration-300 py-2 font-bold text-lg border-b last:border-b-0 font-['Calibri'] ${
                   shouldUseWhiteBg 
                     ? 'text-gray-900 hover:text-green-600 border-gray-200' 
                     : 'text-white hover:text-green-200 border-white/20'
