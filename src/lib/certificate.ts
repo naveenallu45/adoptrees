@@ -1,7 +1,44 @@
 import { PDFDocument, PDFImage, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
+import { createCanvas, loadImage } from 'canvas';
 
 const CERTIFICATE_TEMPLATE_URL = 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762341062/certificato-treedom-2023.pdf_2_hmxpsy.png';
+
+// Cache template image in memory to avoid fetching every time
+let cachedTemplateImageBytes: ArrayBuffer | null = null;
+let templateCachePromise: Promise<ArrayBuffer> | null = null;
+
+async function getTemplateImage(): Promise<ArrayBuffer> {
+  // Return cached template if available
+  if (cachedTemplateImageBytes) {
+    return cachedTemplateImageBytes;
+  }
+  
+  // If already fetching, wait for that promise
+  if (templateCachePromise) {
+    return templateCachePromise;
+  }
+  
+  // Fetch and cache template
+  templateCachePromise = fetch(CERTIFICATE_TEMPLATE_URL)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch certificate template: ${response.status} ${response.statusText}`);
+      }
+      return response.arrayBuffer();
+    })
+    .then(bytes => {
+      cachedTemplateImageBytes = bytes;
+      templateCachePromise = null;
+      return bytes;
+    })
+    .catch(error => {
+      templateCachePromise = null;
+      throw error;
+    });
+  
+  return templateCachePromise;
+}
 
 interface CertificateData {
   userName: string;
@@ -18,16 +55,8 @@ interface CertificateData {
  */
 export async function generateCertificate(data: CertificateData): Promise<Buffer> {
   try {
-    console.log('Starting certificate generation for:', data.orderId);
-    
-    // Download the template image from Cloudinary
-    console.log('Fetching template from:', CERTIFICATE_TEMPLATE_URL);
-    const templateResponse = await fetch(CERTIFICATE_TEMPLATE_URL);
-    if (!templateResponse.ok) {
-      throw new Error(`Failed to fetch certificate template: ${templateResponse.status} ${templateResponse.statusText}`);
-    }
-    const templateImageBytes = await templateResponse.arrayBuffer();
-    console.log('Template downloaded, size:', templateImageBytes.byteLength, 'bytes');
+    // Use cached template image (much faster)
+    const templateImageBytes = await getTemplateImage();
 
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
@@ -82,37 +111,103 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       qrImage = await pdfDoc.embedPng(qrImageBytes);
     }
 
-    // Embed profile picture if available
-    let profilePic: PDFImage | null = null;
-    if (data.profilePicUrl) {
+    // Embed profile picture if available and create circular version
+    // Optimize by resizing to target size before processing
+    // Process profile image in parallel with PDF setup
+    const targetProfileSize = 240; // Target size for PDF
+    
+    const profilePicPromise = data.profilePicUrl ? (async () => {
       try {
-        const profilePicResponse = await fetch(data.profilePicUrl);
-        if (profilePicResponse.ok) {
-          const profilePicBytes = await profilePicResponse.arrayBuffer();
-          // Try to embed as PNG, fallback to JPG if needed
+        const profilePicResponse = await fetch(data.profilePicUrl!);
+        if (!profilePicResponse.ok) return null;
+        
+        const profilePicBytes = await profilePicResponse.arrayBuffer();
+        
+        // Create circular version using canvas (optimized - resize first)
+        try {
+          const img = await loadImage(Buffer.from(profilePicBytes));
+          
+          // Resize to target size for faster processing
+          const canvas = createCanvas(targetProfileSize, targetProfileSize);
+          const ctx = canvas.getContext('2d');
+          
+          // Create circular clipping path
+          ctx.beginPath();
+          ctx.arc(targetProfileSize / 2, targetProfileSize / 2, targetProfileSize / 2, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.clip();
+          
+          // Draw the image centered and scaled to fit
+          const scale = Math.min(targetProfileSize / img.width, targetProfileSize / img.height);
+          const scaledWidth = img.width * scale;
+          const scaledHeight = img.height * scale;
+          const offsetX = (targetProfileSize - scaledWidth) / 2;
+          const offsetY = (targetProfileSize - scaledHeight) / 2;
+          
+          ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+          
+          // Convert canvas to buffer
+          const circularBuffer = canvas.toBuffer('image/png');
+          return await pdfDoc.embedPng(circularBuffer);
+        } catch (_canvasError) {
+          // Fallback to original image
           try {
-            profilePic = await pdfDoc.embedPng(profilePicBytes);
+            return await pdfDoc.embedPng(profilePicBytes);
           } catch {
-            profilePic = await pdfDoc.embedJpg(profilePicBytes);
+            return await pdfDoc.embedJpg(profilePicBytes);
           }
         }
-      } catch (error) {
-        console.error('Failed to load profile picture:', error);
+      } catch (_error) {
+        return null;
       }
-    }
+    })() : Promise.resolve(null);
+    
+    // Wait for profile pic processing
+    const circularProfilePic = await profilePicPromise;
 
     // Draw profile picture (circular, top left area)
-    const profileSize = profilePic ? 240 : 200;
+    const profileSize = circularProfilePic ? 240 : 200;
     const profileX = 540;
     const profileY = pageHeight - 600;
+    const profileRadius = profileSize / 2;
+    const profileCenterX = profileX + profileRadius;
+    const profileCenterY = profileY + profileRadius;
     
-    if (profilePic) {
-      // Draw circular profile picture (using a mask approach)
-      page.drawImage(profilePic, {
+    if (circularProfilePic) {
+      // Draw circular profile picture with circular frame (matching the reference image)
+      // The reference shows a light green circular frame around a circular profile picture
+      
+      // Step 1: Draw outer green circle background (like the reference image)
+      page.drawCircle({
+        x: profileCenterX,
+        y: profileCenterY,
+        size: profileRadius + 5,
+        color: rgb(0.2, 0.5, 0.2), // Light green background
+      });
+      
+      // Step 2: Draw white circle (creates the frame border)
+      page.drawCircle({
+        x: profileCenterX,
+        y: profileCenterY,
+        size: profileRadius - 1,
+        color: rgb(1, 1, 1), // White
+      });
+      
+      // Step 3: Draw the circular profile image (already clipped to circle)
+      page.drawImage(circularProfilePic, {
         x: profileX,
         y: profileY,
         width: profileSize,
         height: profileSize,
+      });
+      
+      // Step 4: Draw the light green circular border (completes the frame like in reference)
+      page.drawCircle({
+        x: profileCenterX,
+        y: profileCenterY,
+        size: profileRadius,
+        borderColor: rgb(0.2, 0.5, 0.2), // Light green border
+        borderWidth: 4,
       });
     } else {
       // Draw placeholder circle with initials
@@ -125,16 +220,16 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       
       // Draw circle background
       page.drawCircle({
-        x: profileX + profileSize / 2,
-        y: profileY + profileSize / 2,
-        size: profileSize / 2,
+        x: profileCenterX,
+        y: profileCenterY,
+        size: profileRadius,
         color: rgb(0.2, 0.5, 0.2),
       });
       
       // Draw initials
       page.drawText(initials, {
-        x: profileX + profileSize / 2 - 10,
-        y: profileY + profileSize / 2 - 8,
+        x: profileCenterX - 10,
+        y: profileCenterY - 8,
         size: 60,
         color: rgb(1, 1, 1),
       });
@@ -223,10 +318,8 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     });
 
     // Serialize the PDF
-    console.log('Serializing PDF...');
     const pdfBytes = await pdfDoc.save();
     const pdfBuffer = Buffer.from(pdfBytes);
-    console.log('Certificate generated successfully, PDF size:', pdfBuffer.length, 'bytes');
     return pdfBuffer;
   } catch (error) {
     console.error('Error generating certificate:', error);

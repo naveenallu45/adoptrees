@@ -124,6 +124,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const isTransactionsPage = pathname.includes('/transactions');
@@ -272,6 +273,9 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
   };
 
   const handleDownloadCertificate = async (orderId: string) => {
+    if (downloadingCertificate) return; // Prevent multiple clicks
+    
+    setDownloadingCertificate(orderId);
     try {
       const response = await fetch(`/api/certificates/${orderId}`);
       
@@ -298,6 +302,8 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     } catch (error) {
       console.error('Error downloading certificate:', error);
       alert('Failed to download certificate');
+    } finally {
+      setDownloadingCertificate(null);
     }
   };
 
@@ -472,11 +478,24 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                               {!isTransactionsPage && getStatusText(primaryOrder) === 'Certificate' && primaryOrder.orderId && (
                                 <button
                                   onClick={() => handleDownloadCertificate(primaryOrder.orderId!)}
-                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-200/50 shadow-sm whitespace-nowrap"
+                                  disabled={downloadingCertificate === primaryOrder.orderId}
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-200/50 shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                                   type="button"
                                 >
+                                  {downloadingCertificate === primaryOrder.orderId ? (
+                                    <>
+                                      <svg className="animate-spin h-3.5 w-3.5 sm:h-4 sm:w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      Generating...
+                                    </>
+                                  ) : (
+                                    <>
                                   <DocumentArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                   Certificate
+                                    </>
+                                  )}
                                 </button>
                               )}
                             </div>
@@ -557,11 +576,24 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                         {!isTransactionsPage && getStatusText(order) === 'Certificate' && order.orderId && (
                           <button
                             onClick={() => handleDownloadCertificate(order.orderId!)}
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                            disabled={downloadingCertificate === order.orderId}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             type="button"
                           >
+                            {downloadingCertificate === order.orderId ? (
+                              <>
+                                <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Generating...
+                              </>
+                            ) : (
+                              <>
                             <DocumentArrowDownIcon className="h-3 w-3 mr-1" />
                             Certificate
+                              </>
+                            )}
                           </button>
                         )}
                         {order.isGift && (
