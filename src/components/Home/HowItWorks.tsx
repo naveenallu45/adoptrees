@@ -3,19 +3,19 @@ import Image from 'next/image';
 export default function HowItWorks() {
   const steps = [
     {
-      title: 'Choose a tree to adopt or gift',
+      title: 'Pick a tree to adopt or gift',
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760798632/WhatsApp_Image_2025-10-18_at_6.14.54_PM_w0v3iq.jpg',
-      alt: 'Choose a tree to adopt or gift'
+      alt: 'Pick a tree to adopt or gift'
     },
     {
-      title: 'A well wisher will plant it for you',
+      title: 'A caretaker plants it on your behalf',
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760798633/WhatsApp_Image_2025-10-18_at_6.15.45_PM_aivxe9.jpg',
-      alt: 'A farmer will plant it for you'
+      alt: 'A caretaker plants it on your behalf'
     },
     {
-      title: 'Track its growth online',
+      title: 'Follow its growth through your dashboard',
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760798632/WhatsApp_Image_2025-10-18_at_6.16.46_PM_veeafu.jpg',
-      alt: 'Track its growth online'
+      alt: 'Follow its growth through your dashboard'
     }
   ];
 
@@ -28,7 +28,7 @@ export default function HowItWorks() {
             Your Tree Adoption Journey
           </h2>
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
-            Join our mission to create a greener planet with just three easy steps
+            Together, let&apos;s grow a healthier planet—one tree at a time.
           </p>
         </div>
 

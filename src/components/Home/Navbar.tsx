@@ -17,13 +17,16 @@ export default function Navbar() {
   const { getTotalItems } = useCart();
 
   // Pages that should always have white navbar background
-  const fixedWhitePages = ['/individuals', '/companies', '/about', '/login', '/register'];
+  const fixedWhitePages = ['/individuals', '/companies', '/about', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies'];
+  
+  // Check if current path starts with /trees (for tree info pages)
+  const isTreeInfoPage = pathname?.startsWith('/trees/');
   
   // On mobile, always use white background. On desktop, use existing logic
   // Only use isMobile after mounting to prevent hydration mismatch
-  const shouldUseWhiteBg = fixedWhitePages.includes(pathname) || (mounted && (isMobile || isScrolled));
+  const shouldUseWhiteBg = fixedWhitePages.includes(pathname) || isTreeInfoPage || (mounted && (isMobile || isScrolled));
   // Pages where buttons should have green background
-  const shouldUseGreenBg = fixedWhitePages.includes(pathname) || (mounted && isScrolled);
+  const shouldUseGreenBg = fixedWhitePages.includes(pathname) || isTreeInfoPage || (mounted && isScrolled);
 
   useEffect(() => {
     setMounted(true);

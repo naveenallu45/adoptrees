@@ -14,17 +14,19 @@ export default function HeroSection() {
           {/* Main Heading */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 drop-shadow-2xl tracking-tight">
             <span className="block">
-              Plant Your Future,
+              Plant a Dream,
             </span>
             <span className="block text-green-300 mt-2">
-              Grow Your Legacy
+              Watch It Grow
             </span>
           </h1>
 
           {/* Subtitle */}
+          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-lg px-4 leading-relaxed mb-4 sm:mb-6">
+            A single tree can become your lifelong legacy.
+          </p>
           <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-lg px-4 leading-relaxed mb-6 sm:mb-8">
-            Adopt a tree and make a personal contribution to a greener tomorrow. 
-            Every tree you plant becomes a living legacy that grows with you.
+            Nurture nature today, and let your impact bloom for years to come.
           </p>
 
           {/* CTA Button */}

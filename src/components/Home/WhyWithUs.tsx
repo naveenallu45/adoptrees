@@ -4,33 +4,33 @@ export default function WhyWithUs() {
   const features = [
     {
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760804072/ChatGPT_Image_Oct_18_2025_09_30_34_PM_lafxma.png',
-      title: 'Verified Impact',
-      description: 'Every tree planted is tracked and verified with GPS coordinates and regular photo updates.'
+      title: 'Impact You Can Feel',
+      description: 'Every tree you plant is real, traceable, and nurtured. See its exact location and photo updates — your kindness growing in the soil.'
     },
     {
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760804068/ChatGPT_Image_Oct_18_2025_09_30_36_PM_btbros.png',
-      title: 'Digital Tracking',
-      description: 'Monitor your tree\'s growth through our mobile app with real-time updates and milestones.'
+      title: 'Stay Connected to Your Tree',
+      description: 'Watch your tree\'s journey unfold through our app. Milestones, growth moments, and life updates — all in real time.'
     },
     {
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760804061/ChatGPT_Image_Oct_18_2025_09_30_39_PM_wppekx.png',
-      title: 'Green India',
-      description: 'Plant trees across India and contribute to reforestation efforts throughout the country.'
+      title: 'Growing a Greener India',
+      description: 'Your tree becomes part of India\'s reforestation story. Together, we rebuild green cover where it\'s needed the most.'
     },
     {
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760804064/ChatGPT_Image_Oct_18_2025_09_26_53_PM_spnwqh.png',
-      title: 'Community Impact',
-      description: 'Join thousands of eco-warriors making a difference and creating lasting environmental change.'
+      title: 'Change Starts With Community',
+      description: 'Join thousands of eco-minded individuals planting hope. Your tree adds strength to a movement creating meaningful change.'
     },
     {
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760804064/ChatGPT_Image_Oct_18_2025_09_26_57_PM_aorura.png',
-      title: 'Certified Partners',
-      description: 'Work with certified farmers and environmental organizations for maximum impact.'
+      title: 'Partners You Can Trust',
+      description: 'We collaborate only with verified farmers and environmental groups, ensuring every tree is cared for with love and responsibility.'
     },
     {
       imageUrl: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760804072/ChatGPT_Image_Oct_18_2025_09_27_01_PM_ccsq8d.png',
-      title: 'Transparent Process',
-      description: 'Complete transparency in how your contribution is used and the impact it creates.'
+      title: 'Transparent at Every Step',
+      description: 'From planting to growth, you see everything. Your contribution, your tree, your impact — always clear and open.'
     }
   ];
 
@@ -49,10 +49,6 @@ export default function WhyWithUs() {
           <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-gray-900 mb-8 tracking-tight leading-tight">
             Why Plant With Us?
           </h2>
-          <p className="text-xl sm:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-medium">
-            We make tree planting simple, transparent, and impactful. Join our mission to create 
-            a greener planet with verified results and lasting change.
-          </p>
         </div>
 
         {/* Features Grid */}

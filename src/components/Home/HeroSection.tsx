@@ -29,13 +29,18 @@ export default function HeroSection() {
               Plant a Tree,
             </span>
             <span className="block text-green-500">
-              Make a Difference
+              Touch a Life
             </span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white max-w-2xl sm:max-w-3xl mx-auto mb-6 sm:mb-8 drop-shadow-lg font-medium px-4">
-            Adopt a tree or gift one to a friend and contribute to Greener India
+          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white max-w-2xl sm:max-w-3xl mx-auto mb-4 sm:mb-6 drop-shadow-lg font-medium px-4">
+            Adopt a tree or gift one to someone you care for. Every tree you plant brings India one step closer to a greener future.
+          </p>
+          
+          {/* Tagline */}
+          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl sm:max-w-3xl mx-auto mb-6 sm:mb-8 drop-shadow-lg font-medium px-4">
+            Together, let&apos;s grow a healthier planet—one tree at a time.
           </p>
 
           {/* CTA Buttons */}

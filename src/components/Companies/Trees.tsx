@@ -1,6 +1,7 @@
 "use client";
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCart } from '@/contexts/CartContext';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
@@ -143,7 +144,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
           {trees.map((tree) => (
             <div 
               key={tree._id} 
-              className="group bg-green-100 rounded-2xl shadow-lg overflow-hidden border-[3.08px] border-green-500"
+              className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400"
             >
               {/* Tree Image */}
               <div className="relative aspect-[4/4] overflow-hidden bg-white">
@@ -151,7 +152,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                   src={tree.imageUrl}
                   alt={tree.name}
                   fill
-                  className="object-cover object-top"
+                  className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                   quality={85}
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -161,32 +162,32 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
               </div>
 
               {/* Product Information */}
-              <div className="p-2.5 sm:p-3">
+              <div className="p-3 sm:p-4 bg-gradient-to-b from-green-50 to-green-100">
                 {/* Tree Name */}
-                <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1.5 line-clamp-2">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 line-clamp-2 min-h-[3rem]">
                   {tree.name}
                 </h3>
 
                 {/* Price and Package Information */}
-                <div className="mb-2 pb-2 border-b border-gray-100">
-                  <div className="flex justify-between items-center mb-1.5">
+                <div className="mb-3">
+                  <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="text-xs text-gray-900 mb-0.5">Price</p>
-                      <span className="text-lg sm:text-xl font-bold text-gray-900">
+                      <p className="text-xs text-gray-600 mb-1 font-medium">Price</p>
+                      <span className="text-xl sm:text-2xl font-bold text-gray-900">
                         {tree.packagePrice ? `₹${tree.packagePrice}` : `₹${tree.price}`}
                       </span>
                     </div>
-                    <div className="text-right bg-green-50 rounded-lg px-2 py-1">
-                      <p className="text-xs text-gray-900 mb-0.5">Oxygen</p>
+                    <div className="text-right bg-white/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 shadow-sm border border-green-200/50">
+                      <p className="text-xs text-gray-600 mb-0.5 font-medium">Oxygen</p>
                       <p className="text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                     </div>
                   </div>
                   {tree.packageQuantity && tree.packageQuantity > 1 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-1 mt-1">
-                      <p className="text-xs text-gray-900 font-medium">
+                    <div className="bg-white/60 backdrop-blur-sm border border-green-200/50 rounded-lg p-2 mt-2">
+                      <p className="text-xs text-gray-700 font-medium">
                         Package: {tree.packageQuantity} trees
                         {tree.packagePrice && (
-                          <span className="ml-2">
+                          <span className="ml-2 text-gray-600">
                             (₹{Math.round(tree.packagePrice / tree.packageQuantity)} per tree)
                           </span>
                         )}
@@ -196,53 +197,65 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  {/* Info Button */}
+                  <Link
+                    href={`/trees/${tree._id}`}
+                    className="flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 font-semibold"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-xs font-semibold">Info</span>
+                  </Link>
+
+                  {/* Add to Cart Button */}
                   {session && session.user.userType !== 'company' ? (
                     <button
                       disabled
-                      className="w-full bg-gray-300 text-gray-500 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold cursor-not-allowed flex items-center justify-center"
+                      className="flex-1 bg-gray-300 text-gray-500 px-3 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed flex items-center justify-center"
                     >
                       Company Only
                     </button>
                   ) : (
                     <button
-
                       ref={(el) => { buttonRefs.current[tree._id] = el; }}
                       onClick={(e) => handleAddToCart(tree, e)}
                       disabled={addingTreeId === tree._id}
-                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center shadow-md disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
                     >
                       {addingTreeId === tree._id ? (
-                        <span className="flex items-center gap-2">
-                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <span className="flex items-center gap-1.5">
+                          <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          Adding...
+                          <span className="text-xs">Adding...</span>
                         </span>
                       ) : (
-                        <span className={`flex items-center gap-2 transition-all duration-300 ${
+                        <span className={`flex items-center gap-1.5 transition-all duration-300 ${
                           addedItems.has(tree._id) ? 'text-white' : 'text-white'
                         }`}>
                           {addedItems.has(tree._id) ? (
                             <>
-                              <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              <svg className="w-3.5 h-3.5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                               </svg>
-                              <span>Added!</span>
+                              <span className="text-xs font-semibold">Added!</span>
                             </>
                           ) : (
                             <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
                               </svg>
-                              <span>Add to Cart</span>
+                              <span className="text-xs font-semibold">Add</span>
                             </>
                           )}
                         </span>
                       )}
                       {addedItems.has(tree._id) && (
-                        <div className="absolute inset-0 bg-green-400/30 animate-pulse rounded-xl"></div>
+                        <div className="absolute inset-0 bg-green-400/30 animate-pulse rounded-lg"></div>
                       )}
                     </button>
                   )}

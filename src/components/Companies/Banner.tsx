@@ -16,12 +16,12 @@ export default function Banner() {
           </div>
           
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 sm:mb-8 drop-shadow-lg">
-            Lead the Green Revolution
+            Create Impact That Outlives Your Brand
           </h2>
           
           <p className="text-lg sm:text-xl md:text-2xl text-teal-50 max-w-3xl mx-auto mb-8 sm:mb-10 leading-relaxed font-light">
-            Join leading companies in creating a sustainable future. Partner with us to make a meaningful impact on the environment and your brand. 
-            Your corporate commitment today shapes tomorrow&apos;s world.
+            Work with us to make your CSR truly meaningful. 
+            Each tree your company plants becomes a contribution to cleaner air, restored nature, and a healthier tomorrow.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

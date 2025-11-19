@@ -16,12 +16,12 @@ export default function Banner() {
           </div>
           
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 sm:mb-8 drop-shadow-lg">
-            Start Your Green Journey Today
+            Take the First Step Toward a Greener Tomorrow
           </h2>
           
           <p className="text-lg sm:text-xl md:text-2xl text-green-50 max-w-3xl mx-auto mb-8 sm:mb-10 leading-relaxed font-light">
-            Join thousands of individuals who are making a difference by adopting trees and contributing to a sustainable future. 
-            Your small act today creates a lasting impact for generations to come.
+            When you adopt a tree, you&apos;re not just planting — you&apos;re nurturing life. 
+            Your small, heartfelt action today becomes a gift the future will cherish.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

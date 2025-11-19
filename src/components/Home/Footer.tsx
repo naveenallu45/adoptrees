@@ -1,22 +1,21 @@
+import Link from 'next/link';
+
 export default function Footer() {
   const footerLinks = {
     company: [
-      { name: 'About Us', href: '#about' },
-      { name: 'Our Mission', href: '#mission' },
-      { name: 'Team', href: '#team' },
-      { name: 'Blog', href: '#blog' }
+      { name: 'About Us', href: '/about' },
+      { name: 'Our Mission', href: '/about' }
     ],
     support: [
       { name: 'Help Center', href: '#help' },
-      { name: 'Contact Us', href: '#contact' },
-      { name: 'FAQ', href: '#faq' },
-      { name: 'Tree Care Guide', href: '#guide' }
+      { name: 'Contact Us', href: '/contact' }
     ],
     legal: [
-      { name: 'Privacy Policy', href: '#privacy' },
-      { name: 'Terms of Service', href: '#terms' },
-      { name: 'Cookie Policy', href: '#cookies' },
-      { name: 'Refund Policy', href: '#refund' }
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Terms & Conditions', href: '/terms' },
+      { name: 'Cookie Policy', href: '/cookies' },
+      { name: 'Refund Policy', href: '/refund' },
+      { name: 'Shipping & Delivery', href: '/shipping' }
     ]
   };
 
@@ -29,8 +28,11 @@ export default function Footer() {
             <div className="flex items-center gap-3 mb-4 sm:mb-6">
               <h3 className="text-xl sm:text-2xl font-bold">Adoptrees</h3>
             </div>
+            <p className="text-green-100 mb-4 sm:mb-6 leading-relaxed max-w-md text-sm sm:text-base">
+              Together, we&apos;re planting hope. One tree today becomes a greener, healthier tomorrow.
+            </p>
             <p className="text-green-100 mb-6 sm:mb-8 leading-relaxed max-w-md text-sm sm:text-base">
-              Making the world greener, one tree at a time. Join our mission to create a sustainable future for generations to come.
+              Join our mission to create a future the next generation will thank us for.
             </p>
             
             {/* Newsletter Signup */}
@@ -59,12 +61,21 @@ export default function Footer() {
               <ul className="space-y-1 lg:space-y-3">
                 {footerLinks.company.map((link) => (
                   <li key={link.name}>
+                    {link.href.startsWith('/') ? (
+                      <Link
+                        href={link.href}
+                        className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                      >
+                        {link.name}
+                      </Link>
+                    ) : (
                     <a
                       href={link.href}
                       className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
                     >
                       {link.name}
                     </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -76,12 +87,21 @@ export default function Footer() {
               <ul className="space-y-1 lg:space-y-3">
                 {footerLinks.support.map((link) => (
                   <li key={link.name}>
+                    {link.href.startsWith('/') ? (
+                      <Link
+                        href={link.href}
+                        className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                      >
+                        {link.name}
+                      </Link>
+                    ) : (
                     <a
                       href={link.href}
                       className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
                     >
                       {link.name}
                     </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -93,12 +113,21 @@ export default function Footer() {
               <ul className="space-y-1 lg:space-y-3">
                 {footerLinks.legal.map((link) => (
                   <li key={link.name}>
+                    {link.href.startsWith('/') ? (
+                      <Link
+                        href={link.href}
+                        className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
+                      >
+                        {link.name}
+                      </Link>
+                    ) : (
                     <a
                       href={link.href}
                       className="text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base"
                     >
                       {link.name}
                     </a>
+                    )}
                   </li>
                 ))}
               </ul>

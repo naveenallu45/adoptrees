@@ -15,25 +15,25 @@ export default function AfterPlant() {
     features: [
       {
         title: 'Tree certificate',
-        description: 'Find out all about your tree: log on to its page for full information, including a photo and its GPS coordinates.',
+        description: 'Your tree begins its journey — and you stay connected to every step. Access your tree\'s page to see its photo, GPS location, and all the details that make it uniquely yours.',
         icon: '📍',
         position: 'left'
       },
       {
         title: 'Real trees, real impact',
-        description: 'Whoever receives a tree gets access to Adoptrees, our online community where you will find updates, articles and quizzes on the world of sustainability.',
+        description: 'Whoever receives the tree becomes part of our green community. They\'ll get updates, inspiring content, and a space to learn, grow, and celebrate sustainability with others.',
         icon: '🌱',
         position: 'right'
       },
       {
         title: 'CO₂ and Timeline',
-        description: 'Follow the most important moments in your tree\'s life, find out how much CO₂ it absorbs and its botanical characteristics.',
+        description: 'Watch your tree make a real difference. Track how much CO₂ it absorbs and discover the important milestones of its growth and life story.',
         icon: '📊',
         position: 'left'
       },
       {
-        title: 'A special gift',
-        description: 'Reach anyone, anytime, with a thought that goes straight to the heart.',
+        title: 'A Living gift',
+        description: 'A tree is more than a gesture — it\'s a memory that grows. Send someone a gift that speaks to the heart and lives on through nature.',
         icon: '🎁',
         position: 'right'
       }
@@ -77,7 +77,7 @@ export default function AfterPlant() {
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-8 leading-tight">
-            After plant what happens?
+            After your tree is planted, what happens next?
           </h2>
           
           {/* Toggle Switch */}

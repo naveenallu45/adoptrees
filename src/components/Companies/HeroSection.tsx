@@ -14,17 +14,19 @@ export default function HeroSection() {
           {/* Main Heading */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 drop-shadow-2xl tracking-tight">
             <span className="block">
-              Lead the Green
+              Lead the Change,
             </span>
             <span className="block text-teal-300 mt-2">
-              Revolution
+              Grow a Sustainable Legacy
             </span>
           </h1>
 
           {/* Subtitle */}
+          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-lg px-4 leading-relaxed mb-4 sm:mb-6">
+            Together, we can create meaningful impact.
+          </p>
           <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-lg px-4 leading-relaxed mb-6 sm:mb-8">
-            Partner with us to create a sustainable future and enhance your corporate social responsibility. 
-            Every tree you plant strengthens your brand&apos;s commitment to the environment.
+            Let your company&apos;s actions speak louder by nurturing trees that protect the future.
           </p>
 
           {/* CTA Button */}

@@ -23,16 +23,17 @@ export default function CompanyorPerson() {
             {/* Content */}
             <div className="space-y-3 sm:space-y-4">
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight group-hover:scale-105 transition-transform duration-300">
-                Are you a person?
+                <span className="block">Plant a Dream,</span>
+                <span className="block">Watch It Grow</span>
               </h2>
               <p className="text-base sm:text-lg md:text-xl text-white/95 leading-relaxed font-medium max-w-lg">
-                Every gesture counts. Plant trees from your smartphone and join our community of pragmatic dreamers.
+                A single tree can become your lifelong legacy. Nurture nature today, and let your impact bloom for years to come.
               </p>
               
               {/* CTA Button */}
               <div className="pt-4">
                 <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-base font-semibold hover:bg-white/30 transition-all duration-300 group-hover:scale-105 shadow-lg">
-                  <span>Explore Individual Plans</span>
+                  <span>Get Started Now</span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -58,17 +59,18 @@ export default function CompanyorPerson() {
 
             {/* Content */}
             <div className="space-y-3 sm:space-y-4">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 leading-tight tracking-tight group-hover:scale-105 transition-transform duration-300 whitespace-nowrap">
-                Are you a company?
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight tracking-tight group-hover:scale-105 transition-transform duration-300">
+                <span className="block">Lead the Change,</span>
+                <span className="block">Grow a Sustainable Legacy</span>
               </h2>
               <p className="text-base sm:text-lg md:text-xl text-gray-800 leading-relaxed font-medium max-w-lg">
-                Discover our services to make sustainability the competitive advantage of your business.
+                Together, we can create meaningful impact. Let your company&apos;s actions speak louder by nurturing trees that protect the future.
               </p>
               
               {/* CTA Button */}
               <div className="pt-4">
                 <div className="inline-flex items-center gap-2 bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-base font-semibold hover:bg-green-700 transition-all duration-300 group-hover:scale-105 shadow-lg">
-                  <span>Explore Corporate Programs</span>
+                  <span>Start Partnership</span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
