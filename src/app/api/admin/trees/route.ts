@@ -102,16 +102,16 @@ export async function POST(request: NextRequest) {
     // Validate package fields for company trees
     if (treeType === 'company') {
       if (!packageQuantityStr || packageQuantity <= 0) {
-        return NextResponse.json(
+      return NextResponse.json(
           { success: false, error: 'Package quantity is required and must be greater than 0 for company trees' },
-          { status: 400 }
-        );
-      }
+        { status: 400 }
+      );
+    }
       if (!packagePriceStr || !packagePrice || packagePrice <= 0) {
-        return NextResponse.json(
+      return NextResponse.json(
           { success: false, error: 'Package price is required and must be greater than 0 for company trees' },
-          { status: 400 }
-        );
+        { status: 400 }
+      );
       }
     }
 
@@ -140,15 +140,15 @@ export async function POST(request: NextRequest) {
     if (foodSecurityStr && foodSecurityStr.trim() !== '' && (isNaN(foodSecurityParsed) || foodSecurityParsed < 0 || foodSecurityParsed > 10)) {
       numericFieldErrors.foodSecurity = 'Food security rating must be a number between 0 and 10';
     }
-    
+
     if (economicDevelopmentStr && economicDevelopmentStr.trim() !== '' && (isNaN(economicDevelopmentParsed) || economicDevelopmentParsed < 0 || economicDevelopmentParsed > 10)) {
       numericFieldErrors.economicDevelopment = 'Economic development rating must be a number between 0 and 10';
     }
-    
+
     if (co2AbsorptionStr && co2AbsorptionStr.trim() !== '' && (isNaN(co2AbsorptionParsed) || co2AbsorptionParsed < 0 || co2AbsorptionParsed > 10)) {
       numericFieldErrors.co2Absorption = 'CO₂ absorption rating must be a number between 0 and 10';
     }
-    
+
     if (environmentalProtectionStr && environmentalProtectionStr.trim() !== '' && (isNaN(environmentalProtectionParsed) || environmentalProtectionParsed < 0 || environmentalProtectionParsed > 10)) {
       numericFieldErrors.environmentalProtection = 'Environmental protection rating must be a number between 0 and 10';
     }
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
     // Convert File to buffer for Cloudinary upload
     let buffer: Buffer;
     try {
-      const bytes = await image.arrayBuffer();
+    const bytes = await image.arrayBuffer();
       buffer = Buffer.from(bytes);
     } catch (error) {
       logError('Failed to convert image to buffer', error instanceof Error ? error : new Error(String(error)));
@@ -236,18 +236,18 @@ export async function POST(request: NextRequest) {
     // Upload to Cloudinary
     let result: { secure_url: string; public_id: string };
     try {
-      const base64String = buffer.toString('base64');
-      const dataUri = `data:${image.type};base64,${base64String}`;
-      
+    const base64String = buffer.toString('base64');
+    const dataUri = `data:${image.type};base64,${base64String}`;
+    
       result = await cloudinary.uploader.upload(dataUri, {
-        folder: 'adoptrees/trees',
-        resource_type: 'image',
-        transformation: [
-          { width: 2000, height: 2000, crop: 'limit', quality: 'auto' },
-          { format: 'auto' }
-        ]
-      });
-      
+      folder: 'adoptrees/trees',
+      resource_type: 'image',
+      transformation: [
+        { width: 2000, height: 2000, crop: 'limit', quality: 'auto' },
+        { format: 'auto' }
+      ]
+    });
+
       logInfo('Image uploaded to Cloudinary', { publicId: result.public_id });
     } catch (error) {
       logError('Failed to upload image to Cloudinary', error instanceof Error ? error : new Error(String(error)));

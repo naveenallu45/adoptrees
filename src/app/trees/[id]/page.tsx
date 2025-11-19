@@ -531,9 +531,9 @@ export default function TreeInfoPage() {
                         {/* Icon container */}
                         <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-amber-200">
                           {getLocalUseIcon(use)}
-                        </div>
+                      </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-900 mb-1">{use}</p>
+                        <p className="font-semibold text-gray-900 mb-1">{use}</p>
                           <p className="text-gray-600 text-sm leading-relaxed">{localUsesDescriptions[use] || 'Local use information.'}</p>
                         </div>
                       </div>

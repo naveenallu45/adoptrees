@@ -146,7 +146,7 @@ export default function TreesManagement() {
           toast.error(`Validation failed:\n${errorMessages}`, { duration: 5000 });
         } else {
           toast.error(data.error || `Failed to ${editingTree ? 'update' : 'create'} tree`);
-        }
+      }
         return;
       }
       
