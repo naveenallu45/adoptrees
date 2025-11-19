@@ -71,18 +71,18 @@ export async function GET(
           qrCodeToUse = user.qrCode;
         } else {
           // Generate QR code only if not stored
-          const publicIdLower = user.publicId.toLowerCase();
-          const qrUrl = `${origin}/u/${publicIdLower}`;
-          
-          // Use same settings as modal (width: 320 for better quality)
-          const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
-            width: 320,
-            margin: 1,
-            errorCorrectionLevel: 'M'
-          });
-          
-          qrCodeToUse = qrDataUrl;
-          
+        const publicIdLower = user.publicId.toLowerCase();
+        const qrUrl = `${origin}/u/${publicIdLower}`;
+        
+        // Use same settings as modal (width: 320 for better quality)
+        const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
+          width: 320,
+          margin: 1,
+          errorCorrectionLevel: 'M'
+        });
+        
+        qrCodeToUse = qrDataUrl;
+        
           // Update stored QR code asynchronously (don't block)
           user.qrCode = qrDataUrl;
           user.save().catch((err: Error) => console.error('Error saving QR code:', err));
@@ -123,7 +123,7 @@ export async function GET(
 
       // Store certificate in order asynchronously (don't block response)
       // This allows the certificate to be returned immediately while saving happens in background
-      order.certificate = certificateBuffer;
+        order.certificate = certificateBuffer;
       order.save().catch(saveError => {
         console.error('Error saving certificate to database:', saveError);
         // Non-blocking - certificate was already returned to user

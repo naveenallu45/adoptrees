@@ -121,7 +121,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
         const profilePicResponse = await fetch(data.profilePicUrl!);
         if (!profilePicResponse.ok) return null;
         
-        const profilePicBytes = await profilePicResponse.arrayBuffer();
+          const profilePicBytes = await profilePicResponse.arrayBuffer();
         
         // Create circular version using canvas (optimized - resize first)
         try {
