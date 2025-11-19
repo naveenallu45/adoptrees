@@ -156,11 +156,11 @@ export async function POST(request: NextRequest) {
       message: 'Tree created successfully'
     });
 
-  } catch (_error) {
-    
-    // Don't expose internal error details
+  } catch (error) {
+    console.error('Error creating tree:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'Failed to create tree. Please try again.' },
+      { success: false, error: `Failed to create tree: ${errorMessage}` },
       { status: 500 }
     );
   }

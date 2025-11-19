@@ -104,6 +104,11 @@ export default function TreesManagement() {
         body: formDataToSend,
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
       
       if (data.success) {
@@ -123,10 +128,14 @@ export default function TreesManagement() {
           image: null
         });
       } else {
-        toast.error(data.error || 'Failed to save tree');
+        // Show detailed error message
+        const errorMsg = data.error || data.details?.[0]?.message || 'Failed to save tree';
+        toast.error(errorMsg);
+        console.error('Tree save error:', data);
       }
-    } catch (_error) {
-      toast.error('An error occurred while saving the tree');
+    } catch (error) {
+      console.error('Error saving tree:', error);
+      toast.error('An error occurred while saving the tree. Please check the console for details.');
     } finally {
       setSubmitting(false);
     }
@@ -167,22 +176,70 @@ export default function TreesManagement() {
 
     if (!result.isConfirmed) return;
 
+    // Optimistically remove tree from UI IMMEDIATELY (before API call)
+    const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
+    queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
+      if (!old) return old;
+      return old.filter((tree) => tree._id !== id);
+    });
+
+    // Update stats optimistically
+    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        totalTrees: Math.max(0, (old.totalTrees || 0) - 1)
+      };
+    });
+
     try {
+      console.log(`[DELETE] Attempting to delete tree with ID: ${id}`);
+      
       const response = await fetch(`/api/admin/trees/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
+      console.log(`[DELETE] Response status: ${response.status}`);
+
+      if (!response.ok) {
+        // Rollback optimistic update on error
+        if (previousTrees) {
+          queryClient.setQueryData(['admin', 'trees'], previousTrees);
+        }
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
+        console.error('[DELETE] Error response:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
+      console.log('[DELETE] Response data:', data);
       
       if (data.success) {
         toast.success('Tree deleted successfully!');
-        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        // Refetch in background to ensure consistency (optimistic update already shown)
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+          queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        }, 500);
       } else {
+        // Rollback optimistic update on failure
+        if (previousTrees) {
+          queryClient.setQueryData(['admin', 'trees'], previousTrees);
+        }
         toast.error(data.error || 'Failed to delete tree');
+        console.error('Tree delete error:', data);
       }
-    } catch (_error) {
-      toast.error('An error occurred while deleting the tree');
+    } catch (error) {
+      // Rollback optimistic update on error
+      if (previousTrees) {
+        queryClient.setQueryData(['admin', 'trees'], previousTrees);
+      }
+      console.error('Error deleting tree:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete tree: ${errorMessage}`);
     }
   }, [queryClient]);
 

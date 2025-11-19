@@ -6,7 +6,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
-import { memo, useCallback, useState, useRef } from 'react';
+import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 
@@ -25,7 +25,32 @@ interface TreesProps {
 }
 
 const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
-  const trees = initialTrees;
+  const [trees, setTrees] = useState<Tree[]>(initialTrees);
+  
+  // Fetch trees dynamically to get latest data
+  useEffect(() => {
+    const fetchTrees = async () => {
+      try {
+        const response = await fetch('/api/trees?type=individual', {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        const data = await response.json();
+        if (data.success && data.data) {
+          setTrees(data.data.filter((tree: Tree) => tree.isActive));
+        }
+      } catch (error) {
+        console.error('Error fetching trees:', error);
+        // Keep current trees on error
+      }
+    };
+    
+    // Fetch on mount and set up periodic refresh for instant updates
+    fetchTrees();
+    const interval = setInterval(fetchTrees, 2000); // Refresh every 2 seconds for instant updates
+    return () => clearInterval(interval);
+  }, []);
+  
   const error = trees.length === 0 ? 'No trees available' : null;
   const { addToCart } = useCart();
   const { data: session } = useSession();

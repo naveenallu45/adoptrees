@@ -5,6 +5,7 @@ import Tree from '@/models/Tree';
 import { deleteFromCloudinary } from '@/lib/upload';
 import { requireAdmin } from '@/lib/api-auth';
 import { treeUpdateSchema } from '@/lib/validations/tree';
+import { revalidatePath } from 'next/cache';
 
 export async function PUT(
   request: NextRequest,
@@ -116,13 +117,32 @@ export async function PUT(
       packagePrice: validatedPackagePrice 
     };
 
-    if (image && image.size > 0) {
+    if (image && image.size > 0 && image instanceof File) {
+      // Validate image file
+      const { validateImageFile, MAX_FILE_SIZE } = await import('@/lib/validations/tree');
+      const imageValidation = validateImageFile(image);
+      if (!imageValidation.valid) {
+        return NextResponse.json(
+          { success: false, error: imageValidation.error },
+          { status: 400 }
+        );
+      }
+
       // Import cloudinary for image upload
       const cloudinary = await import('@/lib/cloudinary');
       
       // Convert File to buffer for Cloudinary upload
       const bytes = await image.arrayBuffer();
       const buffer = Buffer.from(bytes);
+      
+      // Additional size check
+      if (buffer.length > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { success: false, error: 'Image file size exceeds 5MB limit' },
+          { status: 400 }
+        );
+      }
+      
       const base64String = buffer.toString('base64');
       const dataUri = `data:${image.type};base64,${base64String}`;
       
@@ -158,9 +178,11 @@ export async function PUT(
       message: 'Tree updated successfully'
     });
 
-  } catch (_error) {
+  } catch (error) {
+    console.error('Error updating tree:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'Failed to update tree. Please try again.' },
+      { success: false, error: `Failed to update tree: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -192,32 +214,58 @@ export async function DELETE(
     const tree = await Tree.findById(id);
 
     if (!tree) {
+      console.error(`[DELETE] Tree not found with ID: ${id}`);
       return NextResponse.json(
         { success: false, error: 'Tree not found' },
         { status: 404 }
       );
     }
 
+    console.log(`[DELETE] Deleting tree: ${tree.name} (ID: ${id})`);
+
     // Delete image from Cloudinary (best effort)
     if (tree.imagePublicId) {
       try {
         await deleteFromCloudinary(tree.imagePublicId);
-      } catch (_error) {
+        console.log(`[DELETE] Image deleted from Cloudinary: ${tree.imagePublicId}`);
+      } catch (imgError) {
+        console.error('[DELETE] Failed to delete image from Cloudinary:', imgError);
         // Continue with database deletion even if image deletion fails
       }
     }
 
     // Soft delete by setting isActive to false
-    await Tree.findByIdAndUpdate(id, { isActive: false });
+    const updatedTree = await Tree.findByIdAndUpdate(
+      id, 
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!updatedTree) {
+      console.error(`[DELETE] Failed to update tree with ID: ${id}`);
+      return NextResponse.json(
+        { success: false, error: 'Failed to delete tree' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[DELETE] Tree successfully deleted: ${tree.name} (ID: ${id})`);
+
+    // Revalidate Next.js cache for user-facing pages to instantly remove deleted tree
+    revalidatePath('/individuals');
+    revalidatePath('/companies');
+    revalidatePath('/api/trees');
 
     return NextResponse.json({
       success: true,
       message: 'Tree deleted successfully'
     });
 
-  } catch (_error) {
+  } catch (error) {
+    console.error('Error deleting tree:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'Failed to delete tree. Please try again.' },
+      { success: false, error: `Failed to delete tree: ${errorMessage}` },
       { status: 500 }
     );
   }
