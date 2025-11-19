@@ -12,6 +12,15 @@ export interface ITree extends Document {
   // Package fields for corporate trees
   packageQuantity?: number;
   packagePrice?: number;
+  // Additional tree information fields
+  scientificSpecies?: string;
+  speciesInfoAvailable?: boolean;
+  co2?: number; // CO₂ value in kg (can be negative)
+  foodSecurity?: number; // Rating out of 10
+  economicDevelopment?: number; // Rating out of 10
+  co2Absorption?: number; // Rating out of 10
+  environmentalProtection?: number; // Rating out of 10
+  localUses?: string[]; // Array of local use types
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,9 +75,64 @@ const TreeSchema: Schema = new Schema({
   packagePrice: {
     type: Number,
     min: [0, 'Package price cannot be negative']
+  },
+  // Additional tree information fields
+  scientificSpecies: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Scientific species name cannot exceed 200 characters'],
+    required: false,
+    default: undefined
+  },
+  speciesInfoAvailable: {
+    type: Boolean,
+    default: false,
+    required: false
+  },
+  co2: {
+    type: Number,
+    required: false,
+    default: undefined
+    // CO₂ can be negative (e.g., -294kg)
+  },
+  foodSecurity: {
+    type: Number,
+    min: [0, 'Food security rating cannot be negative'],
+    max: [10, 'Food security rating cannot exceed 10'],
+    required: false,
+    default: undefined
+  },
+  economicDevelopment: {
+    type: Number,
+    min: [0, 'Economic development rating cannot be negative'],
+    max: [10, 'Economic development rating cannot exceed 10'],
+    required: false,
+    default: undefined
+  },
+  co2Absorption: {
+    type: Number,
+    min: [0, 'CO₂ absorption rating cannot be negative'],
+    max: [10, 'CO₂ absorption rating cannot exceed 10'],
+    required: false,
+    default: undefined
+  },
+  environmentalProtection: {
+    type: Number,
+    min: [0, 'Environmental protection rating cannot be negative'],
+    max: [10, 'Environmental protection rating cannot exceed 10'],
+    required: false,
+    default: undefined
+  },
+  localUses: {
+    type: [String],
+    default: [],
+    required: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  strict: false, // Disable strict mode to allow all fields to be saved
+  strictQuery: false, // Allow querying with fields not in schema
+  minimize: false // Don't remove empty objects
 });
 
 // Index for better query performance

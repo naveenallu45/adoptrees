@@ -19,6 +19,14 @@ interface Tree {
   treeType: 'individual' | 'company';
   packageQuantity?: number;
   packagePrice?: number;
+  scientificSpecies?: string;
+  speciesInfoAvailable?: boolean;
+  co2?: number;
+  foodSecurity?: number;
+  economicDevelopment?: number;
+  co2Absorption?: number;
+  environmentalProtection?: number;
+  localUses?: string[];
 }
 
 // Scientific names mapping (fallback)
@@ -43,6 +51,19 @@ const getScientificName = (treeName: string): string => {
     }
   }
   return 'Species information available upon request';
+};
+
+// Local uses descriptions
+const localUsesDescriptions: Record<string, string> = {
+  'Natural pesticide': 'Its leaves and fruits naturally repel pests and diseases, offering a safe, chemical-free way to protect plants.',
+  'Soil': 'With its nitrogen-fixing abilities and deep roots, it nourishes the soil, protects it from erosion, and restores fertility.',
+  'Fence': 'Acting as a natural barrier, it shields crops and creates cool, shaded spaces for animals to rest.',
+  'Anti-wind': 'It stands strong against harsh winds, safeguarding tender plants and helping the soil retain precious moisture.',
+  'Cosmetics': 'From its blossoms to its leaves, valuable extracts are used to create gentle, earth-derived beauty products.',
+  'Biodiversity': 'This tree supports the return of birds, insects, and small animals, helping restore balance to the entire ecosystem.',
+  'Consumption and sales': 'Its fruits, seeds, and leaves provide nourishment for farming families and can also be sold, supporting local markets.',
+  'Livestock': 'Its fresh or dried leaves serve as a nutritious feed for livestock, helping farmers care for their animals naturally.',
+  'Medicine': 'Its leaves, roots, bark, and fruits have long been used in traditional remedies — offering healing straight from nature.'
 };
 
 // Calculate CO2 absorption (rough estimate: 1kg oxygen ≈ 1.4kg CO2)
@@ -151,11 +172,20 @@ export default function TreeInfoPage() {
     );
   }
 
-  const scientificName = getScientificName(tree.name);
-  const co2Absorbed = calculateCO2(tree.oxygenKgs);
+  // Use real data from database, fallback to calculated/derived values
+  const scientificName = tree.scientificSpecies || (tree.speciesInfoAvailable ? 'Species information available upon request' : getScientificName(tree.name));
+  const co2Absorbed = tree.co2 !== undefined ? Math.abs(tree.co2) : calculateCO2(tree.oxygenKgs);
   const displayPrice = tree.packagePrice || tree.price;
   const originalPrice = tree.packagePrice ? tree.price * (tree.packageQuantity || 1) : null;
   const discount = originalPrice ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : null;
+  
+  // Benefits data from database or defaults
+  const benefits = [
+    { label: 'Food Security', score: tree.foodSecurity ?? 0 },
+    { label: 'Economic development', score: tree.economicDevelopment ?? 0 },
+    { label: 'CO₂ Absorption', score: tree.co2Absorption ?? 0 },
+    { label: 'Environmental protection', score: tree.environmentalProtection ?? 0 },
+  ].filter(benefit => benefit.score > 0); // Only show benefits with scores > 0
 
   // Generate thumbnail images (using same image for now, can be enhanced later)
   // const thumbnails = [tree.imageUrl, tree.imageUrl, tree.imageUrl, tree.imageUrl];
@@ -226,7 +256,9 @@ export default function TreeInfoPage() {
               </div>
               <div className="flex items-center gap-2 text-gray-700">
                 <span className="font-semibold">CO₂:</span>
-                <span className="text-green-600 font-semibold">-{co2Absorbed}kg</span>
+                <span className="text-green-600 font-semibold">
+                  {tree.co2 !== undefined ? `${tree.co2}kg` : `-${co2Absorbed}kg`}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-gray-700">
                 <span className="font-semibold">Oxygen:</span>
@@ -344,104 +376,347 @@ export default function TreeInfoPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-8">More information on {tree.name}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Local Uses */}
-            <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Local uses
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Consumption and sales</p>
-                    <p className="text-gray-600 text-sm">Its fruits, seeds and/or leaves are used as food in the farmers&apos; families or are sold on local markets.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Soil</p>
-                    <p className="text-gray-600 text-sm">It improves the quality of the soil thanks to the nitrogen fixation process or it reduces soil erosion, thanks to its extended root system.</p>
-                  </div>
+            {tree.localUses && tree.localUses.length > 0 && (
+              <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Local uses</h3>
+                <div className="space-y-4">
+                  {tree.localUses.map((use) => {
+                    // Get icon based on local use type
+                    const getLocalUseIcon = (useType: string) => {
+                      if (useType === 'Consumption and sales') {
+                        // Fruit with coins (matching the image description)
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Fruit - red pear/apple */}
+                            <ellipse cx="12" cy="14" rx="4" ry="6" fill="#EF4444"/>
+                            <ellipse cx="12" cy="14" rx="3" ry="5" fill="#DC2626"/>
+                            {/* Stem */}
+                            <line x1="12" y1="9" x2="12" y2="7" stroke="#22C55E" strokeWidth="2" strokeLinecap="round"/>
+                            {/* Coins stacked */}
+                            <circle cx="16" cy="10" r="2.5" fill="#F59E0B"/>
+                            <circle cx="16" cy="10" r="2" fill="#FCD34D"/>
+                            <circle cx="16" cy="8" r="2.5" fill="#F59E0B"/>
+                            <circle cx="16" cy="8" r="2" fill="#FCD34D"/>
+                            {/* Dollar sign on top coin */}
+                            <path d="M16 6.5V8.5M15 7H17" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Soil') {
+                        // Soil cross-section with layers
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Soil layers */}
+                            <rect x="6" y="18" width="12" height="4" fill="#92400E"/>
+                            <rect x="6" y="14" width="12" height="4" fill="#A16207"/>
+                            <rect x="6" y="10" width="12" height="4" fill="#B45309"/>
+                            {/* Grass on top */}
+                            <path d="M8 10L9 8L10 10M12 10L13 8L14 10M16 10L17 8L18 10" stroke="#22C55E" strokeWidth="2" strokeLinecap="round"/>
+                            {/* Dots in soil */}
+                            <circle cx="9" cy="16" r="0.5" fill="#78350F"/>
+                            <circle cx="12" cy="13" r="0.5" fill="#92400E"/>
+                            <circle cx="15" cy="16" r="0.5" fill="#78350F"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Natural pesticide') {
+                        // Shield or spray icon
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Shield */}
+                            <path d="M12 4L8 6L8 12C8 15 10 17 12 18C14 17 16 15 16 12L16 6L12 4Z" fill="#22C55E" stroke="#166534" strokeWidth="1.5"/>
+                            {/* Checkmark */}
+                            <path d="M10 12L12 14L14 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Fence') {
+                        // Fence/wall icon
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Fence posts */}
+                            <rect x="6" y="8" width="2" height="12" fill="#92400E"/>
+                            <rect x="11" y="8" width="2" height="12" fill="#92400E"/>
+                            <rect x="16" y="8" width="2" height="12" fill="#92400E"/>
+                            {/* Horizontal boards */}
+                            <rect x="6" y="10" width="12" height="1.5" fill="#A16207"/>
+                            <rect x="6" y="14" width="12" height="1.5" fill="#A16207"/>
+                            <rect x="6" y="18" width="12" height="1.5" fill="#A16207"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Anti-wind') {
+                        // Wind shield or tree blocking wind
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Tree trunk */}
+                            <rect x="10" y="12" width="4" height="8" fill="#92400E"/>
+                            {/* Tree top */}
+                            <circle cx="12" cy="10" r="6" fill="#22C55E"/>
+                            {/* Wind lines */}
+                            <path d="M4 8L6 6L4 4M4 12L6 10L4 8M4 16L6 14L4 12" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Cosmetics') {
+                        // Flower or beauty product
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Flower petals */}
+                            <ellipse cx="12" cy="10" rx="3" ry="4" fill="#EC4899" transform="rotate(0 12 10)"/>
+                            <ellipse cx="12" cy="10" rx="3" ry="4" fill="#F472B6" transform="rotate(45 12 10)"/>
+                            <ellipse cx="12" cy="10" rx="3" ry="4" fill="#F9A8D4" transform="rotate(90 12 10)"/>
+                            <ellipse cx="12" cy="10" rx="3" ry="4" fill="#FBCFE8" transform="rotate(135 12 10)"/>
+                            {/* Center */}
+                            <circle cx="12" cy="10" r="2" fill="#FCD34D"/>
+                            {/* Stem */}
+                            <line x1="12" y1="14" x2="12" y2="20" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Biodiversity') {
+                        // Multiple animals/birds
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Bird 1 */}
+                            <ellipse cx="8" cy="10" rx="2" ry="1.5" fill="#3B82F6"/>
+                            <path d="M10 10L12 8" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round"/>
+                            {/* Bird 2 */}
+                            <ellipse cx="16" cy="8" rx="2" ry="1.5" fill="#10B981"/>
+                            <path d="M18 8L20 6" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round"/>
+                            {/* Tree/branch */}
+                            <path d="M12 20L12 14M10 16L14 16" stroke="#166534" strokeWidth="2" strokeLinecap="round"/>
+                            {/* Small animal */}
+                            <ellipse cx="12" cy="18" rx="1.5" ry="1" fill="#92400E"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Livestock') {
+                        // Animal/cow icon
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Animal body */}
+                            <ellipse cx="12" cy="14" rx="5" ry="4" fill="#92400E"/>
+                            {/* Head */}
+                            <ellipse cx="7" cy="12" rx="3" ry="2.5" fill="#A16207"/>
+                            {/* Legs */}
+                            <rect x="9" y="18" width="1.5" height="4" fill="#78350F"/>
+                            <rect x="13.5" y="18" width="1.5" height="4" fill="#78350F"/>
+                            {/* Eye */}
+                            <circle cx="6" cy="11" r="0.8" fill="white"/>
+                            <circle cx="6" cy="11" r="0.4" fill="black"/>
+                          </svg>
+                        );
+                      } else if (useType === 'Medicine') {
+                        // Medical cross or leaf
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Leaf */}
+                            <path d="M12 4C10 6 8 8 8 12C8 16 10 18 12 20C14 18 16 16 16 12C16 8 14 6 12 4Z" fill="#22C55E"/>
+                            <path d="M12 4C10 6 8 8 8 12C8 16 10 18 12 20" stroke="#166534" strokeWidth="1.5"/>
+                            {/* Medical cross */}
+                            <line x1="12" y1="10" x2="12" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                            <line x1="10" y1="12" x2="14" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                          </svg>
+                        );
+                      }
+                      // Default icon - tree log
+                      return (
+                        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <circle cx="12" cy="12" r="10" />
+                          <circle cx="12" cy="12" r="8" />
+                          <circle cx="12" cy="12" r="6" />
+                          <circle cx="12" cy="12" r="4" />
+                          <circle cx="12" cy="12" r="2" />
+                          <circle cx="12" cy="12" r="0.5" fill="currentColor" />
+                        </svg>
+                      );
+                    };
+
+                    return (
+                      <div key={use} className="flex items-start gap-4">
+                        {/* Icon container */}
+                        <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-amber-200">
+                          {getLocalUseIcon(use)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 mb-1">{use}</p>
+                          <p className="text-gray-600 text-sm leading-relaxed">{localUsesDescriptions[use] || 'Local use information.'}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* CO2 Absorbed */}
             <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                </svg>
-                CO₂ absorbed
-              </h3>
-              <div className="text-center">
-                <div className="w-32 h-32 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">{co2Absorbed} KG</div>
-                    <div className="text-sm text-gray-600">of CO₂</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">CO₂ absorbed</h3>
+              
+              {/* Introductory sentence */}
+              <p className="text-gray-700 text-sm mb-5">
+                By planting this <span className="font-bold">{scientificName}</span> tree, you will absorb
+              </p>
+
+              {/* Main CO₂ metric with car icon */}
+              <div className="flex items-start gap-4 mb-5">
+                {/* Car icon - rounded */}
+                <div className="w-16 h-16 flex items-center justify-center flex-shrink-0">
+                  <Image
+                    src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763543266/car_esrdtz.webp"
+                    alt="Car"
+                    width={64}
+                    height={64}
+                    className="object-contain rounded-full"
+                  />
+                </div>
+                
+                {/* CO₂ amount */}
+                <div className="flex-1">
+                  <div className="mb-1">
+                    <span className="text-4xl font-bold text-gray-900">{co2Absorbed}</span>
+                    <span className="text-lg text-gray-900 ml-1">KG of CO₂</span>
                   </div>
+                  {/* Calculate car equivalent: ~0.165 kg CO₂ per km (average car) */}
+                  <p className="text-gray-700 text-sm mt-1">
+                    equal to that produced by <strong className="font-bold">{Math.round(co2Absorbed / 0.165)}km by Car</strong>*
+                  </p>
                 </div>
-                <p className="text-gray-600 text-sm mb-2">
-                  By planting this {scientificName} tree, you will absorb
-                </p>
-                <p className="text-gray-600 text-sm mb-4">
-                  <strong className="text-green-600">{co2Absorbed} KG of CO₂</strong>
-                </p>
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p>CO₂ absorption period: 0 years/10 years</p>
-                  <p>Average annual absorption: {Math.round(co2Absorbed / 10)}Kg</p>
+              </div>
+
+              {/* Separator */}
+              <div className="border-t border-gray-200 my-4"></div>
+
+              {/* Absorption period details */}
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 text-sm">CO₂ absorption period</span>
+                  <span className="text-gray-700 text-sm">0 years/10 years**</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 text-sm">Average annual absorption</span>
+                  <span className="text-gray-700 text-sm">{Math.round(co2Absorbed / 10)}Kg</span>
+                </div>
+              </div>
+
+              {/* Footnotes */}
+              <div className="space-y-1 mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  * Data sourced from: Greenhouse gas reporting: conversion factors 2024, UK Government, Department for Energy Security and Net Zero.
+                </p>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  ** The tree will continue to absorb CO₂ even after the tenth year. Therefore this is a prudent estimate.
+                </p>
               </div>
             </div>
 
             {/* Benefits */}
-            <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Benefits
-              </h3>
-              <div className="space-y-4">
-                {[
-                  { label: 'Food Security', score: 3 },
-                  { label: 'Economic development', score: 9 },
-                  { label: 'CO₂ Absorption', score: 5 },
-                  { label: 'Environmental protection', score: 4 },
-                ].map((benefit) => (
-                  <div key={benefit.label} className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-900">{benefit.label}</span>
-                        <span className="text-xs text-gray-600">{benefit.score}/10</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${(benefit.score / 10) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
+            {benefits.length > 0 && (
+              <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  Benefits
+                  <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">i</span>
                   </div>
-                ))}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {benefits.map((benefit) => {
+                    // Get icon based on benefit type - matching the image exactly
+                    const getIcon = (label: string) => {
+                      if (label === 'Food Security') {
+                        // Red pear with green stem and two green leaves
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Pear body - reddish brown/red */}
+                            <ellipse cx="12" cy="14" rx="5" ry="7" fill="#DC2626"/>
+                            <ellipse cx="12" cy="14" rx="4" ry="6" fill="#EF4444"/>
+                            {/* Stem - green */}
+                            <line x1="12" y1="8" x2="12" y2="6" stroke="#22C55E" strokeWidth="2" strokeLinecap="round"/>
+                            {/* Left leaf */}
+                            <ellipse cx="9" cy="7" rx="2" ry="1.5" fill="#22C55E" transform="rotate(-30 9 7)"/>
+                            {/* Right leaf */}
+                            <ellipse cx="15" cy="7" rx="2" ry="1.5" fill="#22C55E" transform="rotate(30 15 7)"/>
+                          </svg>
+                        );
+                      } else if (label === 'Economic development') {
+                        // Golden coin with white dollar sign
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Outer coin - golden */}
+                            <circle cx="12" cy="12" r="10" fill="#F59E0B"/>
+                            {/* Inner coin - lighter golden */}
+                            <circle cx="12" cy="12" r="8" fill="#FCD34D"/>
+                            {/* Dollar sign - white */}
+                            <path d="M12 6V18M9 9H15M9 15H15" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                            <circle cx="12" cy="9" r="0.8" fill="white"/>
+                            <circle cx="12" cy="15" r="0.8" fill="white"/>
+                          </svg>
+                        );
+                      } else if (label === 'CO₂ Absorption') {
+                        // Solid blue cloud
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            <path d="M18.5 10.5C18.2 8.2 16.3 6.5 14 6.5C12.1 6.5 10.5 7.8 9.8 9.5C8.5 9.8 7.5 11 7.5 12.5C7.5 14.4 9.1 16 11 16H18.5C20.2 16 21.5 14.7 21.5 13C21.5 11.3 20.2 10 18.5 10.5Z" fill="#3B82F6"/>
+                            <path d="M18.5 10.5C18.3 9 17.2 8 15.8 8C14.7 8 13.8 8.7 13.3 9.7C12.6 9.2 11.7 8.8 10.7 8.8C9 8.8 7.5 10.1 7.2 11.8C6.6 12 6.2 12.6 6.2 13.3C6.2 14.4 7.1 15.3 8.2 15.3H18.5C19.9 15.3 21 14.2 21 12.8C21 11.4 19.9 10.3 18.5 10.5Z" fill="#2563EB"/>
+                          </svg>
+                        );
+                      } else if (label === 'Environmental protection') {
+                        // Green sprout with two leaves
+                        return (
+                          <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                            {/* Stem - dark green */}
+                            <path d="M12 20L12 10" stroke="#166534" strokeWidth="2.5" strokeLinecap="round"/>
+                            {/* Left leaf - green */}
+                            <ellipse cx="9" cy="12" rx="3" ry="2" fill="#22C55E" transform="rotate(-45 9 12)"/>
+                            {/* Right leaf - green */}
+                            <ellipse cx="15" cy="12" rx="3" ry="2" fill="#22C55E" transform="rotate(45 15 12)"/>
+                            {/* Top small leaves */}
+                            <ellipse cx="10" cy="9" rx="1.5" ry="1" fill="#16A34A" transform="rotate(-20 10 9)"/>
+                            <ellipse cx="14" cy="9" rx="1.5" ry="1" fill="#16A34A" transform="rotate(20 14 9)"/>
+                          </svg>
+                        );
+                      }
+                      return null;
+                    };
+
+                    return (
+                      <div key={benefit.label} className="flex flex-col items-center">
+                        {/* Circular progress indicator */}
+                        <div className="relative w-24 h-24 mb-4">
+                          <svg className="transform -rotate-90 w-24 h-24">
+                            {/* Background circle - light gray */}
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="42"
+                              stroke="currentColor"
+                              strokeWidth="8"
+                              fill="none"
+                              className="text-gray-200"
+                            />
+                            {/* Progress circle - dark gray */}
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="42"
+                              stroke="currentColor"
+                              strokeWidth="8"
+                              fill="none"
+                              strokeDasharray={`${2 * Math.PI * 42}`}
+                              strokeDashoffset={`${2 * Math.PI * 42 * (1 - benefit.score / 10)}`}
+                              className="text-gray-700 transition-all duration-500"
+                              strokeLinecap="round"
+                            />
+                        </svg>
+                          {/* Icon in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            {getIcon(benefit.label)}
+                      </div>
+                        </div>
+                        {/* Title */}
+                        <p className="text-sm font-medium text-gray-900 text-center mb-1.5">{benefit.label}</p>
+                        {/* Rating */}
+                        <p className="text-xs text-gray-600">{benefit.score}/10</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>

@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+// Valid local uses
+export const VALID_LOCAL_USES = [
+  'Natural pesticide',
+  'Soil',
+  'Fence',
+  'Anti-wind',
+  'Cosmetics',
+  'Biodiversity',
+  'Consumption and sales',
+  'Livestock',
+  'Medicine'
+] as const;
+
 // Tree validation schema
 export const treeSchema = z.object({
   name: z
@@ -35,6 +48,50 @@ export const treeSchema = z.object({
     .number()
     .nonnegative('Package price cannot be negative')
     .max(10000000, 'Package price seems unreasonably high')
+    .optional(),
+  // Additional tree information fields
+  scientificSpecies: z
+    .string()
+    .max(200, 'Scientific species name must not exceed 200 characters')
+    .trim()
+    .optional(),
+  speciesInfoAvailable: z
+    .boolean()
+    .optional(),
+  co2: z
+    .number()
+    .max(10000, 'CO₂ value seems unreasonably high')
+    .min(-10000, 'CO₂ value seems unreasonably low')
+    .optional(),
+  foodSecurity: z
+    .number()
+    .int('Food security rating must be a whole number')
+    .min(0, 'Food security rating must be between 0 and 10')
+    .max(10, 'Food security rating must be between 0 and 10')
+    .optional(),
+  economicDevelopment: z
+    .number()
+    .int('Economic development rating must be a whole number')
+    .min(0, 'Economic development rating must be between 0 and 10')
+    .max(10, 'Economic development rating must be between 0 and 10')
+    .optional(),
+  co2Absorption: z
+    .number()
+    .int('CO₂ absorption rating must be a whole number')
+    .min(0, 'CO₂ absorption rating must be between 0 and 10')
+    .max(10, 'CO₂ absorption rating must be between 0 and 10')
+    .optional(),
+  environmentalProtection: z
+    .number()
+    .int('Environmental protection rating must be a whole number')
+    .min(0, 'Environmental protection rating must be between 0 and 10')
+    .max(10, 'Environmental protection rating must be between 0 and 10')
+    .optional(),
+  localUses: z
+    .array(z.string())
+    .refine((arr) => arr.every(item => VALID_LOCAL_USES.includes(item as typeof VALID_LOCAL_USES[number])), {
+      message: 'All local uses must be valid'
+    })
     .optional(),
 });
 

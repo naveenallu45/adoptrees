@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useTrees } from '@/hooks/useAdminData';
 import { useQueryClient } from '@tanstack/react-query';
+import { VALID_LOCAL_USES } from '@/lib/validations/tree';
 
 interface Tree {
   _id: string;
@@ -21,6 +22,14 @@ interface Tree {
   treeType?: string;
   packageQuantity?: number;
   packagePrice?: number;
+  scientificSpecies?: string;
+  speciesInfoAvailable?: boolean;
+  co2?: number;
+  foodSecurity?: number;
+  economicDevelopment?: number;
+  co2Absorption?: number;
+  environmentalProtection?: number;
+  localUses?: string[];
   createdAt: string;
 }
 
@@ -38,6 +47,14 @@ export default function TreesManagement() {
     treeType: 'individual',
     packageQuantity: '',
     packagePrice: '',
+    scientificSpecies: '',
+    speciesInfoAvailable: false,
+    co2: '',
+    foodSecurity: '',
+    economicDevelopment: '',
+    co2Absorption: '',
+    environmentalProtection: '',
+    localUses: [] as string[],
     image: null as File | null
   });
 
@@ -88,6 +105,20 @@ export default function TreesManagement() {
     formDataToSend.append('packageQuantity', formData.packageQuantity);
     formDataToSend.append('packagePrice', formData.packagePrice);
     
+    // Additional fields - always send to ensure they're saved/cleared
+    formDataToSend.append('scientificSpecies', formData.scientificSpecies || '');
+    formDataToSend.append('speciesInfoAvailable', formData.speciesInfoAvailable.toString());
+    formDataToSend.append('co2', formData.co2 || '');
+    formDataToSend.append('foodSecurity', formData.foodSecurity || '');
+    formDataToSend.append('economicDevelopment', formData.economicDevelopment || '');
+    formDataToSend.append('co2Absorption', formData.co2Absorption || '');
+    formDataToSend.append('environmentalProtection', formData.environmentalProtection || '');
+    
+    // Append local uses as array
+    formData.localUses.forEach((use) => {
+      formDataToSend.append('localUses[]', use);
+    });
+    
     if (formData.image) {
       formDataToSend.append('image', formData.image);
     }
@@ -104,12 +135,20 @@ export default function TreesManagement() {
         body: formDataToSend,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        // Handle validation errors with details
+        if (data.details && Array.isArray(data.details)) {
+          const errorMessages = data.details.map((detail: { field: string; message: string }) => 
+            `${detail.field}: ${detail.message}`
+          ).join('\n');
+          toast.error(`Validation failed:\n${errorMessages}`, { duration: 5000 });
+        } else {
+          toast.error(data.error || `Failed to ${editingTree ? 'update' : 'create'} tree`);
+        }
+        return;
+      }
       
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
@@ -125,17 +164,23 @@ export default function TreesManagement() {
           treeType: 'individual',
           packageQuantity: '',
           packagePrice: '',
+          scientificSpecies: '',
+          speciesInfoAvailable: false,
+          co2: '',
+          foodSecurity: '',
+          economicDevelopment: '',
+          co2Absorption: '',
+          environmentalProtection: '',
+          localUses: [],
           image: null
         });
       } else {
-        // Show detailed error message
-        const errorMsg = data.error || data.details?.[0]?.message || 'Failed to save tree';
+        const errorMsg = data.error || 'Failed to save tree';
         toast.error(errorMsg);
-        console.error('Tree save error:', data);
       }
     } catch (error) {
-      console.error('Error saving tree:', error);
-      toast.error('An error occurred while saving the tree. Please check the console for details.');
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(`Failed to ${editingTree ? 'update' : 'create'} tree: ${errorMessage}`);
     } finally {
       setSubmitting(false);
     }
@@ -151,6 +196,14 @@ export default function TreesManagement() {
       treeType: (tree as Tree & { treeType?: string }).treeType || 'individual',
       packageQuantity: (tree as Tree & { packageQuantity?: number }).packageQuantity?.toString() || '',
       packagePrice: (tree as Tree & { packagePrice?: number }).packagePrice?.toString() || '',
+      scientificSpecies: tree.scientificSpecies || '',
+      speciesInfoAvailable: tree.speciesInfoAvailable || false,
+      co2: tree.co2?.toString() || '',
+      foodSecurity: tree.foodSecurity?.toString() || '',
+      economicDevelopment: tree.economicDevelopment?.toString() || '',
+      co2Absorption: tree.co2Absorption?.toString() || '',
+      environmentalProtection: tree.environmentalProtection?.toString() || '',
+      localUses: tree.localUses || [],
       image: null
     });
     setShowForm(true);
@@ -193,8 +246,6 @@ export default function TreesManagement() {
     });
 
     try {
-      console.log(`[DELETE] Attempting to delete tree with ID: ${id}`);
-      
       const response = await fetch(`/api/admin/trees/${id}`, {
         method: 'DELETE',
         headers: {
@@ -202,20 +253,16 @@ export default function TreesManagement() {
         },
       });
 
-      console.log(`[DELETE] Response status: ${response.status}`);
+      const data = await response.json();
 
       if (!response.ok) {
         // Rollback optimistic update on error
         if (previousTrees) {
           queryClient.setQueryData(['admin', 'trees'], previousTrees);
         }
-        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
-        console.error('[DELETE] Error response:', errorData);
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        toast.error(data.error || 'Failed to delete tree');
+        return;
       }
-
-      const data = await response.json();
-      console.log('[DELETE] Response data:', data);
       
       if (data.success) {
         toast.success('Tree deleted successfully!');
@@ -230,15 +277,13 @@ export default function TreesManagement() {
           queryClient.setQueryData(['admin', 'trees'], previousTrees);
         }
         toast.error(data.error || 'Failed to delete tree');
-        console.error('Tree delete error:', data);
       }
     } catch (error) {
       // Rollback optimistic update on error
       if (previousTrees) {
         queryClient.setQueryData(['admin', 'trees'], previousTrees);
       }
-      console.error('Error deleting tree:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete tree: ${errorMessage}`);
     }
   }, [queryClient]);
@@ -254,8 +299,38 @@ export default function TreesManagement() {
       treeType: 'individual',
       packageQuantity: '',
       packagePrice: '',
+      scientificSpecies: '',
+      speciesInfoAvailable: false,
+      co2: '',
+      foodSecurity: '',
+      economicDevelopment: '',
+      co2Absorption: '',
+      environmentalProtection: '',
+      localUses: [],
       image: null
     });
+  };
+
+  // Local uses descriptions
+  const localUsesDescriptions: Record<string, string> = {
+    'Natural pesticide': 'Its leaves and fruits naturally repel pests and diseases, offering a safe, chemical-free way to protect plants.',
+    'Soil': 'With its nitrogen-fixing abilities and deep roots, it nourishes the soil, protects it from erosion, and restores fertility.',
+    'Fence': 'Acting as a natural barrier, it shields crops and creates cool, shaded spaces for animals to rest.',
+    'Anti-wind': 'It stands strong against harsh winds, safeguarding tender plants and helping the soil retain precious moisture.',
+    'Cosmetics': 'From its blossoms to its leaves, valuable extracts are used to create gentle, earth-derived beauty products.',
+    'Biodiversity': 'This tree supports the return of birds, insects, and small animals, helping restore balance to the entire ecosystem.',
+    'Consumption and sales': 'Its fruits, seeds, and leaves provide nourishment for farming families and can also be sold, supporting local markets.',
+    'Livestock': 'Its fresh or dried leaves serve as a nutritious feed for livestock, helping farmers care for their animals naturally.',
+    'Medicine': 'Its leaves, roots, bark, and fruits have long been used in traditional remedies — offering healing straight from nature.'
+  };
+
+  const handleLocalUseToggle = (use: string) => {
+    setFormData(prev => ({
+      ...prev,
+      localUses: prev.localUses.includes(use)
+        ? prev.localUses.filter(u => u !== use)
+        : [...prev.localUses, use]
+    }));
   };
 
   // Define columns for the table
@@ -475,6 +550,130 @@ export default function TreesManagement() {
                   onChange={(e) => setFormData({ ...formData, oxygenKgs: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
+              </div>
+
+              {/* Additional Tree Information Section */}
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Additional Tree Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Scientific Species</label>
+                    <input
+                      type="text"
+                      disabled={submitting}
+                      value={formData.scientificSpecies}
+                      onChange={(e) => setFormData({ ...formData, scientificSpecies: e.target.value })}
+                      placeholder="e.g., Ficus religiosa"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="speciesInfoAvailable"
+                      disabled={submitting}
+                      checked={formData.speciesInfoAvailable}
+                      onChange={(e) => setFormData({ ...formData, speciesInfoAvailable: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <label htmlFor="speciesInfoAvailable" className="ml-2 block text-sm text-gray-700">
+                      Species information available upon request
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">CO₂ (kg)</label>
+                    <input
+                      type="number"
+                      disabled={submitting}
+                      value={formData.co2}
+                      onChange={(e) => setFormData({ ...formData, co2: e.target.value })}
+                      placeholder="e.g., -294"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Can be negative (e.g., -294kg)</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Food Security (0-10)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        disabled={submitting}
+                        value={formData.foodSecurity}
+                        onChange={(e) => setFormData({ ...formData, foodSecurity: e.target.value })}
+                        placeholder="e.g., 3"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Economic Development (0-10)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        disabled={submitting}
+                        value={formData.economicDevelopment}
+                        onChange={(e) => setFormData({ ...formData, economicDevelopment: e.target.value })}
+                        placeholder="e.g., 9"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">CO₂ Absorption (0-10)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        disabled={submitting}
+                        value={formData.co2Absorption}
+                        onChange={(e) => setFormData({ ...formData, co2Absorption: e.target.value })}
+                        placeholder="e.g., 5"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Environmental Protection (0-10)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        disabled={submitting}
+                        value={formData.environmentalProtection}
+                        onChange={(e) => setFormData({ ...formData, environmentalProtection: e.target.value })}
+                        placeholder="e.g., 4"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Local Uses Section */}
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Local Uses</h3>
+                <p className="text-xs text-gray-500 mb-4">Select all applicable local uses for this tree</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {VALID_LOCAL_USES.map((use) => (
+                    <div key={use} className="flex items-start gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                      <input
+                        type="checkbox"
+                        id={`localUse-${use}`}
+                        disabled={submitting}
+                        checked={formData.localUses.includes(use)}
+                        onChange={() => handleLocalUseToggle(use)}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed flex-shrink-0"
+                      />
+                      <label htmlFor={`localUse-${use}`} className="flex-1 cursor-pointer">
+                        <div className="font-medium text-sm text-gray-900">{use}</div>
+                        <div className="text-xs text-gray-600 mt-1">{localUsesDescriptions[use]}</div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
               
               {/* Package fields - only show for company trees */}
