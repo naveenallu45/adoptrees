@@ -1,7 +1,6 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { PencilIcon, CheckIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
@@ -9,7 +8,7 @@ import Image from 'next/image';
 
 export default function IndividualProfilePage() {
   const { data: session, update: updateSession } = useSession();
-  const router = useRouter();
+  const sessionUpdateRef = useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: session?.user?.name || '',
@@ -90,11 +89,13 @@ export default function IndividualProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [session?.user?.id, session?.user?.email, session?.user?.name, session?.user?.image]); // Depend on user ID, email, name, and image
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]); // Only depend on user ID to prevent re-fetch on session updates
 
-  // Sync profile image with session image
+  // Sync profile image with session image (only on initial load, not on updates)
   useEffect(() => {
-    if (session?.user?.image && !profileImage) {
+    // Only sync if we're not in the middle of an update and image is missing
+    if (!sessionUpdateRef.current && session?.user?.image && !profileImage) {
       setProfileImage(session.user.image);
     }
   }, [session?.user?.image, profileImage]);
@@ -193,87 +194,45 @@ export default function IndividualProfilePage() {
       const result = await response.json();
 
       if (result.success) {
-        // Always use the image from the API response if it exists
+        // Optimistic update - update UI immediately
         const newImage = result.data?.image || null;
+        
+        // Check if session values actually changed to avoid unnecessary updates
+        const nameChanged = formData.name !== session?.user?.name;
+        const emailChanged = formData.email !== session?.user?.email;
+        const imageChanged = newImage !== session?.user?.image;
+        
+        // Update all state immediately for instant UI feedback
+        setProfileImage(newImage);
+        setImagePreview(null);
+        setProfileImageFile(null);
+        setInitialFormData(formData);
+        setSaveError(null);
+        setIsEditing(false);
         
         // Update date of birth last updated timestamp if available
         if (result.data?.dateOfBirthLastUpdated) {
           setDateOfBirthLastUpdated(result.data.dateOfBirthLastUpdated);
         } else if (!result.data?.dateOfBirth) {
-          // Clear last update date if date of birth was cleared
           setDateOfBirthLastUpdated(null);
         }
         
-        console.log('Profile update response:', { 
-          hasImage: !!newImage, 
-          imageUrl: newImage,
-          resultData: result.data 
-        });
-        
-        // Update profile image state FIRST - before session update
-        // This ensures the UI updates immediately
-        setProfileImage(newImage);
-        setImagePreview(null);
-        setProfileImageFile(null);
-        
-        console.log('Profile image state updated:', {
-          newImage,
-          profileImageState: newImage
-        });
-        
-        // Update session with new name/email/image
-        console.log('Updating session with image:', newImage);
-        await updateSession({
-          name: formData.name,
-          email: formData.email,
-          image: newImage,
-        });
-        
-        // Wait a bit for session to propagate
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Update initial form data
-        setInitialFormData(formData);
-        setSaveError(null);
-        setIsEditing(false);
-        
-        // Refetch user data to sync everything, but preserve the new image
-        const refetchedData = await fetch(`/api/users/${session.user.id}`);
-        if (refetchedData.ok) {
-          const refetchResult = await refetchedData.json();
-          if (refetchResult.success && refetchResult.data) {
-            const userData = refetchResult.data;
-            // Only update form data, but keep the new image we just set
-            const dateOfBirthValue = userData.dateOfBirth 
-              ? new Date(userData.dateOfBirth).toISOString().split('T')[0]
-              : '';
-            
-            const fetchedData = {
-              name: userData.name || session?.user?.name || '',
-              email: userData.email || session?.user?.email || '',
-              phone: userData.phone || '',
-              address: userData.address || '',
-              dateOfBirth: dateOfBirthValue,
-            };
-            setFormData(fetchedData);
-            setInitialFormData(fetchedData);
-            
-            // Update last update date
-            if (userData.dateOfBirthLastUpdated) {
-              setDateOfBirthLastUpdated(userData.dateOfBirthLastUpdated);
-            } else {
-              setDateOfBirthLastUpdated(null);
-            }
-            // Only update profileImage if we got a new one from the refetch
-            // Otherwise keep the one we just set
-            if (userData.image) {
-              setProfileImage(userData.image);
-            }
-          }
+        // Only update session if values actually changed (prevents unnecessary re-renders)
+        if (nameChanged || emailChanged || imageChanged) {
+          sessionUpdateRef.current = true;
+          // Defer session update to prevent immediate re-render cascade
+          setTimeout(() => {
+            updateSession({
+              name: formData.name,
+              email: formData.email,
+              image: newImage,
+            }).catch((error) => {
+              console.error('Session update error:', error);
+            }).finally(() => {
+              sessionUpdateRef.current = false;
+            });
+          }, 0);
         }
-        
-        // Force a router refresh to ensure all components get the updated session
-        router.refresh();
       } else {
         setSaveError(result.message || 'Failed to update profile');
       }

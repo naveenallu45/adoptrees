@@ -69,11 +69,9 @@ export default function IndividualUsersPage() {
         // If 404, user doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('User was already deleted from database.');
-          // Force refetch to sync with database
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'] }),
-            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-          ]);
+          // Invalidate and refetch in background (non-blocking)
+          queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'individuals'] });
+          queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
           return;
         }
         
@@ -99,11 +97,9 @@ export default function IndividualUsersPage() {
       }
       
       toast.success('User deleted successfully!');
-      // Force immediate refetch to ensure UI matches database
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-      ]);
+      // Invalidate and refetch in background (non-blocking)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'individuals'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     } catch (error) {
       // Rollback optimistic update on error
       if (previousUsers) {

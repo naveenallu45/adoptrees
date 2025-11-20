@@ -161,11 +161,9 @@ export default function TreesManagement() {
       
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
-        // Force immediate refetch to show updated data
-        await Promise.all([
-          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-        ]);
+        // Invalidate and refetch in background (non-blocking)
+        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
         setShowForm(false);
         setEditingTree(null);
         setFormData({
@@ -273,11 +271,9 @@ export default function TreesManagement() {
         // If 404, tree doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('Tree was already deleted from database.');
-          // Force refetch to sync with database
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-          ]);
+          // Invalidate and refetch in background (non-blocking)
+          queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+          queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
           return;
         }
         
@@ -303,11 +299,9 @@ export default function TreesManagement() {
       }
       
       toast.success('Tree deleted successfully!');
-      // Force immediate refetch to ensure UI matches database
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-      ]);
+      // Invalidate and refetch in background (non-blocking)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     } catch (error) {
       // Rollback optimistic update on error
       if (previousTrees) {

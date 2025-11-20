@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import Order from '@/models/Order';
 import bcrypt from 'bcryptjs';
 import { wellWisherRegistrationSchema } from '@/lib/validations/wellwisher';
 import { checkRateLimit, getClientIp, sanitizeInput, logSecurityEvent } from '@/lib/security';
@@ -43,21 +44,99 @@ export async function GET(request: NextRequest) {
 
     // Get well-wishers with pagination
     const wellWishers = await User.find(query)
-      .select('name email phone createdAt')
+      .select('name email phone createdAt _id')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
-    // For now, return mock task counts since we don't have a task system yet
-    const wellWishersWithStats = wellWishers.map(wellWisher => ({
-      ...wellWisher.toObject(),
-      upcomingTasks: Math.floor(Math.random() * 10),
-      ongoingTasks: Math.floor(Math.random() * 5),
-      completedTasks: Math.floor(Math.random() * 20),
-      updatingTasks: Math.floor(Math.random() * 3),
-    }));
+    // Calculate real task counts for each well-wisher
+    const wellWishersWithStats = await Promise.all(
+      wellWishers.map(async (wellWisher) => {
+        const wellWisherId = String(wellWisher._id);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-    return NextResponse.json({
+        // Calculate task counts using aggregation
+        const [upcomingResult, ongoingResult, completedResult, updatingResult] = await Promise.all([
+          // Upcoming tasks (pending)
+          Order.aggregate([
+            {
+              $match: {
+                assignedWellwisher: wellWisherId,
+                wellwisherTasks: { $exists: true, $ne: [] }
+              }
+            },
+            { $unwind: '$wellwisherTasks' },
+            {
+              $match: {
+                'wellwisherTasks.status': 'pending'
+              }
+            },
+            { $count: 'total' }
+          ]),
+          // Ongoing tasks (in_progress)
+          Order.aggregate([
+            {
+              $match: {
+                assignedWellwisher: wellWisherId,
+                wellwisherTasks: { $exists: true, $ne: [] }
+              }
+            },
+            { $unwind: '$wellwisherTasks' },
+            {
+              $match: {
+                'wellwisherTasks.status': 'in_progress'
+              }
+            },
+            { $count: 'total' }
+          ]),
+          // Completed tasks
+          Order.aggregate([
+            {
+              $match: {
+                assignedWellwisher: wellWisherId,
+                wellwisherTasks: { $exists: true, $ne: [] }
+              }
+            },
+            { $unwind: '$wellwisherTasks' },
+            {
+              $match: {
+                'wellwisherTasks.status': 'completed'
+              }
+            },
+            { $count: 'total' }
+          ]),
+          // Updating tasks (completed tasks needing growth update)
+          Order.aggregate([
+            {
+              $match: {
+                assignedWellwisher: wellWisherId,
+                wellwisherTasks: { $exists: true, $ne: [] }
+              }
+            },
+            { $unwind: '$wellwisherTasks' },
+            {
+              $match: {
+                'wellwisherTasks.status': 'completed',
+                'wellwisherTasks.nextGrowthUpdateDue': { $exists: true, $lte: today }
+              }
+            },
+            { $count: 'total' }
+          ])
+        ]);
+
+        return {
+          ...wellWisher,
+          upcomingTasks: upcomingResult[0]?.total || 0,
+          ongoingTasks: ongoingResult[0]?.total || 0,
+          completedTasks: completedResult[0]?.total || 0,
+          updatingTasks: updatingResult[0]?.total || 0,
+        };
+      })
+    );
+
+    const response = NextResponse.json({
       success: true,
       data: wellWishersWithStats,
       pagination: {
@@ -68,6 +147,13 @@ export async function GET(request: NextRequest) {
         hasPrevPage: page > 1,
       },
     });
+
+    // Prevent caching to ensure real-time updates
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+
+    return response;
   } catch (_error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },

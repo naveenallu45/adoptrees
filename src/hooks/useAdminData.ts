@@ -5,29 +5,40 @@ export function useAdminStats() {
   return useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: async () => {
-      const [treesRes, individualsRes, companiesRes, wellWishersRes] = await Promise.all([
-        fetch('/api/admin/trees'),
-        fetch('/api/admin/users?type=individual'),
-        fetch('/api/admin/users?type=company'),
-        fetch('/api/admin/wellwishers'),
+      const [treesRes, individualsRes, companiesRes, wellWishersRes, ordersRes] = await Promise.all([
+        fetch('/api/admin/trees', { cache: 'no-store' }),
+        fetch('/api/admin/users?type=individual', { cache: 'no-store' }),
+        fetch('/api/admin/users?type=company', { cache: 'no-store' }),
+        fetch('/api/admin/wellwishers', { cache: 'no-store' }),
+        fetch('/api/admin/adoptions/all', { cache: 'no-store' }),
       ]);
 
-      const [treesData, individualsData, companiesData, wellWishersData] = await Promise.all([
+      const [treesData, individualsData, companiesData, wellWishersData, ordersData] = await Promise.all([
         treesRes.json(),
         individualsRes.json(),
         companiesRes.json(),
         wellWishersRes.json(),
+        ordersRes.json(),
       ]);
+
+      // Calculate total revenue from all orders
+      const totalRevenue = ordersData.success && ordersData.metrics 
+        ? ordersData.metrics.totalRevenue || 0
+        : 0;
 
       return {
         totalTrees: treesData.success ? treesData.data.length : 0,
         totalIndividuals: individualsData.success ? individualsData.data.length : 0,
         totalCompanies: companiesData.success ? companiesData.data.length : 0,
         totalWellWishers: wellWishersData.success ? wellWishersData.data.length : 0,
-        totalRevenue: 0,
+        totalRevenue,
       };
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // Always refetch to ensure UI matches database
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
   });
 }
 
@@ -45,6 +56,9 @@ export function useTrees() {
     },
     staleTime: 0, // Always refetch to ensure UI matches database
     refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
   });
 }
 
@@ -62,6 +76,9 @@ export function useIndividualUsers() {
     },
     staleTime: 0, // Always refetch to ensure UI matches database
     refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
   });
 }
 
@@ -79,10 +96,13 @@ export function useCompanyUsers() {
     },
     staleTime: 0, // Always refetch to ensure UI matches database
     refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
   });
 }
 
-// Well-Wishers Hook
+// Well-Wishers Hook with real-time updates
 export function useWellWishers() {
   return useQuery({
     queryKey: ['admin', 'wellwishers'],
@@ -96,5 +116,8 @@ export function useWellWishers() {
     },
     staleTime: 0, // Always refetch to ensure UI matches database
     refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
+    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
   });
 }

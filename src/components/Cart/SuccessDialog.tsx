@@ -39,7 +39,7 @@ export default function PaymentDialog({
           primaryButton: 'View Your Trees',
           secondaryButton: 'Continue Adopting',
           primaryButtonClass: 'bg-white text-green-600 hover:bg-green-50 focus:ring-green-500 shadow-lg',
-          secondaryButtonClass: 'border-2 border-white bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 shadow-md',
+          secondaryButtonClass: 'border-2 border-green-600 bg-transparent text-green-600 hover:bg-green-50 focus:ring-green-500 shadow-md',
           showRetry: false,
           bgGradient: 'from-green-500 via-green-600 to-emerald-600'
         };
@@ -53,7 +53,7 @@ export default function PaymentDialog({
           primaryButton: 'Try Again',
           secondaryButton: 'Close',
           primaryButtonClass: 'bg-white text-red-600 hover:bg-red-50 focus:ring-red-500 shadow-lg',
-          secondaryButtonClass: 'border-2 border-white bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 shadow-md',
+          secondaryButtonClass: 'border-2 border-red-600 bg-transparent text-red-600 hover:bg-red-50 focus:ring-red-500 shadow-md',
           showRetry: true,
           bgGradient: 'from-red-500 via-red-600 to-rose-600'
         };
@@ -67,7 +67,7 @@ export default function PaymentDialog({
           primaryButton: 'Check Status',
           secondaryButton: 'Close',
           primaryButtonClass: 'bg-white text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-500 shadow-lg',
-          secondaryButtonClass: 'border-2 border-white bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 shadow-md',
+          secondaryButtonClass: 'border-2 border-yellow-600 bg-transparent text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-500 shadow-md',
           showRetry: false,
           bgGradient: 'from-yellow-500 via-yellow-600 to-amber-600'
         };
@@ -81,7 +81,7 @@ export default function PaymentDialog({
           primaryButton: 'OK',
           secondaryButton: 'Close',
           primaryButtonClass: 'bg-white text-green-600 hover:bg-green-50 focus:ring-green-500 shadow-lg',
-          secondaryButtonClass: 'border-2 border-white bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 shadow-md',
+          secondaryButtonClass: 'border-2 border-green-600 bg-transparent text-green-600 hover:bg-green-50 focus:ring-green-500 shadow-md',
           showRetry: false,
           bgGradient: 'from-green-500 via-green-600 to-emerald-600'
         };

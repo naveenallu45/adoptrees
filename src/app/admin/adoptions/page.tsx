@@ -130,6 +130,9 @@ export default function AdminAdoptionsPage() {
     },
     staleTime: 0, // Always refetch to ensure UI matches database
     refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
   });
 
 
@@ -281,8 +284,8 @@ export default function AdminAdoptionsPage() {
         // If 404, adoption doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('Adoption was already deleted from database.');
-          // Force refetch to sync with database
-          await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] });
+          // Invalidate and refetch in background (non-blocking)
+          queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
           return;
         }
         
@@ -300,8 +303,8 @@ export default function AdminAdoptionsPage() {
       }
       
       toast.success('Adoption deleted successfully!');
-      // Force immediate refetch to ensure UI matches database
-      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] });
+      // Invalidate and refetch in background (non-blocking)
+      queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
     } catch (error) {
       // Rollback optimistic update on error
       if (previousData) {

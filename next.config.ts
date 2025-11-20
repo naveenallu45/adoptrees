@@ -4,6 +4,24 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'framer-motion', '@tanstack/react-table'],
+    // Optimize filesystem operations
+    outputFileTracingIncludes: {
+      '/api/**/*': ['./node_modules/**/*.wasm', './node_modules/**/*.node'],
+    },
+    // Reduce filesystem reads
+    optimizeCss: true,
+  },
+  
+  // Output configuration for better caching
+  output: 'standalone',
+  
+  // Optimize build output
+  swcMinify: true,
+  
+  // Reduce filesystem operations during build
+  generateBuildId: async () => {
+    // Use a simple build ID to reduce filesystem checks
+    return `build-${Date.now()}`;
   },
   
   // Allow cross-origin requests from local network devices
@@ -59,6 +77,16 @@ const nextConfig: NextConfig = {
   
   // Bundle optimization
   webpack: (config, { dev, isServer }) => {
+    // Optimize filesystem access
+    config.cache = {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename],
+      },
+      // Reduce cache operations
+      compression: 'gzip',
+    };
+    
     // Production optimizations
     if (!dev && !isServer) {
       config.optimization.splitChunks = {

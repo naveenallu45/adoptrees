@@ -69,11 +69,9 @@ export default function AdminWellWishersPage() {
         toast.success('Well-wisher registered successfully!');
         setShowRegisterForm(false);
         setFormData({ name: '', email: '', phone: '', password: '' });
-        // Force immediate refetch to show new well-wisher
-        await Promise.all([
-          queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-        ]);
+        // Invalidate and refetch in background (non-blocking)
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       } else {
         toast.error(data.message || 'Failed to register well-wisher');
       }
@@ -148,11 +146,9 @@ export default function AdminWellWishersPage() {
       setShowEditForm(false);
       setEditingWellWisher(null);
       setEditFormData({ name: '', email: '', phone: '', password: '' });
-      // Force immediate refetch to show updated data
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-      ]);
+      // Invalidate and refetch in background (non-blocking)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Error updating well-wisher: ${errorMessage}`);
@@ -201,11 +197,9 @@ export default function AdminWellWishersPage() {
         // If 404, well-wisher doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('Well-wisher was already deleted from database.');
-          // Force refetch to sync with database
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-          ]);
+          // Invalidate and refetch in background (non-blocking)
+          queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
+          queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
           return;
         }
         
@@ -231,11 +225,9 @@ export default function AdminWellWishersPage() {
       }
       
       toast.success('Well-wisher deleted successfully!');
-      // Force immediate refetch to ensure UI matches database
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
-      ]);
+      // Invalidate and refetch in background (non-blocking)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     } catch (error) {
       // Rollback optimistic update on error
       if (previousWellWishers) {

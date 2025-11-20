@@ -1,14 +1,13 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function CompanyProfilePage() {
   const { data: session, update: updateSession } = useSession();
-  const router = useRouter();
+  const sessionUpdateRef = useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     companyName: session?.user?.name || '',
@@ -68,7 +67,8 @@ export default function CompanyProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [session?.user?.id, session?.user?.email, session?.user?.name]); // Depend on user ID, email, and name
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]); // Only depend on user ID to prevent re-fetch on session updates
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -110,22 +110,30 @@ export default function CompanyProfilePage() {
       const result = await response.json();
 
       if (result.success) {
-        // Update session with new name/email if changed
-        await updateSession({
-          name: formData.companyName,
-          email: formData.email,
-        });
+        // Check if session values actually changed to avoid unnecessary updates
+        const nameChanged = formData.companyName !== session?.user?.name;
+        const emailChanged = formData.email !== session?.user?.email;
         
-        // Wait a bit for session to propagate
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Update initial form data
+        // Optimistic update - update UI immediately
         setInitialFormData(formData);
         setSaveError(null);
         setIsEditing(false);
         
-        // Force a router refresh to ensure all components get the updated session
-        router.refresh();
+        // Only update session if values actually changed (prevents unnecessary re-renders)
+        if (nameChanged || emailChanged) {
+          sessionUpdateRef.current = true;
+          // Defer session update to prevent immediate re-render cascade
+          setTimeout(() => {
+            updateSession({
+              name: formData.companyName,
+              email: formData.email,
+            }).catch((error) => {
+              console.error('Session update error:', error);
+            }).finally(() => {
+              sessionUpdateRef.current = false;
+            });
+          }, 0);
+        }
       } else {
         setSaveError(result.message || 'Failed to update profile');
       }

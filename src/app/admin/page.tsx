@@ -108,7 +108,7 @@ export default function AdminDashboard() {
           <div className="grid gap-6 md:grid-cols-4">
             <Link href="/admin/trees">
               <motion.div
-                className="cursor-pointer rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
+                className="flex h-full min-h-[180px] cursor-pointer flex-col rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
 
             <Link href="/admin/users/individuals">
               <motion.div
-                className="cursor-pointer rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
+                className="flex h-full min-h-[180px] cursor-pointer flex-col rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
 
             <Link href="/admin/users/companies">
               <motion.div
-                className="cursor-pointer rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
+                className="flex h-full min-h-[180px] cursor-pointer flex-col rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -144,7 +144,7 @@ export default function AdminDashboard() {
 
             <Link href="/admin/wellwishers">
               <motion.div
-                className="cursor-pointer rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
+                className="flex h-full min-h-[180px] cursor-pointer flex-col rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
