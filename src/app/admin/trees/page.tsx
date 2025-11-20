@@ -143,7 +143,7 @@ export default function TreesManagement() {
       let imageUrl = '';
       try {
         imageUrl = formData.image ? URL.createObjectURL(formData.image) : '/placeholder-tree.jpg';
-      } catch (e) {
+      } catch (_e) {
         imageUrl = '/placeholder-tree.jpg';
       }
       
@@ -168,7 +168,7 @@ export default function TreesManagement() {
         smallImageUrls: formData.smallImages.filter(img => img !== null).map(img => {
           try {
             return img ? URL.createObjectURL(img) : '';
-          } catch (e) {
+          } catch (_e) {
             return '';
           }
         }).filter(url => url !== ''),
@@ -215,14 +215,14 @@ export default function TreesManagement() {
               imageUrl: (() => {
                 try {
                   return formData.image ? URL.createObjectURL(formData.image) : tree.imageUrl;
-                } catch (e) {
+                } catch (_e) {
                   return tree.imageUrl;
                 }
               })(),
               smallImageUrls: formData.smallImages.filter(img => img !== null).map((img, idx) => {
                 try {
                   return img ? URL.createObjectURL(img) : (tree.smallImageUrls?.[idx] || '');
-                } catch (e) {
+                } catch (_e) {
                   return tree.smallImageUrls?.[idx] || '';
                 }
               }).filter(url => url !== ''),
