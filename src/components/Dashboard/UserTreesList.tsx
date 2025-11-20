@@ -18,20 +18,30 @@ import {
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
-function LocationToggle({ latitude, longitude, treeName }: { latitude: number; longitude: number; treeName: string }) {
-  const [show, setShow] = useState(true); // Show map by default when dropdown is opened
-
+function LocationToggle({ 
+  latitude, 
+  longitude, 
+  treeName, 
+  isVisible,
+  onToggle
+}: { 
+  latitude: number; 
+  longitude: number; 
+  treeName: string; 
+  isVisible: boolean;
+  onToggle: () => void;
+}) {
   return (
     <div>
       <button
         type="button"
-        onClick={() => setShow(!show)}
+        onClick={onToggle}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
       >
         <MapPinIcon className="h-4 w-4 flex-shrink-0" />
-        <span>{show ? 'Hide location' : 'View location'}</span>
+        <span>{isVisible ? 'Hide location' : 'View location'}</span>
       </button>
-      {show && (
+      {isVisible && (
         <div className="mt-3">
           <PlantingLocationMap
             latitude={latitude}
@@ -124,6 +134,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
+  const [locationVisibility, setLocationVisibility] = useState<Record<string, boolean>>({});
   const pathname = usePathname();
   const router = useRouter();
   const isTransactionsPage = pathname.includes('/transactions');
@@ -502,7 +513,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                           </div>
                         </div>
 
-                        {/* Planting location (show by default) */}
+                        {/* Planting location */}
                         {(() => {
                           // Check only the primary order for this specific tree adoption's planting location
                           const completedTask = primaryOrder.wellwisherTasks?.find(task => 
@@ -510,12 +521,23 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                           );
                           if (completedTask?.plantingDetails?.plantingLocation) {
                             const coords = completedTask.plantingDetails.plantingLocation.coordinates;
+                            const locationKey = `location-${uniqueKey}`;
+                            const isVisible = locationVisibility[locationKey] || false;
+                            
                             return (
-                              <div className="mt-1 pt-1.5 border-t border-green-100/50" key={`location-${uniqueKey}`}>
+                              <div className="mt-1 pt-1.5 border-t border-green-100/50" key={locationKey}>
                                 <LocationToggle
+                                  key={`location-toggle-${uniqueKey}`}
                                   latitude={coords[1]}
                                   longitude={coords[0]}
                                   treeName={item.treeName}
+                                  isVisible={isVisible}
+                                  onToggle={() => {
+                                    setLocationVisibility(prev => ({
+                                      ...prev,
+                                      [locationKey]: !prev[locationKey]
+                                    }));
+                                  }}
                                 />
                               </div>
                             );

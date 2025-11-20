@@ -72,6 +72,7 @@ interface Order {
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   isGift: boolean;
+  userName?: string;
   giftRecipientName?: string;
   giftRecipientEmail?: string;
   giftMessage?: string;
@@ -113,7 +114,6 @@ export default function TreeDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; caption?: string; index?: number } | null>(null);
   const [allImagesForModal, setAllImagesForModal] = useState<Array<{ url: string; caption?: string }>>([]);
-  const [wellwisherName, setWellwisherName] = useState<string | null>(null);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
   // Keyboard navigation for image gallery
@@ -188,19 +188,6 @@ export default function TreeDetailPage() {
             }
           }
           
-          // Fetch wellwisher name if assigned
-          if (foundOrder.assignedWellwisher) {
-            try {
-              const wellwisherResponse = await fetch(`/api/admin/users/${foundOrder.assignedWellwisher}`);
-              const wellwisherResult = await wellwisherResponse.json();
-              if (wellwisherResult.success && wellwisherResult.data) {
-                setWellwisherName(wellwisherResult.data.name || wellwisherResult.data.email || 'Wellwisher');
-              }
-            } catch (_err) {
-              // If fetching wellwisher fails, just use default
-              setWellwisherName('Wellwisher');
-            }
-          }
         } else {
           setError('Tree not found');
         }
@@ -217,6 +204,11 @@ export default function TreeDetailPage() {
   useEffect(() => {
     fetchOrder();
   }, [fetchOrder]);
+
+  // Reset location dropdown when navigating to a different tree
+  useEffect(() => {
+    setShowLocationDropdown(false);
+  }, [orderId, itemIndex]);
 
   const _handleDownloadCertificate = async (orderId: string) => {
     try {
@@ -434,18 +426,20 @@ export default function TreeDetailPage() {
             </div>
 
             {/* My Connections */}
-            {order.assignedWellwisher && (
+            {order.userName && (
               <div>
                 <h3 className="text-white font-semibold mb-3 text-lg">My connections</h3>
                 <div className="bg-amber-50 rounded-2xl p-5 border-2 border-amber-200 shadow-lg">
-                  <p className="text-green-800 font-semibold mb-2">Planted by</p>
+                  <p className="text-green-800 font-semibold mb-2">Adopted by</p>
                   <div className="flex items-center">
                     <div className="bg-white rounded-xl p-3 mr-4 shadow-md">
                       <CheckCircleIcon className="h-7 w-7 text-green-600" />
                     </div>
                     <div>
                       <p className="text-green-800 font-bold text-lg">
-                        {wellwisherName || 'Wellwisher'}
+                        {order.isGift && order.giftRecipientName 
+                          ? order.giftRecipientName 
+                          : order.userName || 'User'}
                       </p>
                     </div>
                   </div>

@@ -64,7 +64,8 @@ export default function Footer() {
                     {link.href.startsWith('/') ? (
                       <Link
                         href={link.href}
-                        className={`text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base ${link.name === 'About Us' ? "font-['Calibri']" : ''}`}
+                        className={`text-green-100 hover:text-white transition-colors duration-300 text-xs lg:text-base`}
+                        style={link.name === 'About Us' ? { fontFamily: 'var(--font-work-sans), sans-serif' } : {}}
                       >
                         {link.name}
                       </Link>

@@ -16,7 +16,7 @@ export default function CompanyorPerson() {
           
           <div className="relative z-10 px-6 sm:px-8 md:px-12 lg:px-16 py-6 sm:py-8 max-w-xl w-full">
             {/* Badge */}
-            <div className="inline-flex items-center bg-white/20 backdrop-blur-sm text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-5 shadow-lg group-hover:bg-white/30 transition-all duration-300">
+            <div className="inline-flex items-center bg-white/20 backdrop-blur-sm text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-5 shadow-lg group-hover:bg-white/30 transition-all duration-300" style={{ fontFamily: 'var(--font-work-sans), sans-serif' }}>
               FOR INDIVIDUALS
             </div>
 
@@ -53,7 +53,7 @@ export default function CompanyorPerson() {
           
           <div className="relative z-10 px-6 sm:px-8 md:px-12 lg:px-16 py-6 sm:py-8 max-w-xl w-full">
             {/* Badge */}
-            <div className="inline-flex items-center bg-green-200/80 backdrop-blur-sm text-green-800 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-5 shadow-lg border border-green-300/50 group-hover:bg-green-300/90 group-hover:border-green-400/60 transition-all duration-300">
+            <div className="inline-flex items-center bg-green-200/80 backdrop-blur-sm text-green-800 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-5 shadow-lg border border-green-300/50 group-hover:bg-green-300/90 group-hover:border-green-400/60 transition-all duration-300" style={{ fontFamily: 'var(--font-work-sans), sans-serif' }}>
               FOR COMPANIES
             </div>
 

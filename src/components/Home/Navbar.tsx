@@ -96,11 +96,12 @@ export default function Navbar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`transition-all duration-300 font-bold text-xl xl:text-2xl tracking-tight relative group font-['Calibri'] ${
+                  className={`transition-all duration-300 font-bold text-xl xl:text-2xl tracking-tight relative group ${
                     shouldUseWhiteBg 
                       ? 'text-gray-900 hover:text-green-600' 
                       : 'text-white hover:text-green-200 drop-shadow-lg'
                   }`}
+                  style={{ fontFamily: 'var(--font-work-sans), sans-serif' }}
                 >
                   {item.name}
                   <span className={`absolute -bottom-1 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
@@ -207,11 +208,12 @@ export default function Navbar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`block transition-colors duration-300 py-2 font-bold text-lg border-b last:border-b-0 font-['Calibri'] ${
+                className={`block transition-colors duration-300 py-2 font-bold text-lg border-b last:border-b-0 ${
                   shouldUseWhiteBg 
                     ? 'text-gray-900 hover:text-green-600 border-gray-200' 
                     : 'text-white hover:text-green-200 border-white/20'
                 }`}
+                style={{ fontFamily: 'var(--font-work-sans), sans-serif' }}
                 onClick={() => setIsMenuOpen(false)}
               >
                 {item.name}
