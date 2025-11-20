@@ -25,6 +25,8 @@ export interface Tree {
   oxygenKgs: number;
   imageUrl: string;
   imagePublicId: string;
+  smallImageUrls?: string[];
+  smallImagePublicIds?: string[];
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;

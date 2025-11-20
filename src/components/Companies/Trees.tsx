@@ -202,7 +202,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
               className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400 cursor-pointer"
             >
               {/* Tree Image */}
-              <div className="relative aspect-[4/4] overflow-hidden bg-white">
+              <div className="relative aspect-[4/3.2] sm:aspect-[4/4] overflow-hidden bg-white">
                 <Image
                   src={tree.imageUrl}
                   alt={tree.name}
@@ -217,32 +217,32 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
               </div>
 
               {/* Product Information */}
-              <div className="p-3 sm:p-4 bg-gradient-to-b from-green-50 to-green-100">
+              <div className="p-2 sm:p-4 bg-gradient-to-b from-green-50 to-green-100">
                 {/* Tree Name */}
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 line-clamp-2 min-h-[3rem]">
+                <h3 className="text-sm sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 line-clamp-2 min-h-[2.4rem] sm:min-h-[3rem]">
                   {tree.name}
                 </h3>
 
                 {/* Price and Package Information */}
-                <div className="mb-3">
-                  <div className="flex justify-between items-start mb-2">
+                <div className="mb-2 sm:mb-3">
+                  <div className="flex justify-between items-start mb-1.5 sm:mb-2">
                     <div>
-                      <p className="text-xs text-gray-600 mb-1 font-medium">Price</p>
-                      <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-0.5 sm:mb-1 font-medium">Price</p>
+                      <span className="text-lg sm:text-2xl font-bold text-gray-900">
                         {tree.packagePrice ? `₹${tree.packagePrice.toLocaleString()}` : `₹${tree.price.toLocaleString()}`}
                       </span>
                     </div>
-                    <div className="text-right bg-white/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 shadow-sm border border-green-200/50">
-                      <p className="text-xs text-gray-600 mb-0.5 font-medium">Oxygen</p>
-                      <p className="text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
+                    <div className="text-right bg-white/80 backdrop-blur-sm rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 shadow-sm border border-green-200/50">
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-0.5 font-medium">Oxygen</p>
+                      <p className="text-[10px] sm:text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                     </div>
                   </div>
                   {tree.packageQuantity && tree.packageQuantity > 1 && (
-                    <div className="bg-white/60 backdrop-blur-sm border border-green-200/50 rounded-lg p-2 mt-2">
-                      <p className="text-xs text-gray-700 font-medium">
+                    <div className="bg-white/60 backdrop-blur-sm border border-green-200/50 rounded-lg p-1.5 sm:p-2 mt-1.5 sm:mt-2">
+                      <p className="text-[10px] sm:text-xs text-gray-700 font-medium">
                         Package: {tree.packageQuantity} trees
                         {tree.packagePrice && (
-                          <span className="ml-2 text-gray-600">
+                          <span className="ml-1 sm:ml-2 text-gray-600">
                             (₹{Math.round(tree.packagePrice / tree.packageQuantity).toLocaleString()} per tree)
                           </span>
                         )}
@@ -252,24 +252,24 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 sm:gap-2">
                   {/* Info Button */}
                   <Link
                     href={`/trees/${tree._id}`}
-                    className="flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 font-semibold"
+                    className="flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 transition-all duration-200 flex items-center justify-center gap-1 sm:gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 font-semibold"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="text-xs font-semibold">Info</span>
+                    <span className="text-[10px] sm:text-xs font-semibold">Info</span>
                   </Link>
 
                   {/* Add to Cart Button */}
                   {session && session.user.userType !== 'company' ? (
                     <button
                       disabled
-                      className="flex-1 bg-gray-300 text-gray-500 px-3 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed flex items-center justify-center"
+                      className="flex-1 bg-gray-300 text-gray-500 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg text-[10px] sm:text-xs font-semibold cursor-not-allowed flex items-center justify-center"
                     >
                       Company Only
                     </button>
@@ -278,7 +278,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                       ref={(el) => { buttonRefs.current[tree._id] = el; }}
                       onClick={(e) => handleAddToCart(tree, e)}
                       disabled={addingTreeId === tree._id}
-                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1 sm:gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
                     >
                       {addingTreeId === tree._id ? (
                         <span className="flex items-center gap-1.5">

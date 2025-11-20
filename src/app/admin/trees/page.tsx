@@ -30,6 +30,7 @@ interface Tree {
   co2Absorption?: number;
   environmentalProtection?: number;
   localUses?: string[];
+  smallImageUrls?: string[];
   createdAt: string;
 }
 
@@ -55,7 +56,8 @@ export default function TreesManagement() {
     co2Absorption: '',
     environmentalProtection: '',
     localUses: [] as string[],
-    image: null as File | null
+    image: null as File | null,
+    smallImages: [null, null, null, null] as (File | null)[]
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +124,13 @@ export default function TreesManagement() {
     if (formData.image) {
       formDataToSend.append('image', formData.image);
     }
+    
+    // Append small images
+    formData.smallImages.forEach((smallImage, index) => {
+      if (smallImage) {
+        formDataToSend.append(`smallImage${index}`, smallImage);
+      }
+    });
 
     try {
       const url = editingTree 
@@ -175,7 +184,8 @@ export default function TreesManagement() {
           co2Absorption: '',
           environmentalProtection: '',
           localUses: [],
-          image: null
+          image: null,
+          smallImages: [null, null, null, null]
         });
       } else {
         const errorMsg = data.error || 'Failed to save tree';
@@ -207,7 +217,8 @@ export default function TreesManagement() {
       co2Absorption: tree.co2Absorption?.toString() || '',
       environmentalProtection: tree.environmentalProtection?.toString() || '',
       localUses: tree.localUses || [],
-      image: null
+      image: null,
+      smallImages: [null, null, null, null] // Small images will be loaded from existing tree data if editing
     });
     setShowForm(true);
   };
@@ -326,7 +337,8 @@ export default function TreesManagement() {
       co2Absorption: '',
       environmentalProtection: '',
       localUses: [],
-      image: null
+      image: null,
+      smallImages: [null, null, null, null]
     });
   };
 
@@ -752,6 +764,81 @@ export default function TreesManagement() {
                     <li><strong>Recommended Dimensions:</strong> 1200x1200px or 1600x1600px</li>
                     <li><strong>Maximum File Size:</strong> 5MB</li>
                     <li><strong>Note:</strong> Images with 1:1 (square) aspect ratio will fit perfectly in the card without cropping. Other ratios may be cropped to fit.</li>
+                  </ul>
+                </div>
+                {editingTree && editingTree.imageUrl && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-600 mb-1">Current Image:</p>
+                    <Image
+                      src={editingTree.imageUrl}
+                      alt={editingTree.name}
+                      width={100}
+                      height={100}
+                      className="rounded-lg border border-gray-300"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              {/* Small Images Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Small Images (4 images for collage display)
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Upload up to 4 small square images that will be displayed in a collage format on the tree detail page.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  {[0, 1, 2, 3].map((index) => (
+                    <div key={index}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Small Image {index + 1}
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={submitting}
+                        onChange={(e) => {
+                          const newSmallImages = [...formData.smallImages];
+                          newSmallImages[index] = e.target.files?.[0] || null;
+                          setFormData({ ...formData, smallImages: newSmallImages });
+                        }}
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                      {editingTree && editingTree.smallImageUrls && editingTree.smallImageUrls[index] && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-600 mb-1">Current:</p>
+                          <Image
+                            src={editingTree.smallImageUrls[index]}
+                            alt={`Small image ${index + 1}`}
+                            width={80}
+                            height={80}
+                            className="rounded-lg border border-gray-300 object-cover"
+                          />
+                        </div>
+                      )}
+                      {formData.smallImages[index] && (
+                        <div className="mt-2">
+                          <p className="text-xs text-green-600 mb-1">New:</p>
+                          <Image
+                            src={URL.createObjectURL(formData.smallImages[index]!)}
+                            alt={`New small image ${index + 1}`}
+                            width={80}
+                            height={80}
+                            className="rounded-lg border border-gray-300 object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 rounded-lg bg-green-50 border border-green-200 p-3">
+                  <p className="text-xs font-semibold text-green-900 mb-1.5">💡 Small Image Guidelines:</p>
+                  <ul className="text-xs text-green-800 space-y-1 list-disc list-inside">
+                    <li><strong>Recommended:</strong> Square images (1:1 aspect ratio)</li>
+                    <li><strong>Recommended Size:</strong> 400x400px to 800x800px</li>
+                    <li><strong>Maximum File Size:</strong> 2MB per image</li>
+                    <li><strong>Display:</strong> These images will appear as a vertical stack on the tree detail page</li>
                   </ul>
                 </div>
               </div>

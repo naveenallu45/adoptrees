@@ -257,6 +257,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Upload small images (up to 4)
+    const smallImageUrls: string[] = [];
+    const smallImagePublicIds: string[] = [];
+    
+    for (let i = 0; i < 4; i++) {
+      const smallImage = formData.get(`smallImage${i}`) as File;
+      if (smallImage && smallImage.size > 0) {
+        // Validate file size (2MB limit for small images)
+        if (smallImage.size > 2 * 1024 * 1024) {
+          return NextResponse.json(
+            { success: false, error: `Small image ${i + 1} file size exceeds 2MB limit` },
+            { status: 400 }
+          );
+        }
+
+        try {
+          const arrayBuffer = await smallImage.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const base64String = buffer.toString('base64');
+          const dataUri = `data:${smallImage.type};base64,${base64String}`;
+          
+          const smallResult = await cloudinary.uploader.upload(dataUri, {
+            folder: 'adoptrees/trees/small',
+            resource_type: 'image',
+            transformation: [
+              { width: 800, height: 800, crop: 'limit', quality: 'auto' },
+              { format: 'auto' }
+            ]
+          });
+
+          smallImageUrls.push(smallResult.secure_url);
+          smallImagePublicIds.push(smallResult.public_id);
+          logInfo('Small image uploaded to Cloudinary', { index: i, publicId: smallResult.public_id });
+        } catch (error) {
+          logError(`Failed to upload small image ${i + 1} to Cloudinary`, error instanceof Error ? error : new Error(String(error)));
+          return NextResponse.json(
+            { success: false, error: `Failed to upload small image ${i + 1}. Please try again.` },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
     // Build tree data object with sanitized inputs
     const treeData: {
       name: string;
@@ -270,6 +313,8 @@ export async function POST(request: NextRequest) {
       packagePrice?: number;
       speciesInfoAvailable: boolean;
       localUses: string[];
+      smallImageUrls?: string[];
+      smallImagePublicIds?: string[];
       scientificSpecies?: string;
       co2?: number;
       foodSecurity?: number;
@@ -289,6 +334,12 @@ export async function POST(request: NextRequest) {
       speciesInfoAvailable: speciesInfoAvailable,
       localUses: localUsesArray.length > 0 ? localUsesArray : [],
     };
+
+    // Include small images if any were uploaded
+    if (smallImageUrls.length > 0) {
+      treeData.smallImageUrls = smallImageUrls;
+      treeData.smallImagePublicIds = smallImagePublicIds;
+    }
 
     // Include optional additional fields
     if (scientificSpecies && scientificSpecies.trim() !== '') {

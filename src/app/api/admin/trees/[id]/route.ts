@@ -224,6 +224,8 @@ export async function PUT(
       localUses?: string[];
       imageUrl?: string;
       imagePublicId?: string;
+      smallImageUrls?: string[];
+      smallImagePublicIds?: string[];
     } = { 
       name: validatedName, 
       price: validatedPrice, 
@@ -235,6 +237,17 @@ export async function PUT(
       speciesInfoAvailable: speciesInfoAvailable,
       localUses: localUsesArray.length > 0 ? localUsesArray : []
     };
+
+    // Get existing tree early (needed for both main image and small images handling)
+    const existingTree = await Tree.findById(id).select('imagePublicId smallImageUrls smallImagePublicIds').lean();
+    
+    if (!existingTree) {
+      logWarning('Tree update failed: tree not found', { treeId: id });
+      return NextResponse.json(
+        { success: false, error: 'Tree not found' },
+        { status: 404 }
+      );
+    }
 
     // Include additional fields using the parsed values (not from validationResult)
     // This ensures they are saved to the database even if Zod strips them from validationResult
@@ -280,9 +293,6 @@ export async function PUT(
           { status: 400 }
         );
       }
-
-      // Get existing tree to delete old image
-      const existingTree = await Tree.findById(id).select('imagePublicId').lean();
       
       // Convert File to buffer for Cloudinary upload
       let buffer: Buffer;
@@ -345,6 +355,89 @@ export async function PUT(
             error: deleteError instanceof Error ? deleteError.message : String(deleteError)
           });
           // Continue with update even if old image deletion fails
+        }
+      }
+    }
+
+    // Handle small images (up to 4)
+    // Track which indices have new images
+    const newSmallImages: Array<{ index: number; file: File }> = [];
+    for (let i = 0; i < 4; i++) {
+      const smallImage = formData.get(`smallImage${i}`) as File;
+      if (smallImage && smallImage.size > 0) {
+        newSmallImages.push({ index: i, file: smallImage });
+      }
+    }
+
+    if (newSmallImages.length > 0) {
+      const existingSmallImageUrls = (existingTree?.smallImageUrls as string[]) || [];
+      const existingSmallImagePublicIds = (existingTree?.smallImagePublicIds as string[]) || [];
+      const smallImageUrls = [...existingSmallImageUrls]; // Start with existing images
+      const smallImagePublicIds = [...existingSmallImagePublicIds];
+      const oldPublicIdsToDelete: string[] = [];
+
+      // Upload new small images and replace at their specific indices
+      for (const { index, file: smallImage } of newSmallImages) {
+        // Validate file size (2MB limit for small images)
+        if (smallImage.size > 2 * 1024 * 1024) {
+          return NextResponse.json(
+            { success: false, error: `Small image ${index + 1} file size exceeds 2MB limit` },
+            { status: 400 }
+          );
+        }
+
+        // Track old public ID for deletion if it exists
+        if (index < existingSmallImagePublicIds.length) {
+          oldPublicIdsToDelete.push(existingSmallImagePublicIds[index]);
+        }
+
+        try {
+          const arrayBuffer = await smallImage.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const base64String = buffer.toString('base64');
+          const dataUri = `data:${smallImage.type};base64,${base64String}`;
+          
+          const smallResult = await cloudinary.uploader.upload(dataUri, {
+            folder: 'adoptrees/trees/small',
+            resource_type: 'image',
+            transformation: [
+              { width: 800, height: 800, crop: 'limit', quality: 'auto' },
+              { format: 'auto' }
+            ]
+          });
+
+          // Replace at the specific index
+          smallImageUrls[index] = smallResult.secure_url;
+          smallImagePublicIds[index] = smallResult.public_id;
+          logInfo('Small image uploaded to Cloudinary', { treeId: id, index, publicId: smallResult.public_id });
+        } catch (error) {
+          logError(`Failed to upload small image ${index + 1} to Cloudinary`, error instanceof Error ? error : new Error(String(error)));
+          return NextResponse.json(
+            { success: false, error: `Failed to upload small image ${index + 1}. Please try again.` },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Remove undefined entries (in case we're replacing beyond existing array length)
+      const filteredUrls = smallImageUrls.filter((url): url is string => url !== undefined);
+      const filteredPublicIds = smallImagePublicIds.filter((id): id is string => id !== undefined);
+
+      updateData.smallImageUrls = filteredUrls;
+      updateData.smallImagePublicIds = filteredPublicIds;
+
+      // Delete old small images that were replaced (best effort)
+      for (const oldPublicId of oldPublicIdsToDelete) {
+        try {
+          await deleteFromCloudinary(oldPublicId);
+          logInfo('Old small image deleted from Cloudinary', { treeId: id, publicId: oldPublicId });
+        } catch (deleteError) {
+          logWarning('Failed to delete old small image from Cloudinary', { 
+            treeId: id, 
+            publicId: oldPublicId,
+            error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+          });
+          // Continue even if deletion fails
         }
       }
     }

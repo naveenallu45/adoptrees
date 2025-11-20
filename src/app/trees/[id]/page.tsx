@@ -28,6 +28,7 @@ interface Tree {
   co2Absorption?: number;
   environmentalProtection?: number;
   localUses?: string[];
+  smallImageUrls?: string[];
 }
 
 // Scientific names mapping (fallback)
@@ -82,7 +83,6 @@ export default function TreeInfoPage() {
   const [tree, setTree] = useState<Tree | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<string>('');
   const [addingToCart, setAddingToCart] = useState(false);
   const [flyingTree, setFlyingTree] = useState<{ id: string; imageUrl: string; startPos: { x: number; y: number }; endPos: { x: number; y: number } } | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -96,7 +96,6 @@ export default function TreeInfoPage() {
 
         if (result.success) {
           setTree(result.data);
-          setSelectedImage(result.data.imageUrl || '');
         } else {
           setError(result.error || 'Tree not found');
         }
@@ -283,11 +282,11 @@ export default function TreeInfoPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Column - Images */}
           <div className="flex justify-center lg:justify-start">
-            <div className="w-[85%]">
-              {/* Main Image */}
-              <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-white shadow-lg">
+            <div className="w-full max-w-lg">
+              {/* Main Image - Always shows the main product image */}
+              <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-white shadow-lg mb-4">
                 <Image
-                  src={selectedImage}
+                  src={tree.imageUrl}
                   alt={tree.name}
                   fill
                   className="object-cover"
@@ -295,6 +294,26 @@ export default function TreeInfoPage() {
                   quality={90}
                 />
               </div>
+              
+              {/* Small Images Gallery - Displayed below main image if available */}
+              {tree.smallImageUrls && tree.smallImageUrls.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {tree.smallImageUrls.map((smallImageUrl, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all cursor-pointer"
+                    >
+                      <Image
+                        src={smallImageUrl}
+                        alt={`${tree.name} - Additional view ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 25vw, 150px"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -310,7 +329,7 @@ export default function TreeInfoPage() {
               </div>
               <div className="flex-1">
                 <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{tree.name}</h1>
-                {discount && (
+                {discount && discount > 0 && (
                   <span className="inline-block bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded mb-2">
                     -{discount}%
                   </span>
@@ -343,7 +362,7 @@ export default function TreeInfoPage() {
             {/* Pricing */}
             <div className="mb-6 p-4 bg-green-50 rounded-lg">
               <div className="flex items-baseline gap-3">
-                {originalPrice && (
+                {originalPrice && originalPrice > displayPrice && (
                   <span className="text-lg text-gray-500 line-through">₹{originalPrice.toLocaleString()}</span>
                 )}
                 <span className="text-3xl font-bold text-green-600">₹{displayPrice.toLocaleString()}</span>

@@ -7,6 +7,9 @@ export interface ITree extends Document {
   oxygenKgs: number;
   imageUrl: string;
   imagePublicId: string;
+  // Small images for collage display (4 images)
+  smallImageUrls?: string[];
+  smallImagePublicIds?: string[];
   isActive: boolean;
   treeType: 'individual' | 'company';
   // Package fields for corporate trees
@@ -55,6 +58,17 @@ const TreeSchema: Schema = new Schema({
   imagePublicId: {
     type: String,
     required: [true, 'Image public ID is required']
+  },
+  // Small images for collage display (4 images)
+  smallImageUrls: {
+    type: [String],
+    default: [],
+    required: false
+  },
+  smallImagePublicIds: {
+    type: [String],
+    default: [],
+    required: false
   },
   isActive: {
     type: Boolean,
