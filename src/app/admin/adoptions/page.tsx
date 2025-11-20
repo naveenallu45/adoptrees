@@ -21,8 +21,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import {
   MagnifyingGlassIcon,
   ArrowDownTrayIcon,
-  EyeIcon,
-  PencilIcon,
+  TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
@@ -30,6 +29,9 @@ import {
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Adoption {
   _id: string;
@@ -112,26 +114,22 @@ export default function AdminAdoptionsPage() {
     pageSize: 10,
   });
 
-
-
+  const queryClient = useQueryClient();
 
   // Fetch all adoptions data once
   const { data: allData, isLoading, error, refetch } = useQuery({
     queryKey: ['admin-adoptions-all'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/adoptions/all');
+      const response = await fetch('/api/admin/adoptions/all', {
+        cache: 'no-store', // Always fetch fresh data from server
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch adoptions');
       }
       return response.json();
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes - data stays fresh much longer
-    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache much longer (formerly cacheTime)
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
-    refetchOnMount: true, // Refetch on component mount
-    refetchOnReconnect: false, // Don't refetch on network reconnect
-    retry: 1, // Only retry once on failure
-    retryDelay: 1000, // 1 second delay between retries
+    staleTime: 0, // Always refetch to ensure UI matches database
+    refetchOnMount: true, // Always refetch when component mounts
   });
 
 
@@ -240,6 +238,79 @@ export default function AdminAdoptionsPage() {
     totalCount: filteredAdoptions.length,
     totalPages: Math.ceil(filteredAdoptions.length / pagination.pageSize),
   };
+
+  // Delete handler - must be defined before columns useMemo
+  const handleDelete = useCallback(async (id: string, orderId: string) => {
+    const result = await Swal.fire({
+      title: 'Delete Adoption?',
+      text: `Are you sure you want to delete adoption ${orderId}? This action cannot be undone!`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      background: '#fff',
+      customClass: {
+        popup: 'rounded-lg',
+        confirmButton: 'rounded-lg px-4 py-2',
+        cancelButton: 'rounded-lg px-4 py-2',
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Optimistically remove adoption from UI IMMEDIATELY (before API call)
+    const previousData = queryClient.getQueryData<{ data: Adoption[] }>(['admin-adoptions-all']);
+    queryClient.setQueryData(['admin-adoptions-all'], (old: { data: Adoption[] } | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.filter((adoption) => adoption._id !== id)
+      };
+    });
+
+    try {
+      const response = await fetch(`/api/admin/adoptions/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        // If 404, adoption doesn't exist in DB - keep it removed from UI (already deleted)
+        if (response.status === 404) {
+          toast.success('Adoption was already deleted from database.');
+          // Force refetch to sync with database
+          await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] });
+          return;
+        }
+        
+        // Rollback optimistic update on other errors
+        if (previousData) {
+          queryClient.setQueryData(['admin-adoptions-all'], previousData);
+        }
+        // Show specific error message based on status code
+        if (response.status === 400) {
+          toast.error(data.error || 'Invalid adoption ID. Please refresh the page and try again.');
+        } else {
+          toast.error(data.error || 'Failed to delete adoption. Please try again.');
+        }
+        return;
+      }
+      
+      toast.success('Adoption deleted successfully!');
+      // Force immediate refetch to ensure UI matches database
+      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] });
+    } catch (error) {
+      // Rollback optimistic update on error
+      if (previousData) {
+        queryClient.setQueryData(['admin-adoptions-all'], previousData);
+      }
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(`Failed to delete adoption: ${errorMessage}`);
+    }
+  }, [queryClient]);
 
   // Define columns
   const columns = useMemo(
@@ -383,28 +454,23 @@ export default function AdminAdoptionsPage() {
       columnHelper.display({
         id: 'actions',
         header: 'Actions',
-        cell: (_info) => (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => {
-              }}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <EyeIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => {
-                // Handle edit action
-              }}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <PencilIcon className="w-4 h-4" />
-            </button>
-          </div>
-        ),
+        cell: (info) => {
+          const adoption = info.row.original;
+          return (
+            <div className="flex items-center">
+              <button
+                onClick={() => handleDelete(adoption._id, adoption.orderId)}
+                className="text-red-600 hover:text-red-700 transition-colors"
+                title="Delete Adoption"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        },
       }),
     ],
-    []
+    [handleDelete]
   ) as ColumnDef<Adoption>[];
 
   const table = useReactTable({

@@ -96,6 +96,7 @@ export async function PUT(
       phone?: string;
       address?: string;
       gstNumber?: string;
+      dateOfBirth?: string; // ISO date string
     }
     let body: BodyData = {};
     let imageFile: File | null = null;
@@ -115,6 +116,7 @@ export async function PUT(
       const phoneField = formData.get('phone');
       const addressField = formData.get('address');
       const gstNumberField = formData.get('gstNumber');
+      const dateOfBirthField = formData.get('dateOfBirth');
 
       body = {
         name: nameField ? String(nameField) : undefined,
@@ -123,12 +125,13 @@ export async function PUT(
         phone: phoneField ? String(phoneField) : undefined,
         address: addressField ? String(addressField) : undefined,
         gstNumber: gstNumberField ? String(gstNumberField) : undefined,
+        dateOfBirth: dateOfBirthField ? String(dateOfBirthField) : undefined,
       };
     } else {
       body = (await request.json()) as BodyData;
     }
 
-    const { name, companyName, email, phone, address, gstNumber } = body;
+    const { name, companyName, email, phone, address, gstNumber, dateOfBirth } = body;
 
     // Build update object
     interface UpdateData {
@@ -140,6 +143,8 @@ export async function PUT(
       phone?: string;
       address?: string;
       gstNumber?: string;
+      dateOfBirth?: Date;
+      dateOfBirthLastUpdated?: Date;
     }
     const updateData: UpdateData = {};
 
@@ -196,6 +201,55 @@ export async function PUT(
     // Update fields based on user type
     if (user.userType === 'individual') {
       if (name !== undefined) updateData.name = name;
+      
+      // Handle date of birth update for individual users
+      if (dateOfBirth !== undefined) {
+        if (dateOfBirth === '' || dateOfBirth === null) {
+          // Allow clearing the date of birth
+          updateData.dateOfBirth = undefined;
+          updateData.dateOfBirthLastUpdated = undefined;
+        } else {
+          // Validate and parse the date
+          const parsedDate = new Date(dateOfBirth);
+          if (isNaN(parsedDate.getTime())) {
+            return NextResponse.json(
+              { success: false, message: 'Invalid date of birth format' },
+              { status: 400 }
+            );
+          }
+          
+          // Validate date is not in the future
+          const today = new Date();
+          today.setHours(23, 59, 59, 999); // End of today
+          if (parsedDate > today) {
+            return NextResponse.json(
+              { success: false, message: 'Date of birth cannot be in the future' },
+              { status: 400 }
+            );
+          }
+          
+          // Validate reasonable age (max 120 years)
+          const maxAge = new Date();
+          maxAge.setFullYear(today.getFullYear() - 120);
+          if (parsedDate < maxAge) {
+            return NextResponse.json(
+              { success: false, message: 'Date of birth is too far in the past' },
+              { status: 400 }
+            );
+          }
+          
+          // Only update if the date actually changed
+          const existingDateOfBirth = user.dateOfBirth 
+            ? new Date(user.dateOfBirth).toISOString().split('T')[0]
+            : null;
+          const newDateOfBirth = parsedDate.toISOString().split('T')[0];
+          
+          if (existingDateOfBirth !== newDateOfBirth) {
+            updateData.dateOfBirth = parsedDate;
+            updateData.dateOfBirthLastUpdated = new Date();
+          }
+        }
+      }
     } else if (user.userType === 'company') {
       if (companyName !== undefined) updateData.companyName = companyName;
       if (gstNumber !== undefined) updateData.gstNumber = gstNumber;

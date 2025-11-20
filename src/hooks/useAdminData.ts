@@ -36,12 +36,15 @@ export function useTrees() {
   return useQuery({
     queryKey: ['admin', 'trees'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/trees');
+      const response = await fetch('/api/admin/trees', {
+        cache: 'no-store', // Always fetch fresh data from server
+      });
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
       return data.data;
     },
-    staleTime: 3 * 60 * 1000, // 3 minutes
+    staleTime: 0, // Always refetch to ensure UI matches database
+    refetchOnMount: true, // Always refetch when component mounts
   });
 }
 
@@ -50,12 +53,15 @@ export function useIndividualUsers() {
   return useQuery({
     queryKey: ['admin', 'users', 'individuals'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/users?type=individual');
+      const response = await fetch('/api/admin/users?type=individual', {
+        cache: 'no-store', // Always fetch fresh data from server
+      });
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
       return data.data;
     },
-    staleTime: 3 * 60 * 1000, // 3 minutes
+    staleTime: 0, // Always refetch to ensure UI matches database
+    refetchOnMount: true, // Always refetch when component mounts
   });
 }
 
@@ -64,12 +70,15 @@ export function useCompanyUsers() {
   return useQuery({
     queryKey: ['admin', 'users', 'companies'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/users?type=company');
+      const response = await fetch('/api/admin/users?type=company', {
+        cache: 'no-store', // Always fetch fresh data from server
+      });
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
       return data.data;
     },
-    staleTime: 3 * 60 * 1000, // 3 minutes
+    staleTime: 0, // Always refetch to ensure UI matches database
+    refetchOnMount: true, // Always refetch when component mounts
   });
 }
 
@@ -78,11 +87,14 @@ export function useWellWishers() {
   return useQuery({
     queryKey: ['admin', 'wellwishers'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/wellwishers');
+      const response = await fetch('/api/admin/wellwishers', {
+        cache: 'no-store', // Always fetch fresh data from server
+      });
       const data = await response.json();
       if (!data.success) throw new Error(data.message);
       return data.data;
     },
-    staleTime: 3 * 60 * 1000, // 3 minutes
+    staleTime: 0, // Always refetch to ensure UI matches database
+    refetchOnMount: true, // Always refetch when component mounts
   });
 }

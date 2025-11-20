@@ -45,21 +45,82 @@ export default function CompanyUsersPage() {
 
     if (!result.isConfirmed) return;
 
+    // Optimistically remove company from UI IMMEDIATELY (before API call)
+    const previousUsers = queryClient.getQueryData<CompanyUser[]>(['admin', 'users', 'companies']);
+    queryClient.setQueryData(['admin', 'users', 'companies'], (old: CompanyUser[] | undefined) => {
+      if (!old) return old;
+      return old.filter((user) => user._id !== id);
+    });
+
+    // Update stats optimistically
+    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        totalCompanies: Math.max(0, (old.totalCompanies || 0) - 1)
+      };
+    });
+
     try {
       const response = await fetch(`/api/admin/users/${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
       
-      if (data.success) {
-        toast.success('Company deleted successfully!');
-        queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'companies'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      } else {
-        toast.error(data.error || 'Failed to delete company');
+      if (!response.ok || !data.success) {
+        // If 404, company doesn't exist in DB - keep it removed from UI (already deleted)
+        if (response.status === 404) {
+          toast.success('Company was already deleted from database.');
+          // Force refetch to sync with database
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: ['admin', 'users', 'companies'] }),
+            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+          ]);
+          return;
+        }
+        
+        // Rollback optimistic update on other errors
+        if (previousUsers) {
+          queryClient.setQueryData(['admin', 'users', 'companies'], previousUsers);
+          // Rollback stats too
+          queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              totalCompanies: (old.totalCompanies || 0) + 1
+            };
+          });
+        }
+        // Show specific error message based on status code
+        if (response.status === 400) {
+          toast.error(data.error || 'Invalid company ID. Please refresh the page and try again.');
+        } else {
+          toast.error(data.error || 'Failed to delete company. Please try again.');
+        }
+        return;
       }
-    } catch (_error) {
-      toast.error('An error occurred while deleting the company');
+      
+      toast.success('Company deleted successfully!');
+      // Force immediate refetch to ensure UI matches database
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['admin', 'users', 'companies'] }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+      ]);
+    } catch (error) {
+      // Rollback optimistic update on error
+      if (previousUsers) {
+        queryClient.setQueryData(['admin', 'users', 'companies'], previousUsers);
+        // Rollback stats too
+        queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            totalCompanies: (old.totalCompanies || 0) + 1
+          };
+        });
+      }
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(`Failed to delete company: ${errorMessage}`);
     }
   }, [queryClient]);
 

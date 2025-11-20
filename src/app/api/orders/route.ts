@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import Order from '@/models/Order';
+import Order, { IOrder } from '@/models/Order';
 import Tree from '@/models/Tree';
 import User from '@/models/User';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
@@ -72,14 +72,87 @@ export async function POST(request: NextRequest) {
     // Calculate total amount
     const totalAmount = orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
+    // Check for duplicate pending orders with same items before creating
+    // Get all pending orders for this user
+    const pendingOrders = await Order.find({
+      userId: String(session.user.id),
+      status: 'pending',
+      paymentStatus: 'pending',
+      totalAmount: totalAmount,
+      isGift: isGift || false
+    }).sort({ createdAt: -1 });
+
+    // Check if any pending order has the same items
+    for (const existingOrder of pendingOrders) {
+      if (existingOrder.items.length !== orderItems.length) {
+        continue;
+      }
+
+      // Sort items for comparison
+      const existingItems = existingOrder.items.map(item => ({
+        treeId: String(item.treeId),
+        quantity: item.quantity,
+        adoptionType: item.adoptionType || 'self'
+      })).sort((a, b) => a.treeId.localeCompare(b.treeId));
+
+      const newItems = orderItems.map(item => ({
+        treeId: String(item.treeId),
+        quantity: item.quantity,
+        adoptionType: item.adoptionType || 'self'
+      })).sort((a, b) => a.treeId.localeCompare(b.treeId));
+
+      // Compare items
+      const itemsMatch = existingItems.every((existingItem, index) => {
+        const newItem = newItems[index];
+        return existingItem.treeId === newItem.treeId &&
+               existingItem.quantity === newItem.quantity &&
+               existingItem.adoptionType === newItem.adoptionType;
+      });
+
+      if (itemsMatch) {
+        // Duplicate found - return existing order
+        return NextResponse.json({
+          success: true,
+          data: {
+            orderId: existingOrder.orderId,
+            message: 'Order already exists. Using existing order.',
+            totalAmount,
+            items: orderItems.length,
+            isDuplicate: true
+          }
+        });
+      }
+    }
+
     // Create order with user-based ID
     const userName = session.user.name || 'User';
     const firstThreeLetters = userName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
-    const fiveNumbers = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
-    const orderId = `${firstThreeLetters}${fiveNumbers}`;
+    
+    // Ensure unique orderId by checking database
+    let orderId: string;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!isUnique && attempts < maxAttempts) {
+      const fiveNumbers = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+      orderId = `${firstThreeLetters}${fiveNumbers}`;
+      
+      const existingOrder = await Order.findOne({ orderId });
+      if (!existingOrder) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+    
+    if (!isUnique) {
+      // Fallback: use timestamp-based ID if random generation fails
+      const timestamp = Date.now().toString().slice(-8);
+      orderId = `${firstThreeLetters}${timestamp}`;
+    }
     
     const order = new Order({
-      orderId,
+      orderId: orderId!,
       userId: String(session.user.id), // Ensure userId is stored as string
       userEmail: session.user.email,
       userName: session.user.name || 'User',
@@ -202,33 +275,72 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Deduplicate orders: Remove duplicate pending orders with same items
-    // Keep only the most recent one for each unique set of items
-    const deduplicatedOrders = [];
+    // Deduplicate orders: Remove duplicate orders with same items
+    // For pending orders: Keep only the most recent one
+    // For paid/confirmed orders: Keep all (they're legitimate separate orders)
+    const deduplicatedOrders: IOrder[] = [];
     const seenOrderKeys = new Set<string>();
     
-    for (const order of orders) {
-      // Create a unique key based on items and payment status
-      // For pending orders, group by items. For paid orders, show all.
+    // Sort orders by createdAt descending to keep most recent duplicates
+    const sortedOrders = [...orders].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    
+    for (const order of sortedOrders) {
+      // Create a unique key based on items, total amount, and gift status
+      const orderKey = JSON.stringify({
+        userId: order.userId,
+        items: order.items.map(item => ({
+          treeId: item.treeId,
+          quantity: item.quantity,
+          adoptionType: item.adoptionType || 'self'
+        })).sort((a, b) => a.treeId.localeCompare(b.treeId)),
+        totalAmount: order.totalAmount,
+        isGift: order.isGift || false
+      });
+      
+      // For pending orders, deduplicate (keep only most recent)
+      // For paid/confirmed orders, only deduplicate if they're exact duplicates
       if (order.paymentStatus === 'pending' && order.status === 'pending') {
-        const orderKey = JSON.stringify({
-          items: order.items.map(item => ({
-            treeId: item.treeId,
-            quantity: item.quantity,
-            adoptionType: item.adoptionType
-          })).sort((a, b) => a.treeId.localeCompare(b.treeId)),
-          totalAmount: order.totalAmount
-        });
-        
         if (seenOrderKeys.has(orderKey)) {
           // Skip duplicate pending order
           continue;
         }
         seenOrderKeys.add(orderKey);
+      } else if (order.paymentStatus === 'paid' || order.status === 'confirmed' || order.status === 'planted' || order.status === 'completed') {
+        // For paid orders, only deduplicate if exact duplicate exists (same orderId or exact same items + amount + date within 1 minute)
+        // This handles cases where payment webhook created duplicate
+        const isExactDuplicate = deduplicatedOrders.some(existing => {
+          if (existing.orderId === order.orderId) return true;
+          
+          const timeDiff = Math.abs(new Date(existing.createdAt).getTime() - new Date(order.createdAt).getTime());
+          if (timeDiff < 60000) { // Within 1 minute
+            const existingKey = JSON.stringify({
+              items: existing.items.map(item => ({
+                treeId: item.treeId,
+                quantity: item.quantity,
+                adoptionType: item.adoptionType || 'self'
+              })).sort((a, b) => a.treeId.localeCompare(b.treeId)),
+              totalAmount: existing.totalAmount,
+              isGift: existing.isGift || false
+            });
+            return existingKey === orderKey;
+          }
+          return false;
+        });
+        
+        if (isExactDuplicate) {
+          continue;
+        }
       }
       
       deduplicatedOrders.push(order);
     }
+    
+    // Sort back by createdAt descending for display
+    deduplicatedOrders.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     // Use same query for count
     const totalCount = await Order.countDocuments(query);

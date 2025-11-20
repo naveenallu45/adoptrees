@@ -3,6 +3,7 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 
 export async function GET(
   request: NextRequest,
@@ -19,6 +20,14 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid well-wisher ID format' },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
 
@@ -81,6 +90,15 @@ export async function PUT(
     }
 
     const { id } = await params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid well-wisher ID format' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { name, email, phone, password } = body;
 
@@ -177,6 +195,14 @@ export async function DELETE(
     }
 
     const { id } = await params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid well-wisher ID format' },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
 

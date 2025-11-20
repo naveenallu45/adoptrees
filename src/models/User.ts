@@ -9,6 +9,8 @@ export interface IUser {
   phone?: string;
   address?: string;
   gstNumber?: string;
+  dateOfBirth?: Date; // Date of birth for individual users
+  dateOfBirthLastUpdated?: Date; // Timestamp when date of birth was last updated
   passwordHash: string;
   userType: UserType;
   role: 'user' | 'admin' | 'wellwisher';
@@ -41,6 +43,20 @@ const UserSchema = new Schema<IUser>(
     phone: { type: String },
     address: { type: String },
     gstNumber: { type: String },
+    dateOfBirth: { 
+      type: Date,
+      validate: {
+        validator: function(v: Date | null | undefined) {
+          if (!v) return true; // Optional field
+          const today = new Date();
+          const maxAge = new Date();
+          maxAge.setFullYear(today.getFullYear() - 120); // Max age 120 years
+          return v <= today && v >= maxAge;
+        },
+        message: 'Date of birth must be a valid date and person must be less than 120 years old'
+      }
+    },
+    dateOfBirthLastUpdated: { type: Date },
     passwordHash: { type: String, required: true, select: false },
     userType: { type: String, enum: ['individual', 'company'], required: true },
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },

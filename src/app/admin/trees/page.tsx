@@ -152,8 +152,11 @@ export default function TreesManagement() {
       
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
-        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        // Force immediate refetch to show updated data
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+        ]);
         setShowForm(false);
         setEditingTree(null);
         setFormData({
@@ -255,29 +258,45 @@ export default function TreesManagement() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        // Rollback optimistic update on error
+      if (!response.ok || !data.success) {
+        // If 404, tree doesn't exist in DB - keep it removed from UI (already deleted)
+        if (response.status === 404) {
+          toast.success('Tree was already deleted from database.');
+          // Force refetch to sync with database
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+          ]);
+          return;
+        }
+        
+        // Rollback optimistic update on other errors
         if (previousTrees) {
           queryClient.setQueryData(['admin', 'trees'], previousTrees);
+          // Rollback stats too
+          queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              totalTrees: (old.totalTrees || 0) + 1
+            };
+          });
         }
-        toast.error(data.error || 'Failed to delete tree');
+        // Show specific error message based on status code
+        if (response.status === 400) {
+          toast.error(data.error || 'Invalid tree ID. Please refresh the page and try again.');
+        } else {
+          toast.error(data.error || 'Failed to delete tree. Please try again.');
+        }
         return;
       }
       
-      if (data.success) {
-        toast.success('Tree deleted successfully!');
-        // Refetch in background to ensure consistency (optimistic update already shown)
-        setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-          queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-        }, 500);
-      } else {
-        // Rollback optimistic update on failure
-        if (previousTrees) {
-          queryClient.setQueryData(['admin', 'trees'], previousTrees);
-        }
-        toast.error(data.error || 'Failed to delete tree');
-      }
+      toast.success('Tree deleted successfully!');
+      // Force immediate refetch to ensure UI matches database
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+      ]);
     } catch (error) {
       // Rollback optimistic update on error
       if (previousTrees) {

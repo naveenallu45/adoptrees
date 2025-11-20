@@ -69,8 +69,11 @@ export default function AdminWellWishersPage() {
         toast.success('Well-wisher registered successfully!');
         setShowRegisterForm(false);
         setFormData({ name: '', email: '', phone: '', password: '' });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        // Force immediate refetch to show new well-wisher
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
+          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+        ]);
       } else {
         toast.error(data.message || 'Failed to register well-wisher');
       }
@@ -81,24 +84,34 @@ export default function AdminWellWishersPage() {
 
   const handleEditWellWisher = async (wellWisher: WellWisher) => {
     try {
+      // Ensure ID is a string
+      const wellWisherId = String(wellWisher._id);
       // Fetch current well-wisher details including password info
-      const response = await fetch(`/api/admin/wellwishers/${wellWisher._id}`);
+      const response = await fetch(`/api/admin/wellwishers/${wellWisherId}`);
       const data = await response.json();
       
-      if (data.success) {
-        setEditingWellWisher(data.data);
-        setEditFormData({
-          name: data.data.name,
-          email: data.data.email,
-          phone: data.data.phone || '',
-          password: '',
-        });
-        setShowEditForm(true);
-      } else {
-        toast.error('Failed to fetch well-wisher details');
+      if (!response.ok || !data.success) {
+        if (response.status === 400) {
+          toast.error(data.message || 'Invalid well-wisher ID. Please refresh the page.');
+        } else if (response.status === 404) {
+          toast.error(data.message || 'Well-wisher not found.');
+        } else {
+          toast.error(data.message || 'Failed to fetch well-wisher details');
+        }
+        return;
       }
-    } catch (_error) {
-      toast.error('Error fetching well-wisher details');
+      
+      setEditingWellWisher(data.data);
+      setEditFormData({
+        name: data.data.name,
+        email: data.data.email,
+        phone: data.data.phone || '',
+        password: '',
+      });
+      setShowEditForm(true);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(`Error fetching well-wisher details: ${errorMessage}`);
     }
   };
 
@@ -108,7 +121,9 @@ export default function AdminWellWishersPage() {
     if (!editingWellWisher) return;
     
     try {
-      const response = await fetch(`/api/admin/wellwishers/${editingWellWisher._id}`, {
+      // Ensure ID is a string
+      const wellWisherId = String(editingWellWisher._id);
+      const response = await fetch(`/api/admin/wellwishers/${wellWisherId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -118,18 +133,29 @@ export default function AdminWellWishersPage() {
 
       const data = await response.json();
 
-      if (data.success) {
-        toast.success('Well-wisher updated successfully!');
-        setShowEditForm(false);
-        setEditingWellWisher(null);
-        setEditFormData({ name: '', email: '', phone: '', password: '' });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      } else {
-        toast.error(data.message || 'Failed to update well-wisher');
+      if (!response.ok || !data.success) {
+        if (response.status === 400) {
+          toast.error(data.message || 'Invalid data. Please check all fields and try again.');
+        } else if (response.status === 404) {
+          toast.error(data.message || 'Well-wisher not found. Please refresh the page.');
+        } else {
+          toast.error(data.message || 'Failed to update well-wisher');
+        }
+        return;
       }
-    } catch (_error) {
-      toast.error('Error updating well-wisher');
+      
+      toast.success('Well-wisher updated successfully!');
+      setShowEditForm(false);
+      setEditingWellWisher(null);
+      setEditFormData({ name: '', email: '', phone: '', password: '' });
+      // Force immediate refetch to show updated data
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+      ]);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(`Error updating well-wisher: ${errorMessage}`);
     }
   };
 
@@ -141,24 +167,82 @@ export default function AdminWellWishersPage() {
   const confirmDeleteWellWisher = async () => {
     if (!deletingWellWisher) return;
     
+    // Ensure ID is a string
+    const wellWisherId = String(deletingWellWisher._id);
+    
+    // Optimistically remove well-wisher from UI IMMEDIATELY (before API call)
+    const previousWellWishers = queryClient.getQueryData<WellWisher[]>(['admin', 'wellwishers']);
+    queryClient.setQueryData(['admin', 'wellwishers'], (old: WellWisher[] | undefined) => {
+      if (!old) return old;
+      return old.filter((w) => w._id !== wellWisherId);
+    });
+
+    // Update stats optimistically
+    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        totalWellWishers: Math.max(0, (old.totalWellWishers || 0) - 1)
+      };
+    });
+
+    // Close confirmation modal immediately for better UX
+    setShowDeleteConfirm(false);
+    setDeletingWellWisher(null);
+    
     try {
-      const response = await fetch(`/api/admin/wellwishers/${deletingWellWisher._id}`, {
+      const response = await fetch(`/api/admin/wellwishers/${wellWisherId}`, {
         method: 'DELETE',
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        toast.success('Well-wisher deleted successfully!');
-        setShowDeleteConfirm(false);
-        setDeletingWellWisher(null);
-        queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      } else {
-        toast.error(data.message || 'Failed to delete well-wisher');
+      if (!response.ok || !data.success) {
+        // If 404, well-wisher doesn't exist in DB - keep it removed from UI (already deleted)
+        if (response.status === 404) {
+          toast.success('Well-wisher was already deleted from database.');
+          // Force refetch to sync with database
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
+            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+          ]);
+          return;
+        }
+        
+        // Rollback optimistic update on other errors
+        if (previousWellWishers) {
+          queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
+          // Rollback stats too
+          queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              totalWellWishers: (old.totalWellWishers || 0) + 1
+            };
+          });
+        }
+        // Show specific error message based on status code
+        if (response.status === 400) {
+          toast.error(data.message || 'Invalid well-wisher ID. Please refresh the page and try again.');
+        } else {
+          toast.error(data.message || 'Failed to delete well-wisher. Please try again.');
+        }
+        return;
       }
-    } catch (_error) {
-      toast.error('Error deleting well-wisher');
+      
+      toast.success('Well-wisher deleted successfully!');
+      // Force immediate refetch to ensure UI matches database
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] }),
+      ]);
+    } catch (error) {
+      // Rollback optimistic update on error
+      if (previousWellWishers) {
+        queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
+      }
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(`Error deleting well-wisher: ${errorMessage}`);
     }
   };
 

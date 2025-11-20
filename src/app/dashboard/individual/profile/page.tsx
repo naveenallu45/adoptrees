@@ -16,14 +16,22 @@ export default function IndividualProfilePage() {
     email: session?.user?.email || '',
     phone: '',
     address: '',
+    dateOfBirth: '',
   });
+  const [dateOfBirthLastUpdated, setDateOfBirthLastUpdated] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [initialFormData, setInitialFormData] = useState(formData);
+  const [initialFormData, setInitialFormData] = useState({
+    name: session?.user?.name || '',
+    email: session?.user?.email || '',
+    phone: '',
+    address: '',
+    dateOfBirth: '',
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch user profile data on mount - only once
@@ -44,15 +52,28 @@ export default function IndividualProfilePage() {
           if (result.success && result.data && isMounted) {
             const userData = result.data;
             // Set form data
+            // Format date of birth for input field (YYYY-MM-DD)
+            const dateOfBirthValue = userData.dateOfBirth 
+              ? new Date(userData.dateOfBirth).toISOString().split('T')[0]
+              : '';
+            
             const fetchedData = {
               name: userData.name || session?.user?.name || '',
               email: userData.email || session?.user?.email || '',
               phone: userData.phone || '',
               address: userData.address || '',
+              dateOfBirth: dateOfBirthValue,
             };
             setFormData(fetchedData);
             setInitialFormData(fetchedData);
             setProfileImage(userData.image || session?.user?.image || null);
+            
+            // Set last update date if it exists
+            if (userData.dateOfBirthLastUpdated) {
+              setDateOfBirthLastUpdated(userData.dateOfBirthLastUpdated);
+            } else {
+              setDateOfBirthLastUpdated(null);
+            }
           }
         }
       } catch (error) {
@@ -138,6 +159,9 @@ export default function IndividualProfilePage() {
         formDataToSend.append('email', formData.email);
         formDataToSend.append('phone', formData.phone);
         formDataToSend.append('address', formData.address);
+        if (formData.dateOfBirth) {
+          formDataToSend.append('dateOfBirth', formData.dateOfBirth);
+        }
         formDataToSend.append('image', profileImageFile);
 
         response = await fetch(`/api/users/${session.user.id}`, {
@@ -156,6 +180,7 @@ export default function IndividualProfilePage() {
             email: formData.email,
             phone: formData.phone,
             address: formData.address,
+            dateOfBirth: formData.dateOfBirth || undefined,
           }),
         });
       }
@@ -170,6 +195,14 @@ export default function IndividualProfilePage() {
       if (result.success) {
         // Always use the image from the API response if it exists
         const newImage = result.data?.image || null;
+        
+        // Update date of birth last updated timestamp if available
+        if (result.data?.dateOfBirthLastUpdated) {
+          setDateOfBirthLastUpdated(result.data.dateOfBirthLastUpdated);
+        } else if (!result.data?.dateOfBirth) {
+          // Clear last update date if date of birth was cleared
+          setDateOfBirthLastUpdated(null);
+        }
         
         console.log('Profile update response:', { 
           hasImage: !!newImage, 
@@ -211,14 +244,26 @@ export default function IndividualProfilePage() {
           if (refetchResult.success && refetchResult.data) {
             const userData = refetchResult.data;
             // Only update form data, but keep the new image we just set
+            const dateOfBirthValue = userData.dateOfBirth 
+              ? new Date(userData.dateOfBirth).toISOString().split('T')[0]
+              : '';
+            
             const fetchedData = {
               name: userData.name || session?.user?.name || '',
               email: userData.email || session?.user?.email || '',
               phone: userData.phone || '',
               address: userData.address || '',
+              dateOfBirth: dateOfBirthValue,
             };
             setFormData(fetchedData);
             setInitialFormData(fetchedData);
+            
+            // Update last update date
+            if (userData.dateOfBirthLastUpdated) {
+              setDateOfBirthLastUpdated(userData.dateOfBirthLastUpdated);
+            } else {
+              setDateOfBirthLastUpdated(null);
+            }
             // Only update profileImage if we got a new one from the refetch
             // Otherwise keep the one we just set
             if (userData.image) {
@@ -419,6 +464,32 @@ export default function IndividualProfilePage() {
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={formData.dateOfBirth}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  max={new Date().toISOString().split('T')[0]} // Cannot select future dates
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                {dateOfBirthLastUpdated && formData.dateOfBirth && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Last updated: {new Date(dateOfBirthLastUpdated).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
               </div>
 
               {isEditing && (
