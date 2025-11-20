@@ -14,90 +14,38 @@ import {
   DocumentArrowDownIcon,
   ArrowRightIcon,
   PlusCircleIcon,
-  SparklesIcon,
-  XMarkIcon
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
 function LocationToggle({ latitude, longitude, treeName }: { latitude: number; longitude: number; treeName: string }) {
-  const [showMap, setShowMap] = useState(false);
-
-  const openInMaps = () => {
-    // Detect if iOS device
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    
-    if (isIOS) {
-      // Open in Apple Maps
-      window.open(`https://maps.apple.com/?q=${latitude},${longitude}&ll=${latitude},${longitude}`, '_blank');
-    } else {
-      // Open in Google Maps
-      window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
-    }
-  };
+  const [show, setShow] = useState(true); // Show map by default when dropdown is opened
 
   return (
-    <>
+    <div>
       <button
         type="button"
-        onClick={() => setShowMap(true)}
+        onClick={() => setShow(!show)}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
       >
         <MapPinIcon className="h-4 w-4 flex-shrink-0" />
-        <span>View location</span>
+        <span>{show ? 'Hide location' : 'View location'}</span>
       </button>
-      
-      {/* Map Modal */}
-      {showMap && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowMap(false);
-            }
-          }}
-        >
-          <div className="relative bg-white rounded-2xl overflow-hidden shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-green-50">
-              <h3 className="text-lg font-bold text-gray-900">Tree Planting Location</h3>
-              <button
-                onClick={() => setShowMap(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
-                type="button"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            
-            {/* Map */}
-            <div className="p-4 flex-1 min-h-0">
-              <PlantingLocationMap
-                latitude={latitude}
-                longitude={longitude}
-                treeName={treeName}
-                className="w-full h-80 rounded-lg border border-green-200/50 shadow-sm"
-                showOpenInMaps={false}
-              />
-              <p className="mt-3 text-sm text-gray-600 text-center">
-                Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
-              </p>
-            </div>
-            
-            {/* Footer with Open in Maps button */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={openInMaps}
-                className="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
-                type="button"
-              >
-                <MapPinIcon className="h-5 w-5" />
-                <span>Open in Maps</span>
-              </button>
-            </div>
-          </div>
+      {show && (
+        <div className="mt-3">
+          <PlantingLocationMap
+            latitude={latitude}
+            longitude={longitude}
+            treeName={treeName}
+            className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
+            showOpenInMaps={true}
+          />
+          <p className="mt-2 text-xs text-gray-500 text-center">
+            Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+          </p>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
