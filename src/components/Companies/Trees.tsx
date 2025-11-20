@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
@@ -27,6 +28,7 @@ interface TreesProps {
 }
 
 export default function Trees({ initialTrees = [] }: TreesProps) {
+  const router = useRouter();
   const [trees, setTrees] = useState<Tree[]>(initialTrees);
   
   // Fetch trees dynamically to get latest data
@@ -196,7 +198,8 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
           {trees.map((tree) => (
             <div 
               key={tree._id} 
-              className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400"
+              onClick={() => router.push(`/trees/${tree._id}`)}
+              className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400 cursor-pointer"
             >
               {/* Tree Image */}
               <div className="relative aspect-[4/4] overflow-hidden bg-white">
