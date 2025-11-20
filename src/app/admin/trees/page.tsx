@@ -36,7 +36,7 @@ interface Tree {
 
 export default function TreesManagement() {
   const queryClient = useQueryClient();
-  const { data: trees = [], isLoading: loading } = useTrees();
+  const { data: trees = [], isLoading: loading, error, isError } = useTrees();
   const [showForm, setShowForm] = useState(false);
   const [editingTree, setEditingTree] = useState<Tree | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -139,13 +139,21 @@ export default function TreesManagement() {
     // Optimistic update for CREATE operation
     if (!editingTree) {
       const tempId = `temp-${Date.now()}`;
+      // Use placeholder or existing image URL instead of object URL to avoid memory leaks
+      let imageUrl = '';
+      try {
+        imageUrl = formData.image ? URL.createObjectURL(formData.image) : '/placeholder-tree.jpg';
+      } catch (e) {
+        imageUrl = '/placeholder-tree.jpg';
+      }
+      
       const optimisticTree: Tree = {
         _id: tempId,
         name: formData.name,
         price: parseFloat(formData.price) || (formData.treeType === 'company' ? parseFloat(formData.packagePrice || '0') / parseInt(formData.packageQuantity || '1') : 0),
         info: formData.info,
         oxygenKgs: parseFloat(formData.oxygenKgs) || 0,
-        imageUrl: formData.image ? URL.createObjectURL(formData.image) : '',
+        imageUrl,
         treeType: formData.treeType as 'individual' | 'company',
         packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : undefined,
         packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : undefined,
@@ -157,7 +165,13 @@ export default function TreesManagement() {
         co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : undefined,
         environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : undefined,
         localUses: formData.localUses,
-        smallImageUrls: formData.smallImages.filter(img => img !== null).map(img => img ? URL.createObjectURL(img) : ''),
+        smallImageUrls: formData.smallImages.filter(img => img !== null).map(img => {
+          try {
+            return img ? URL.createObjectURL(img) : '';
+          } catch (e) {
+            return '';
+          }
+        }).filter(url => url !== ''),
         createdAt: new Date().toISOString(),
       };
 
@@ -198,10 +212,20 @@ export default function TreesManagement() {
               co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : tree.co2Absorption,
               environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : tree.environmentalProtection,
               localUses: formData.localUses,
-              imageUrl: formData.image ? URL.createObjectURL(formData.image) : tree.imageUrl,
-              smallImageUrls: formData.smallImages.filter(img => img !== null).map((img, idx) => 
-                img ? URL.createObjectURL(img) : (tree.smallImageUrls?.[idx] || '')
-              ).filter(url => url !== ''),
+              imageUrl: (() => {
+                try {
+                  return formData.image ? URL.createObjectURL(formData.image) : tree.imageUrl;
+                } catch (e) {
+                  return tree.imageUrl;
+                }
+              })(),
+              smallImageUrls: formData.smallImages.filter(img => img !== null).map((img, idx) => {
+                try {
+                  return img ? URL.createObjectURL(img) : (tree.smallImageUrls?.[idx] || '');
+                } catch (e) {
+                  return tree.smallImageUrls?.[idx] || '';
+                }
+              }).filter(url => url !== ''),
             };
           }
           return tree;
@@ -562,6 +586,32 @@ export default function TreesManagement() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="rounded-lg bg-red-50 border border-red-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <h2 className="text-lg font-semibold text-red-900">Error Loading Trees</h2>
+            </div>
+            <p className="text-red-700 mb-4">
+              {error instanceof Error ? error.message : 'Failed to load trees. Please try again.'}
+            </p>
+            <button
+              onClick={() => queryClient.refetchQueries({ queryKey: ['admin', 'trees'] })}
+              className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
