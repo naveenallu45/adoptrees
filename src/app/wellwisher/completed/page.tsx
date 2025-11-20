@@ -6,8 +6,7 @@ import {
   CheckCircleIcon, 
   MapPinIcon, 
   CalendarIcon, 
-  ExclamationTriangleIcon,
-  CameraIcon
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 interface WellwisherTask {
@@ -203,23 +202,6 @@ export default function CompletedPage() {
                   </div>
                 </div>
               )}
-
-              <div className="flex justify-between items-center">
-                <div className="text-xs text-gray-600">
-                  Priority: {task.priority}
-                </div>
-                <div className="flex space-x-2">
-                  {task.plantingDetails?.plantingImages && task.plantingDetails.plantingImages.length > 0 && (
-                    <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium flex items-center space-x-1.5">
-                      <CameraIcon className="h-3.5 w-3.5" />
-                      <span>View Photos</span>
-                    </button>
-                  )}
-                  <button className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs font-medium">
-                    View Details
-                  </button>
-                </div>
-              </div>
             </motion.div>
           ))}
         </div>

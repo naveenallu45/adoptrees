@@ -18,6 +18,24 @@ export default function AdminLoginForm() {
     setIsSubmitting(true);
     
     try {
+      // First check if user exists
+      const checkUserResponse = await fetch('/api/auth/check-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const checkUserData = await checkUserResponse.json();
+
+      if (!checkUserData.exists) {
+        setError('User not found');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // User exists, proceed with login
       const res = await signIn('credentials', {
         redirect: false,
         email,
@@ -25,7 +43,7 @@ export default function AdminLoginForm() {
       });
       
       if (res?.error) {
-        setError('Invalid admin credentials');
+        setError('Invalid password');
       } else {
         // Check if user is admin after successful login
         try {

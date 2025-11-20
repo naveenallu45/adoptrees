@@ -147,6 +147,7 @@ export default function Navbar() {
                 ? 'bg-green-500 hover:bg-green-600' 
                 : 'bg-transparent hover:text-green-200'
             }`}>
+              <div id="desktop-cart-button" className="absolute inset-0 pointer-events-none" aria-hidden="true" />
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
               </svg>
@@ -163,6 +164,7 @@ export default function Navbar() {
                 ? 'bg-green-500 hover:bg-green-600' 
                 : 'bg-transparent hover:text-green-200'
             }`}>
+              <div id="mobile-cart-button" className="absolute inset-0 pointer-events-none" aria-hidden="true" />
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
               </svg>

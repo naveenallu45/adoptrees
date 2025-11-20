@@ -71,13 +71,13 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <div className="relative w-12 h-12 flex-shrink-0">
+            <div className="relative w-[90px] h-[90px] flex-shrink-0 -my-[17px]">
               <Image
                 src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
                 alt="Adoptrees Logo"
                 fill
                 className="object-contain object-center"
-                sizes="48px"
+                sizes="90px"
                 priority
               />
             </div>

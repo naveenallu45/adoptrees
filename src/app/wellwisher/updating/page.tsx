@@ -11,6 +11,14 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { 
+  validateWellWisherImages, 
+  formatFileSize, 
+  isOnline, 
+  getNetworkErrorMessage, 
+  retryWithBackoff,
+  compressImage 
+} from '@/lib/utils/wellwisher';
 
 interface WellwisherTask {
   id: string;
@@ -74,41 +82,106 @@ export default function UpdatingPage() {
     };
   }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (showRetryToast = false) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/wellwisher/tasks?needsGrowthUpdate=true');
-      const result = await response.json();
-      
-      if (result.success) {
-        setTasks(result.data);
-      } else {
-        setError(result.error);
+      setError(null);
+
+      if (!isOnline()) {
+        setError('You are offline. Please check your internet connection.');
+        return;
       }
-    } catch (_error) {
-      setError('Failed to fetch tasks');
+
+      const result = await retryWithBackoff(async () => {
+        const response = await fetch('/api/wellwisher/tasks?needsGrowthUpdate=true', {
+          cache: 'no-store',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      });
+
+      if (result.success) {
+        setTasks(result.data || []);
+        if (showRetryToast) {
+          toast.success('Tasks refreshed successfully', { duration: 2000 });
+        }
+      } else {
+        setError(result.error || 'Failed to fetch tasks');
+        if (showRetryToast) {
+          toast.error(result.error || 'Failed to refresh tasks');
+        }
+      }
+    } catch (error) {
+      const errorMessage = getNetworkErrorMessage(error);
+      setError(errorMessage);
+      if (showRetryToast) {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageChange = (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length > 5) {
-      toast.error('Maximum 5 images allowed');
+    
+    if (files.length === 0) return;
+
+    // Validate images
+    const validation = validateWellWisherImages(files);
+    
+    if (!validation.valid) {
+      validation.errors.forEach(error => {
+        toast.error(error, { duration: 4000 });
+      });
+      e.target.value = '';
       return;
     }
-    
-    setTaskImages(prev => ({
-      ...prev,
-      [taskId]: files
-    }));
 
-    // Create preview URLs
-    files.forEach((file, index) => {
-      const urlKey = `${taskId}-${index}`;
-      previewUrlsRef.current[urlKey] = URL.createObjectURL(file);
-    });
+    // Show loading toast for compression
+    const compressToast = toast.loading('Processing images...', { duration: 5000 });
+
+    try {
+      // Compress images if needed (in parallel)
+      const compressedFiles = await Promise.all(
+        validation.validFiles.map(file => compressImage(file, 2)) // Max 2MB per image
+      );
+
+      toast.dismiss(compressToast);
+
+      // Clean up old preview URLs
+      Object.keys(previewUrlsRef.current).forEach(key => {
+        if (key.startsWith(`${taskId}-`)) {
+          URL.revokeObjectURL(previewUrlsRef.current[key]);
+          delete previewUrlsRef.current[key];
+        }
+      });
+
+      // Create preview URLs for new images
+      compressedFiles.forEach((file, index) => {
+        const urlKey = `${taskId}-${index}`;
+        previewUrlsRef.current[urlKey] = URL.createObjectURL(file);
+      });
+      
+      setTaskImages(prev => ({
+        ...prev,
+        [taskId]: compressedFiles
+      }));
+
+      const totalSize = compressedFiles.reduce((sum, file) => sum + file.size, 0);
+      toast.success(
+        `${compressedFiles.length} image(s) ready (${formatFileSize(totalSize)})`,
+        { duration: 2000 }
+      );
+    } catch (_error) {
+      toast.dismiss(compressToast);
+      toast.error('Failed to process images. Please try again.', { duration: 4000 });
+      e.target.value = '';
+    }
   };
 
   const removeImage = (taskId: string, index: number) => {
@@ -146,12 +219,26 @@ export default function UpdatingPage() {
     const images = taskImages[task.id] || [];
     
     if (images.length === 0) {
-      toast.error('Please upload at least one growth image');
+      toast.error('Please upload at least one growth image', {
+        duration: 4000,
+        icon: '📷',
+      });
+      return;
+    }
+
+    if (!isOnline()) {
+      toast.error('You are offline. Please check your internet connection.', {
+        duration: 4000,
+      });
       return;
     }
 
     try {
       setUploading(task.id);
+      
+      const progressToast = toast.loading('Uploading growth update...', {
+        duration: 30000,
+      });
       
       const formData = new FormData();
       formData.append('taskId', task.id);
@@ -162,15 +249,31 @@ export default function UpdatingPage() {
         formData.append('images', image);
       });
 
-      const response = await fetch('/api/wellwisher/growth-update', {
-        method: 'POST',
-        body: formData,
-      });
+      const result = await retryWithBackoff(async () => {
+        const response = await fetch('/api/wellwisher/growth-update', {
+          method: 'POST',
+          body: formData,
+        });
 
-      const result = await response.json();
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+      }, 2, 2000);
+      
+      toast.dismiss(progressToast);
       
       if (result.success) {
-        toast.success('Growth update uploaded successfully!');
+        toast.success('Growth update uploaded successfully! 🌱', {
+          icon: '✅',
+          duration: 3000,
+        });
+        
+        // Optimistically remove task from UI
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+        
         // Clean up preview URLs
         Object.keys(previewUrlsRef.current).forEach(key => {
           if (key.startsWith(`${task.id}-`)) {
@@ -188,13 +291,19 @@ export default function UpdatingPage() {
           delete updated[task.id];
           return updated;
         });
-        fetchTasks(); // Refresh tasks
+        
+        // Refresh tasks in background
+        fetchTasks();
       } else {
-        toast.error(result.error || 'Failed to upload growth update');
+        toast.error(result.error || 'Failed to upload growth update', {
+          duration: 5000,
+        });
       }
-    } catch (error: unknown) {
-      console.error('Growth update upload error:', error);
-      toast.error('Failed to upload growth update. Please try again.');
+    } catch (_error: unknown) {
+      const errorMessage = getNetworkErrorMessage(_error);
+      toast.error(`Failed to upload: ${errorMessage}`, {
+        duration: 5000,
+      });
     } finally {
       setUploading(null);
     }

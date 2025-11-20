@@ -7,9 +7,19 @@ import {
   MapPinIcon, 
   ClockIcon, 
   CheckCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  PhotoIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { 
+  validateWellWisherImages, 
+  formatFileSize, 
+  isOnline, 
+  getNetworkErrorMessage, 
+  retryWithBackoff,
+  compressImage 
+} from '@/lib/utils/wellwisher';
 
 interface WellwisherTask {
   id: string;
@@ -39,6 +49,7 @@ export default function OngoingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null); // Track which task is uploading
+  const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set()); // Track tasks with status updates
   const [taskImages, setTaskImages] = useState<Record<string, File[]>>({}); // Store images per task
   const previewUrlsRef = useRef<Record<string, string>>({}); // Store preview URLs for cleanup
   const [fastMode] = useState<boolean>(true); // Faster location with lower accuracy
@@ -106,43 +117,199 @@ export default function OngoingPage() {
     };
   }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (showRetryToast = false) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/wellwisher/tasks?status=in_progress');
-      const result = await response.json();
-      
-      if (result.success) {
-        setTasks(result.data);
-      } else {
-        setError(result.error);
+      setError(null);
+
+      if (!isOnline()) {
+        setError('You are offline. Please check your internet connection.');
+        return;
       }
-    } catch (_error) {
-      setError('Failed to fetch tasks');
+
+      const result = await retryWithBackoff(async () => {
+        const response = await fetch('/api/wellwisher/tasks?status=in_progress', {
+          cache: 'no-store',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      });
+
+      if (result.success) {
+        setTasks(result.data || []);
+        if (showRetryToast) {
+          toast.success('Tasks refreshed successfully', { duration: 2000 });
+        }
+      } else {
+        setError(result.error || 'Failed to fetch tasks');
+        if (showRetryToast) {
+          toast.error(result.error || 'Failed to refresh tasks');
+        }
+      }
+    } catch (error) {
+      const errorMessage = getNetworkErrorMessage(error);
+      setError(errorMessage);
+      if (showRetryToast) {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageChange = (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 5) {
-      toast.error('Maximum 5 images allowed');
+  const handleStatusChange = async (taskId: string, orderId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (!taskToUpdate) return;
+
+    if (!isOnline()) {
+      toast.error('You are offline. Please check your internet connection.', {
+        duration: 4000,
+      });
       return;
     }
 
-    // Clean up old preview URLs for this task
-    const oldImages = taskImages[taskId];
-    if (oldImages) {
-      oldImages.forEach(() => {
-        // URL was created when displaying, we'll clean it up properly in the component
+    setUpdatingStatus(prev => new Set(prev).add(taskId));
+
+    // Optimistic update - update status immediately
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, status: newStatus } : t
+    ));
+
+    // Show toast based on status
+    const statusMessages = {
+      pending: 'Task moved back to pending',
+      in_progress: 'Task status updated to in progress',
+      completed: 'Task marked as completed'
+    };
+    
+    const toastId = toast.loading('Updating task status...', { duration: 3000 });
+
+    try {
+      const result = await retryWithBackoff(async () => {
+        const response = await fetch('/api/wellwisher/tasks', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            taskId,
+            orderId,
+            status: newStatus
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+      });
+      
+      toast.dismiss(toastId);
+      
+      if (!result.success) {
+        // Rollback on error
+        setTasks(prev => prev.map(t => 
+          t.id === taskId ? taskToUpdate : t
+        ));
+        toast.error(result.error || 'Failed to update task status. Please try again.', {
+          duration: 4000,
+        });
+      } else {
+        // If moved to pending or completed, remove from ongoing list
+        if (newStatus === 'pending' || newStatus === 'completed') {
+          setTasks(prev => prev.filter(t => t.id !== taskId));
+          toast.success(`Task moved to ${newStatus === 'pending' ? 'upcoming' : 'completed'} tasks`, {
+            icon: '✅',
+            duration: 2000,
+          });
+        } else {
+          toast.success(statusMessages[newStatus], {
+            icon: '✅',
+            duration: 2000,
+          });
+        }
+      }
+    } catch (error) {
+      toast.dismiss(toastId);
+      // Rollback on error
+      setTasks(prev => prev.map(t => 
+        t.id === taskId ? taskToUpdate : t
+      ));
+      const errorMessage = getNetworkErrorMessage(error);
+      toast.error(errorMessage, {
+        duration: 4000,
+      });
+    } finally {
+      setUpdatingStatus(prev => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
       });
     }
+  };
+
+  const handleImageChange = async (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
     
-    setTaskImages(prev => ({
-      ...prev,
-      [taskId]: files
-    }));
+    if (files.length === 0) return;
+
+    // Validate images
+    const validation = validateWellWisherImages(files);
+    
+    if (!validation.valid) {
+      validation.errors.forEach(error => {
+        toast.error(error, { duration: 4000 });
+      });
+      // Reset input
+      e.target.value = '';
+      return;
+    }
+
+    // Show loading toast for compression
+    const compressToast = toast.loading('Processing images...', { duration: 5000 });
+
+    try {
+      // Compress images if needed (in parallel)
+      const compressedFiles = await Promise.all(
+        validation.validFiles.map(file => compressImage(file, 2)) // Max 2MB per image
+      );
+
+      toast.dismiss(compressToast);
+
+      // Clean up old preview URLs for this task
+      Object.keys(previewUrlsRef.current).forEach(key => {
+        if (key.startsWith(`${taskId}-`)) {
+          URL.revokeObjectURL(previewUrlsRef.current[key]);
+          delete previewUrlsRef.current[key];
+        }
+      });
+
+      // Create preview URLs for new images
+      compressedFiles.forEach((file, index) => {
+        const urlKey = `${taskId}-${index}`;
+        previewUrlsRef.current[urlKey] = URL.createObjectURL(file);
+      });
+      
+      setTaskImages(prev => ({
+        ...prev,
+        [taskId]: compressedFiles
+      }));
+
+      const totalSize = compressedFiles.reduce((sum, file) => sum + file.size, 0);
+      toast.success(
+        `${compressedFiles.length} image(s) ready (${formatFileSize(totalSize)})`,
+        { duration: 2000 }
+      );
+    } catch (_error) {
+      toast.dismiss(compressToast);
+      toast.error('Failed to process images. Please try again.', { duration: 4000 });
+      e.target.value = '';
+    }
   };
 
   const removeImage = (taskId: string, index: number) => {
@@ -183,9 +350,29 @@ export default function OngoingPage() {
     const images = taskImages[task.id] || [];
     
     if (images.length === 0) {
-      toast.error('Please upload at least one planting image');
+      toast.error('Please upload at least one planting image', {
+        duration: 4000,
+        icon: '📷',
+      });
       return;
     }
+
+    if (!isOnline()) {
+      toast.error('You are offline. Please check your internet connection.', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Show confirmation
+    const confirmed = window.confirm(
+      `Are you sure you want to complete this planting task?\n\n` +
+      `Task: ${task.task}\n` +
+      `Images: ${images.length}\n\n` +
+      `This will mark the task as completed.`
+    );
+
+    if (!confirmed) return;
 
     // Get current device location using browser geolocation API, Google API as fallback
     // Location is optional - if all methods fail, submission can proceed without location
@@ -274,8 +461,16 @@ export default function OngoingPage() {
       });
     };
 
+    // Declare progressToast outside try block so it's accessible in catch
+    let progressToast: string | undefined;
+    
     try {
       setUploading(task.id);
+      
+      // Show progress toast
+      progressToast = toast.loading('Getting location and uploading images...', {
+        duration: 30000,
+      });
       
       // Use prewarmed location if recent and fast mode is enabled and has valid coordinates
       const now = Date.now();
@@ -287,12 +482,24 @@ export default function OngoingPage() {
         prewarmedLocation.latitude !== undefined &&
         prewarmedLocation.longitude !== undefined;
 
-      // Get current location automatically and capture permission state
-      const permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
-        .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
-        .catch(() => undefined));
+      // Get current location automatically
+      let location;
+      let permissionState: string | undefined;
+      try {
+        permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+          .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
+          .catch(() => undefined));
 
-      const location = canUsePrewarm ? prewarmedLocation! : await getLocation();
+        location = canUsePrewarm ? prewarmedLocation! : await getLocation();
+        
+        if (location.latitude && location.longitude) {
+          toast.dismiss(progressToast);
+          toast.loading('Uploading images...', { id: progressToast });
+        }
+      } catch (_locationError) {
+        // Continue without location
+        location = { source: 'location_unavailable', timestamp: Date.now() };
+      }
       
       const formData = new FormData();
       formData.append('taskId', task.id);
@@ -321,15 +528,31 @@ export default function OngoingPage() {
         formData.append('images', image);
       });
 
-      const response = await fetch('/api/wellwisher/planting', {
-        method: 'POST',
-        body: formData,
-      });
+      const result = await retryWithBackoff(async () => {
+        const response = await fetch('/api/wellwisher/planting', {
+          method: 'POST',
+          body: formData,
+        });
 
-      const result = await response.json();
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+      }, 2, 2000); // 2 retries with 2s initial delay
+      
+      toast.dismiss(progressToast);
       
       if (result.success) {
-        toast.success('Planting details uploaded successfully!');
+        toast.success('Planting details uploaded successfully! 🎉', {
+          icon: '✅',
+          duration: 3000,
+        });
+        
+        // Optimistically remove task from UI
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+        
         // Clean up preview URLs for this task
         Object.keys(previewUrlsRef.current).forEach(key => {
           if (key.startsWith(`${task.id}-`)) {
@@ -342,21 +565,29 @@ export default function OngoingPage() {
           delete updated[task.id];
           return updated;
         });
-        fetchTasks(); // Refresh tasks
+        
+        // Refresh tasks in background
+        fetchTasks();
       } else {
         // Show detailed error message
         const errorMessage = result.error || 'Failed to upload planting details';
         const details = result.details ? ` - ${result.details.map((d: { message?: string }) => d.message || '').join(', ')}` : '';
-        toast.error(`${errorMessage}${details}`);
+        toast.error(`${errorMessage}${details}`, {
+          duration: 5000,
+        });
         console.error('Planting upload error:', result);
       }
-          } catch (error: unknown) {
-            console.error('Planting upload exception:', error);
-            const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error');
-            toast.error(`Failed to upload planting details: ${errorMessage}`);
-          } finally {
-            setUploading(null);
-          }
+    } catch (_error: unknown) {
+      if (progressToast) {
+        toast.dismiss(progressToast);
+      }
+      const errorMessage = getNetworkErrorMessage(_error);
+      toast.error(`Failed to upload: ${errorMessage}`, {
+        duration: 5000,
+      });
+    } finally {
+      setUploading(null);
+    }
   };
 
   if (loading) {
@@ -369,12 +600,35 @@ export default function OngoingPage() {
     );
   }
 
-  if (error) {
+  if (error && !loading) {
     return (
       <div className="p-8">
-        <div className="text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600">{error}</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Ongoing Tasks</h1>
+            <p className="text-gray-600">Tasks currently in progress</p>
+          </div>
+          <button
+            onClick={() => fetchTasks(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <ArrowPathIcon className="h-5 w-5" />
+            <span>Retry</span>
+          </button>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-start space-x-3">
+            <ExclamationTriangleIcon className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-red-800 font-semibold mb-1">Error Loading Tasks</h3>
+              <p className="text-red-700">{error}</p>
+              {!isOnline() && (
+                <p className="text-red-600 text-sm mt-2">
+                  💡 Tip: Check your internet connection and try again.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -385,10 +639,21 @@ export default function OngoingPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-8 flex items-center justify-between"
       >
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Ongoing Tasks</h1>
-        <p className="text-gray-600">Tasks currently in progress - Upload planting details to complete</p>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Ongoing Tasks</h1>
+          <p className="text-gray-600">Tasks currently in progress - Upload planting details to complete</p>
+        </div>
+        <button
+          onClick={() => fetchTasks(true)}
+          disabled={loading}
+          className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Refresh tasks"
+        >
+          <ArrowPathIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </motion.div>
 
       {tasks.length === 0 ? (
@@ -459,26 +724,87 @@ export default function OngoingPage() {
                 )}
               </div>
 
+              {/* Status Switcher - Only show valid transitions */}
+              <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Quick Status Change
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => handleStatusChange(task.id, task.orderId, 'completed')}
+                    disabled={updatingStatus.has(task.id)}
+                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-green-100 text-green-800 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                    title="Mark as completed (without uploading images)"
+                  >
+                    {updatingStatus.has(task.id) ? (
+                      <>
+                        <div className="animate-spin rounded-full h-2.5 w-2.5 border-b-2 border-green-800"></div>
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircleIcon className="h-3 w-3" />
+                        <span>Mark Complete</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Or upload images below to complete with planting details
+                </p>
+              </div>
+
               {/* Image Upload Section */}
               <div className="mt-3 space-y-2">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                    Upload Planting Images (Max 5) - Use Camera
+                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                    Upload Planting Images (Max 5)
                   </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    multiple
-                    onChange={(e) => handleImageChange(task.id, e)}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-xs"
-                    disabled={uploading === task.id}
-                  />
+                  
+                  {/* Custom File Input */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      multiple
+                      onChange={(e) => handleImageChange(task.id, e)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      disabled={uploading === task.id}
+                      id={`file-input-${task.id}`}
+                    />
+                    <label
+                      htmlFor={`file-input-${task.id}`}
+                      className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+                        uploading === task.id
+                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                          : 'border-green-300 bg-green-50 hover:bg-green-100 hover:border-green-400'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <PhotoIcon className={`w-8 h-8 mb-2 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`} />
+                        <p className={`text-sm font-medium ${uploading === task.id ? 'text-gray-400' : 'text-green-700'}`}>
+                          {taskImages[task.id] && taskImages[task.id].length > 0
+                            ? `Click to add more images (${taskImages[task.id].length}/5)`
+                            : 'Click to upload or use camera'}
+                        </p>
+                        <p className={`text-xs mt-1 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`}>
+                          PNG, JPG, WEBP up to 5MB each
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
                   {taskImages[task.id] && taskImages[task.id].length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs text-green-600 mb-1.5">
-                        {taskImages[task.id].length} image(s) selected
-                      </p>
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-green-600 font-semibold">
+                          {taskImages[task.id].length} image(s) selected
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Total: {formatFileSize(taskImages[task.id].reduce((sum, file) => sum + file.size, 0))}
+                        </p>
+                      </div>
                       {/* Image Previews */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                         {taskImages[task.id].map((image, idx) => {
@@ -494,19 +820,20 @@ export default function OngoingPage() {
                             <img
                               src={previewUrlsRef.current[urlKey]}
                               alt={`Preview ${idx + 1}`}
-                              className="w-full h-16 object-cover rounded-lg border border-gray-200"
+                              className="w-full h-20 object-cover rounded-lg border-2 border-gray-200 group-hover:border-green-400 transition-colors"
                             />
                             <button
                               onClick={() => removeImage(task.id, idx)}
-                              className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors z-20"
                               type="button"
                               disabled={uploading === task.id}
                               title="Remove image"
                             >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
+                              <XMarkIcon className="w-3 h-3" />
                             </button>
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1 py-0.5 rounded-b-lg">
+                              {formatFileSize(image.size)}
+                            </div>
                           </div>
                           );
                         })}

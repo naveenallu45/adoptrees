@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
+import Image from 'next/image';
 import WellWisherSidebar from '@/components/WellWisher/WellWisherSidebar';
 import AuthGuard from '@/components/WellWisher/AuthGuard';
 
@@ -70,7 +71,16 @@ export default function WellWisherLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Well Wisher</h1>
+            <div className="relative w-[90px] h-[90px] flex-shrink-0 -my-[17px]">
+              <Image
+                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
+                alt="Adoptrees Logo"
+                fill
+                className="object-contain object-center"
+                sizes="90px"
+                priority
+              />
+            </div>
             <div className="w-10"></div>
           </div>
           

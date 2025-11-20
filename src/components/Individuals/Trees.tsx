@@ -63,20 +63,47 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
 
 
   const getCartIconPosition = useCallback(() => {
-    // Try to find the cart icon in the navbar
-    const cartLink = document.querySelector('a[href="/cart"]');
+    // Check if mobile or desktop
+    const isMobile = window.innerWidth < 768;
+    
+    // Try to find the cart icon in the navbar - prioritize mobile/desktop specific selectors
+    const cartButtonId = isMobile ? 'mobile-cart-button' : 'desktop-cart-button';
+    const cartMarker = document.getElementById(cartButtonId);
+    
+    // If marker found, get its parent Link element
+    let cartLink: HTMLElement | null = null;
+    if (cartMarker) {
+      cartLink = cartMarker.closest('a[href="/cart"]') as HTMLElement;
+    }
+    
+    // Fallback to any cart link if specific ID not found
+    if (!cartLink) {
+      cartLink = document.querySelector('a[href="/cart"]') as HTMLElement;
+    }
+    
     if (cartLink) {
       const rect = cartLink.getBoundingClientRect();
+      // Account for scroll position and get center of button
       return {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2
       };
     }
-    // Fallback to top right corner
-    return {
-      x: window.innerWidth - 80,
-      y: 60
-    };
+    
+    // Fallback based on screen size
+    if (isMobile) {
+      // Mobile: cart is typically in top right, accounting for navbar height
+      return {
+        x: window.innerWidth - 40, // Right edge minus half button width
+        y: 40 // Approximate center of mobile navbar
+      };
+    } else {
+      // Desktop: cart is in top right
+      return {
+        x: window.innerWidth - 100,
+        y: 50
+      };
+    }
   }, []);
 
   const handleAddToCart = useCallback((tree: Tree, event: React.MouseEvent<HTMLButtonElement>) => {

@@ -56,13 +56,13 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex-1 lg:pl-64 flex flex-col min-h-screen relative z-10">
           {/* Mobile header */}
           <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-            <div className="relative w-12 h-12 flex-shrink-0">
+            <div className="relative w-[90px] h-[90px] flex-shrink-0 -my-[17px]">
               <Image
                 src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
                 alt="Adoptrees Logo"
                 fill
                 className="object-contain object-center"
-                sizes="48px"
+                sizes="90px"
                 priority
               />
             </div>

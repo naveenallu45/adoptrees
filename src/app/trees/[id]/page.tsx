@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/contexts/CartContext';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Tree {
   _id: string;
@@ -83,6 +84,8 @@ export default function TreeInfoPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [addingToCart, setAddingToCart] = useState(false);
+  const [flyingTree, setFlyingTree] = useState<{ id: string; imageUrl: string; startPos: { x: number; y: number }; endPos: { x: number; y: number } } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const fetchTree = async () => {
@@ -109,7 +112,51 @@ export default function TreeInfoPage() {
     }
   }, [treeId]);
 
-  const handleAddToCart = () => {
+  const getCartIconPosition = useCallback(() => {
+    // Check if mobile or desktop
+    const isMobile = window.innerWidth < 768;
+    
+    // Try to find the cart icon in the navbar - prioritize mobile/desktop specific selectors
+    const cartButtonId = isMobile ? 'mobile-cart-button' : 'desktop-cart-button';
+    const cartMarker = document.getElementById(cartButtonId);
+    
+    // If marker found, get its parent Link element
+    let cartLink: HTMLElement | null = null;
+    if (cartMarker) {
+      cartLink = cartMarker.closest('a[href="/cart"]') as HTMLElement;
+    }
+    
+    // Fallback to any cart link if specific ID not found
+    if (!cartLink) {
+      cartLink = document.querySelector('a[href="/cart"]') as HTMLElement;
+    }
+    
+    if (cartLink) {
+      const rect = cartLink.getBoundingClientRect();
+      // Account for scroll position and get center of button
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    }
+    
+    // Fallback based on screen size
+    if (isMobile) {
+      // Mobile: cart is typically in top right, accounting for navbar height
+      return {
+        x: window.innerWidth - 40, // Right edge minus half button width
+        y: 40 // Approximate center of mobile navbar
+      };
+    } else {
+      // Desktop: cart is in top right
+      return {
+        x: window.innerWidth - 100,
+        y: 50
+      };
+    }
+  }, []);
+
+  const handleAddToCart = (event?: React.MouseEvent<HTMLButtonElement>) => {
     if (!tree) return;
 
     // Check user type only if logged in
@@ -125,27 +172,54 @@ export default function TreeInfoPage() {
       }
     }
 
+    // Get button position for animation
+    const button = event?.currentTarget || buttonRef.current;
+    if (button) {
+      const rect = button.getBoundingClientRect();
+      const startPos = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+
+      const endPos = getCartIconPosition();
+
+      setFlyingTree({
+        id: tree._id,
+        imageUrl: tree.imageUrl,
+        startPos,
+        endPos
+      });
+    }
+
     setAddingToCart(true);
     
-    try {
-      addToCart({
-        id: tree._id,
-        name: tree.treeType === 'company' ? `Corporate ${tree.name}` : tree.name,
-        price: tree.packagePrice || tree.price,
-        imageUrl: tree.imageUrl,
-        info: tree.info,
-        oxygenKgs: tree.oxygenKgs,
-        type: tree.treeType,
-        packageQuantity: tree.packageQuantity,
-        packagePrice: tree.packagePrice
-      });
+    // Add to cart after animation starts
+    setTimeout(() => {
+      try {
+        addToCart({
+          id: tree._id,
+          name: tree.treeType === 'company' ? `Corporate ${tree.name}` : tree.name,
+          price: tree.packagePrice || tree.price,
+          imageUrl: tree.imageUrl,
+          info: tree.info,
+          oxygenKgs: tree.oxygenKgs,
+          type: tree.treeType,
+          packageQuantity: tree.packageQuantity,
+          packagePrice: tree.packagePrice
+        });
 
-      toast.success(`${tree.name} added to cart!`);
-    } catch (_error) {
-      toast.error('Failed to add to cart. Please try again.');
-    } finally {
-      setAddingToCart(false);
-    }
+        // Complete animation and show toast
+        setTimeout(() => {
+          setFlyingTree(null);
+          setAddingToCart(false);
+          toast.success(`${tree.name} added to cart!`);
+        }, 800);
+      } catch (_error) {
+        setFlyingTree(null);
+        setAddingToCart(false);
+        toast.error('Failed to add to cart. Please try again.');
+      }
+    }, 50);
   };
 
   if (loading) {
@@ -721,6 +795,51 @@ export default function TreeInfoPage() {
           </div>
         </div>
       </div>
+
+      {/* Flying Tree Animation */}
+      <AnimatePresence>
+        {flyingTree && (
+          <motion.div
+            className="fixed z-[99999] pointer-events-none"
+            style={{
+              left: `${flyingTree.startPos.x}px`,
+              top: `${flyingTree.startPos.y}px`,
+            }}
+            initial={{
+              x: -40,
+              y: -40,
+              scale: 1,
+              opacity: 1,
+              rotate: 0
+            }}
+            animate={{
+              x: flyingTree.endPos.x - flyingTree.startPos.x - 40,
+              y: flyingTree.endPos.y - flyingTree.startPos.y - 40,
+              scale: 0.3,
+              opacity: 0.9,
+              rotate: 360
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0
+            }}
+            transition={{
+              duration: 0.8,
+              ease: [0.25, 0.1, 0.25, 1]
+            }}
+          >
+            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-green-500 shadow-2xl bg-white">
+              <Image
+                src={flyingTree.imageUrl}
+                alt="Flying tree"
+                width={80}
+                height={80}
+                className="object-cover w-full h-full"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

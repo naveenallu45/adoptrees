@@ -20,13 +20,31 @@ export default function LoginForm() {
     setError(null);
     setIsSubmitting(true);
     try {
+      // First check if user exists
+      const checkUserResponse = await fetch('/api/auth/check-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const checkUserData = await checkUserResponse.json();
+
+      if (!checkUserData.exists) {
+        setError('User not found');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // User exists, proceed with login
       const res = await signIn('credentials', {
         redirect: false,
         email,
         password,
       });
       if (res?.error) {
-        setError('Invalid email or password');
+        setError('Invalid password');
       } else {
         // Fetch the updated session to check user role
         try {

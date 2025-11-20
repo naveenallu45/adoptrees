@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ClockIcon, MapPinIcon, CalendarIcon, GiftIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, MapPinIcon, CalendarIcon, GiftIcon, HeartIcon, ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
+import { isOnline, getNetworkErrorMessage, retryWithBackoff } from '@/lib/utils/wellwisher';
 
 interface WellwisherTask {
   id: string;
@@ -31,68 +33,134 @@ export default function UpcomingPage() {
   const [tasks, setTasks] = useState<WellwisherTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (showRetryToast = false) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/wellwisher/tasks?status=pending');
-      const result = await response.json();
-      
-      if (result.success) {
-        setTasks(result.data);
-      } else {
-        setError(result.error);
+      setError(null);
+
+      if (!isOnline()) {
+        setError('You are offline. Please check your internet connection.');
+        return;
       }
-    } catch (_error) {
-      setError('Failed to fetch tasks');
+
+      const result = await retryWithBackoff(async () => {
+        const response = await fetch('/api/wellwisher/tasks?status=pending', {
+          cache: 'no-store',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      });
+
+      if (result.success) {
+        setTasks(result.data || []);
+        if (showRetryToast) {
+          toast.success('Tasks refreshed successfully', { duration: 2000 });
+        }
+      } else {
+        setError(result.error || 'Failed to fetch tasks');
+        if (showRetryToast) {
+          toast.error(result.error || 'Failed to refresh tasks');
+        }
+      }
+    } catch (error) {
+      const errorMessage = getNetworkErrorMessage(error);
+      setError(errorMessage);
+      if (showRetryToast) {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleStartTask = async (taskId: string, orderId: string) => {
+    // Optimistic update - remove task immediately from UI
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (!taskToUpdate) return;
+
+    if (!isOnline()) {
+      toast.error('You are offline. Please check your internet connection.', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    setUpdatingTasks(prev => new Set(prev).add(taskId));
+    
+    // Remove task from UI instantly
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    
+    // Show success toast immediately
+    const toastId = toast.loading('Starting task...', {
+      duration: 3000,
+    });
+
     try {
-      const response = await fetch('/api/wellwisher/tasks', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          taskId,
-          orderId,
-          status: 'in_progress'
-        }),
+      const result = await retryWithBackoff(async () => {
+        const response = await fetch('/api/wellwisher/tasks', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            taskId,
+            orderId,
+            status: 'in_progress'
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
       });
 
-      const result = await response.json();
+      toast.dismiss(toastId);
       
       if (result.success) {
-        // Refresh tasks
-        fetchTasks();
+        toast.success('Task started! Moving to ongoing tasks...', {
+          icon: '✅',
+          duration: 2000,
+        });
       } else {
-        alert('Failed to start task: ' + result.error);
+        // Rollback on error - add task back to list
+        setTasks(prev => [...prev, taskToUpdate].sort((a, b) => 
+          new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
+        ));
+        toast.error(result.error || 'Failed to start task. Please try again.', {
+          duration: 4000,
+        });
       }
-    } catch (_error) {
-      alert('Failed to start task. Please try again.');
+    } catch (error) {
+      toast.dismiss(toastId);
+      // Rollback on error - add task back to list
+      setTasks(prev => [...prev, taskToUpdate].sort((a, b) => 
+        new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
+      ));
+      const errorMessage = getNetworkErrorMessage(error);
+      toast.error(errorMessage, {
+        duration: 4000,
+      });
+    } finally {
+      setUpdatingTasks(prev => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   if (loading) {
     return (
@@ -115,15 +183,35 @@ export default function UpcomingPage() {
     );
   }
 
-  if (error) {
+  if (error && !loading) {
     return (
       <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
-          <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
+            <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
+          </div>
+          <button
+            onClick={() => fetchTasks(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <ArrowPathIcon className="h-5 w-5" />
+            <span>Retry</span>
+          </button>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <p className="text-red-800">{error}</p>
+          <div className="flex items-start space-x-3">
+            <ExclamationTriangleIcon className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-red-800 font-semibold mb-1">Error Loading Tasks</h3>
+              <p className="text-red-700">{error}</p>
+              {!isOnline() && (
+                <p className="text-red-600 text-sm mt-2">
+                  💡 Tip: Check your internet connection and try again.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -134,10 +222,21 @@ export default function UpcomingPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-8 flex items-center justify-between"
       >
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
-        <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
+          <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
+        </div>
+        <button
+          onClick={() => fetchTasks(true)}
+          disabled={loading}
+          className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Refresh tasks"
+        >
+          <ArrowPathIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </motion.div>
 
       {tasks.length === 0 ? (
@@ -174,9 +273,6 @@ export default function UpcomingPage() {
                     )}
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
-                  {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
@@ -205,12 +301,17 @@ export default function UpcomingPage() {
               <div className="flex space-x-2">
                 <button 
                   onClick={() => handleStartTask(task.id, task.orderId)}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium"
+                  disabled={updatingTasks.has(task.id)}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1.5"
                 >
-                  Start Task
-                </button>
-                <button className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs font-medium">
-                  View Details
+                  {updatingTasks.has(task.id) ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                      <span>Starting...</span>
+                    </>
+                  ) : (
+                    <span>Start Task</span>
+                  )}
                 </button>
               </div>
             </motion.div>
