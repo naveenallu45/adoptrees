@@ -8,7 +8,9 @@ import {
   ArrowLeftIcon,
   XMarkIcon,
   CheckCircleIcon,
-  MapPinIcon
+  MapPinIcon,
+  SparklesIcon,
+  CloudIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from '@/components/Dashboard/PlantingLocationMap';
 
@@ -98,22 +100,21 @@ export default function TreeDetailPage() {
   const itemIndex = parseInt(params.itemIndex as string, 10);
   
   const [order, setOrder] = useState<Order | null>(null);
+  const [treeData, setTreeData] = useState<{
+    oxygenKgs?: number;
+    scientificSpecies?: string;
+    co2?: number;
+    foodSecurity?: number;
+    economicDevelopment?: number;
+    co2Absorption?: number;
+    environmentalProtection?: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; caption?: string; index?: number } | null>(null);
   const [allImagesForModal, setAllImagesForModal] = useState<Array<{ url: string; caption?: string }>>([]);
   const [showLocationMap, setShowLocationMap] = useState(false);
   const [wellwisherName, setWellwisherName] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  // Update time every minute for real-time calculations
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000); // Update every minute
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Keyboard navigation for image gallery
   useEffect(() => {
@@ -163,6 +164,29 @@ export default function TreeDetailPage() {
         
         if (foundOrder && foundOrder.items[itemIndex] && foundOrder.paymentStatus === 'paid') {
           setOrder(foundOrder);
+          
+          // Fetch tree data using treeId
+          const treeId = foundOrder.items[itemIndex].treeId;
+          if (treeId) {
+            try {
+              const treeResponse = await fetch(`/api/trees/${treeId}`);
+              const treeResult = await treeResponse.json();
+              if (treeResult.success && treeResult.data) {
+                setTreeData({
+                  oxygenKgs: treeResult.data.oxygenKgs,
+                  scientificSpecies: treeResult.data.scientificSpecies,
+                  co2: treeResult.data.co2,
+                  foodSecurity: treeResult.data.foodSecurity,
+                  economicDevelopment: treeResult.data.economicDevelopment,
+                  co2Absorption: treeResult.data.co2Absorption,
+                  environmentalProtection: treeResult.data.environmentalProtection,
+                });
+              }
+            } catch (_err) {
+              // If fetching tree fails, continue without tree data
+              console.error('Failed to fetch tree data:', _err);
+            }
+          }
           
           // Fetch wellwisher name if assigned
           if (foundOrder.assignedWellwisher) {
@@ -248,37 +272,29 @@ export default function TreeDetailPage() {
 
   const item = order.items[itemIndex];
   const treeNameLower = item.treeName.toLowerCase();
-  const scientificName = scientificNames[treeNameLower] || `${item.treeName} sp.`;
+  // Use tree data scientificSpecies if available, otherwise fallback to mapping
+  const scientificName = treeData?.scientificSpecies || scientificNames[treeNameLower] || `${item.treeName} sp.`;
   
   // Calculate real-time oxygen and CO2 based on planting date
   const completedTask = order.wellwisherTasks?.find(task => 
     task.status === 'completed' && task.plantingDetails?.plantedAt
   );
   
-  let currentOxygen = item.oxygenKgs;
-  let currentCO2 = parseFloat((item.oxygenKgs * 0.7).toFixed(2));
+  // Use EXACT same values as tree info page - match exactly what's displayed there
+  // Tree info page shows: Oxygen = tree.oxygenKgs, CO2 = tree.co2 if available, otherwise calculateCO2(oxygenKgs)
+  const baseOxygen = treeData?.oxygenKgs !== undefined ? treeData.oxygenKgs : item.oxygenKgs;
   
-  if (completedTask?.plantingDetails?.plantedAt) {
-    const plantedDate = new Date(completedTask.plantingDetails.plantedAt);
-    const daysSincePlanting = Math.floor((currentTime.getTime() - plantedDate.getTime()) / (1000 * 60 * 60 * 24));
-    const yearsSincePlanting = daysSincePlanting / 365;
-    
-    // Trees start producing less oxygen when young and reach full capacity around 5-10 years
-    // For real-time calculation: scale based on tree age
-    // Young trees (0-2 years): 20-60% capacity
-    // Mature trees (2-5 years): 60-100% capacity
-    // Full capacity (5+ years): 100%
-    let ageMultiplier = 1;
-    if (yearsSincePlanting < 2) {
-      ageMultiplier = 0.2 + (yearsSincePlanting / 2) * 0.4; // 20% to 60%
-    } else if (yearsSincePlanting < 5) {
-      ageMultiplier = 0.6 + ((yearsSincePlanting - 2) / 3) * 0.4; // 60% to 100%
-    }
-    
-    // Current annual rate based on age
-    currentOxygen = item.oxygenKgs * ageMultiplier;
-    currentCO2 = parseFloat((currentOxygen * 0.7).toFixed(2));
-  }
+  // Same calculation as tree info page: calculateCO2 = oxygenKgs * 1.4 * 10 (10 years estimate)
+  const calculateCO2 = (oxygenKgs: number): number => {
+    return Math.round(oxygenKgs * 1.4 * 10); // 10 years estimate - same as tree info page
+  };
+  
+  // CO2 calculation matches tree info page exactly
+  const co2Absorbed = treeData?.co2 !== undefined ? Math.abs(treeData.co2) : calculateCO2(baseOxygen);
+  
+  // Display exact same values as tree info page (no age multipliers - show base values)
+  const currentOxygen = baseOxygen;
+  const currentCO2Absorption = co2Absorbed;
   
   // Collect all images from completed tasks
   const allImages: Array<{ url: string; caption?: string; type: 'planting' | 'growth'; date: string }> = [];
@@ -376,6 +392,22 @@ export default function TreeDetailPage() {
                 {scientificName}
               </p>
               
+              {/* Tree Info Badges */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 text-white font-medium text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  <span>{currentOxygen.toFixed(2)} kg/year O₂</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 text-white font-medium text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  <span>-{currentCO2Absorption.toFixed(2)} kg/year CO₂</span>
+                </div>
+              </div>
+              
               {/* Pill Tags */}
               <div className="flex flex-wrap gap-3 mb-6">
                 <div className="bg-green-800 rounded-full px-4 py-2 flex items-center gap-2">
@@ -426,7 +458,7 @@ export default function TreeDetailPage() {
               <div>
                 <h3 className="text-white font-semibold mb-3 text-lg">Planting Location</h3>
                 <div className="bg-white rounded-2xl p-5 border-2 border-green-200 shadow-lg">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between">
                     <p className="text-green-800 font-semibold">Tree Location</p>
                     <button
                       onClick={() => setShowLocationMap(true)}
@@ -437,9 +469,6 @@ export default function TreeDetailPage() {
                       <span>View location</span>
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    Coordinates: {completedTask.plantingDetails.plantingLocation.coordinates[1].toFixed(6)}, {completedTask.plantingDetails.plantingLocation.coordinates[0].toFixed(6)}
-                  </p>
                 </div>
               </div>
             )}
@@ -454,40 +483,13 @@ export default function TreeDetailPage() {
           className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
         >
           {/* Oxygen Production */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative overflow-hidden">
-            {/* Percentage Indicator - Top Right */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative">
+            {/* Icon - Top Right */}
             <div className="absolute top-6 right-6">
-              <div className="relative w-20 h-20">
-                <svg className="transform -rotate-90 w-20 h-20">
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="36"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    className="text-gray-200"
-                  />
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="36"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    strokeDasharray={`${Math.min((currentOxygen / item.oxygenKgs) * 226, 226)} 226`}
-                    className="text-emerald-600"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-emerald-600">
-                    {Math.round((currentOxygen / item.oxygenKgs) * 100)}%
-                  </span>
-                </div>
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <SparklesIcon className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
-
             <div className="pr-24">
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Oxygen Production</h3>
               
@@ -508,46 +510,19 @@ export default function TreeDetailPage() {
           </div>
 
           {/* CO2 Absorption */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative overflow-hidden">
-            {/* Percentage Indicator - Top Right */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative">
+            {/* Icon - Top Right */}
             <div className="absolute top-6 right-6">
-              <div className="relative w-20 h-20">
-                <svg className="transform -rotate-90 w-20 h-20">
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="36"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    className="text-gray-200"
-                  />
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="36"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    strokeDasharray={`${Math.min((currentCO2 / (item.oxygenKgs * 0.7)) * 226, 226)} 226`}
-                    className="text-cyan-600"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-cyan-600">
-                    {Math.round((currentCO2 / (item.oxygenKgs * 0.7)) * 100)}%
-                  </span>
-                </div>
+              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center">
+                <CloudIcon className="h-8 w-8 text-cyan-600" />
               </div>
             </div>
-
             <div className="pr-24">
               <h3 className="text-2xl font-bold text-gray-900 mb-4">CO₂ Absorption</h3>
               
               <div className="mb-6">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-4xl font-bold text-gray-900">{currentCO2.toFixed(2)}</span>
+                  <span className="text-4xl font-bold text-gray-900">-{currentCO2Absorption.toFixed(2)}</span>
                   <span className="text-lg text-gray-600 font-medium">kg/year</span>
                 </div>
                 <p className="text-sm text-gray-500">Annual absorption rate</p>
@@ -556,7 +531,7 @@ export default function TreeDetailPage() {
             
             <div className="bg-cyan-50 rounded-xl p-5 border border-cyan-100">
               <p className="text-sm text-gray-700 leading-relaxed">
-                This tree absorbs <span className="font-semibold text-cyan-700">{currentCO2.toFixed(2)} kg</span> of CO₂ annually, offsetting emissions from <span className="font-semibold text-cyan-700">{Math.round(currentCO2 / 4.6)}</span> cars per year, helping combat climate change and reduce carbon footprint.
+                This tree absorbs <span className="font-semibold text-cyan-700">{currentCO2Absorption.toFixed(2)} kg</span> of CO₂ annually, offsetting emissions from <span className="font-semibold text-cyan-700">{Math.round(currentCO2Absorption / 4.6)}</span> cars per year, helping combat climate change and reduce carbon footprint.
               </p>
             </div>
           </div>
@@ -643,152 +618,160 @@ export default function TreeDetailPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8">My Benefits</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Food Security */}
-            <div className="bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-center mb-3">
-                <div className="relative w-24 h-24">
-                  <svg className="transform -rotate-90 w-24 h-24">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      className="text-amber-300"
-                    />
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray="251.2 251.2"
-                      className="text-amber-800"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-amber-900">100%</span>
+            {treeData?.foodSecurity !== undefined && (
+              <div className="bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="relative w-24 h-24">
+                    <svg className="transform -rotate-90 w-24 h-24">
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        className="text-amber-300"
+                      />
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        strokeDasharray={`${(treeData.foodSecurity / 10) * 251.2} 251.2`}
+                        className="text-amber-800"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-amber-900">{treeData.foodSecurity * 10}%</span>
+                    </div>
                   </div>
                 </div>
+                <h3 className="text-xl font-bold text-amber-900 mb-1.5">Food Security</h3>
+                <p className="text-amber-800 text-sm">
+                  The trees will bear fruits, some that will be edible immediately and others that can become edible through processing, ensuring food resources over time.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-amber-900 mb-1.5">Food Security</h3>
-              <p className="text-amber-800 text-sm">
-                The trees will bear fruits, some that will be edible immediately and others that can become edible through processing, ensuring food resources over time.
-              </p>
-            </div>
+            )}
 
             {/* Economic Development */}
-            <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-center mb-3">
-                <div className="relative w-24 h-24">
-                  <svg className="transform -rotate-90 w-24 h-24">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      className="text-orange-300"
-                    />
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray="200.96 251.2"
-                      className="text-orange-800"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-orange-900">80%</span>
+            {treeData?.economicDevelopment !== undefined && (
+              <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="relative w-24 h-24">
+                    <svg className="transform -rotate-90 w-24 h-24">
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        className="text-orange-300"
+                      />
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        strokeDasharray={`${(treeData.economicDevelopment / 10) * 251.2} 251.2`}
+                        className="text-orange-800"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-orange-900">{treeData.economicDevelopment * 10}%</span>
+                    </div>
                   </div>
                 </div>
+                <h3 className="text-xl font-bold text-orange-900 mb-1.5">Economic Development</h3>
+                <p className="text-orange-800 text-sm">
+                  The trees&apos; fruits and the products derived from their transformation can be traded in local networks, offering income opportunities.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-orange-900 mb-1.5">Economic Development</h3>
-              <p className="text-orange-800 text-sm">
-                The trees&apos; fruits and the products derived from their transformation can be traded in local networks, offering income opportunities.
-              </p>
-            </div>
+            )}
 
             {/* CO₂ Absorption */}
-            <div className="bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-center mb-3">
-                <div className="relative w-24 h-24">
-                  <svg className="transform -rotate-90 w-24 h-24">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      className="text-yellow-300"
-                    />
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray="25.12 251.2"
-                      className="text-yellow-800"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-yellow-900">10%</span>
+            {treeData?.co2Absorption !== undefined && (
+              <div className="bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="relative w-24 h-24">
+                    <svg className="transform -rotate-90 w-24 h-24">
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        className="text-yellow-300"
+                      />
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        strokeDasharray={`${(treeData.co2Absorption / 10) * 251.2} 251.2`}
+                        className="text-yellow-800"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-yellow-900">{treeData.co2Absorption * 10}%</span>
+                    </div>
                   </div>
                 </div>
+                <h3 className="text-xl font-bold text-yellow-900 mb-1.5">CO₂ Absorption</h3>
+                <p className="text-yellow-800 text-sm">
+                  During its life cycle, each tree will absorb CO₂. The trees you plant can offset your emissions.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-yellow-900 mb-1.5">CO₂ Absorption</h3>
-              <p className="text-yellow-800 text-sm">
-                During its life cycle, each tree will absorb CO₂. The trees you plant can offset your emissions.
-              </p>
-            </div>
+            )}
 
             {/* Environmental Protection */}
-            <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-center mb-3">
-                <div className="relative w-24 h-24">
-                  <svg className="transform -rotate-90 w-24 h-24">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      className="text-green-300"
-                    />
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray="25.12 251.2"
-                      className="text-green-800"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-green-900">10%</span>
+            {treeData?.environmentalProtection !== undefined && (
+              <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-2xl p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="relative w-24 h-24">
+                    <svg className="transform -rotate-90 w-24 h-24">
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        className="text-green-300"
+                      />
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="none"
+                        strokeDasharray={`${(treeData.environmentalProtection / 10) * 251.2} 251.2`}
+                        className="text-green-800"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-green-900">{treeData.environmentalProtection * 10}%</span>
+                    </div>
                   </div>
                 </div>
+                <h3 className="text-xl font-bold text-green-900 mb-1.5">Environmental Protection</h3>
+                <p className="text-green-800 text-sm">
+                  The trees are planted in agroforestry systems that favor the virtuous interaction between the different species and their positive impact on the environment and on the land.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-green-900 mb-1.5">Environmental Protection</h3>
-              <p className="text-green-800 text-sm">
-                The trees are planted in agroforestry systems that favor the virtuous interaction between the different species and their positive impact on the environment and on the land.
-              </p>
-            </div>
+            )}
           </div>
           </div>
         </motion.section>
@@ -911,9 +894,6 @@ export default function TreeDetailPage() {
                 className="w-full h-96 rounded-lg"
                 showOpenInMaps={true}
               />
-              <p className="mt-3 text-sm text-gray-600 text-center">
-                Coordinates: {completedTask.plantingDetails.plantingLocation.coordinates[1].toFixed(6)}, {completedTask.plantingDetails.plantingLocation.coordinates[0].toFixed(6)}
-              </p>
             </div>
           </div>
         </div>

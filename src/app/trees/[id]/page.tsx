@@ -331,7 +331,7 @@ export default function TreeInfoPage() {
               <div className="flex items-center gap-2 text-gray-700">
                 <span className="font-semibold">CO₂:</span>
                 <span className="text-green-600 font-semibold">
-                  {tree.co2 !== undefined ? `${tree.co2}kg` : `-${co2Absorbed}kg`}
+                  {tree.co2 !== undefined ? `${tree.co2} kg/year` : `-${co2Absorbed} kg/year`}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-gray-700">

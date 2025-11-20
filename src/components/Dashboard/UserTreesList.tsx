@@ -40,9 +40,6 @@ function LocationToggle({ latitude, longitude, treeName }: { latitude: number; l
             className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
             showOpenInMaps={true}
           />
-          <p className="mt-2 text-xs text-gray-500 text-center">
-            Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
-          </p>
         </div>
       )}
     </div>
@@ -446,9 +443,6 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                           <div className="flex-1 min-w-0 flex flex-row items-start gap-3 sm:gap-4">
                             {/* Left: Tree Info */}
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-green-800 to-emerald-800 bg-clip-text text-transparent mb-2 text-left">
-                                {item.treeName}
-                              </h4>
                               <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
                                 <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
                                   <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
