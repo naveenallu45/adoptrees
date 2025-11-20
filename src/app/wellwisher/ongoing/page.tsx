@@ -20,6 +20,7 @@ import {
   retryWithBackoff,
   compressImage 
 } from '@/lib/utils/wellwisher';
+import LocationPicker from '@/components/WellWisher/LocationPicker';
 
 interface WellwisherTask {
   id: string;
@@ -65,6 +66,9 @@ export default function OngoingPage() {
     timestamp?: number;
     source?: string;
   } | null>(null);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locationPickerTaskId, setLocationPickerTaskId] = useState<string | null>(null);
+  const [manualLocation, setManualLocation] = useState<Record<string, { latitude: number; longitude: number }>>({});
 
   useEffect(() => {
     fetchTasks();
@@ -479,33 +483,47 @@ export default function OngoingPage() {
         duration: 30000,
       });
       
-      // Use prewarmed location if recent and fast mode is enabled and has valid coordinates
-      const now = Date.now();
-      const recentMs = 2 * 60 * 1000; // 2 minutes
-      const canUsePrewarm = fastMode && 
-        prewarmedLocation && 
-        prewarmedLocation.timestamp && 
-        (now - prewarmedLocation.timestamp) <= recentMs &&
-        prewarmedLocation.latitude !== undefined &&
-        prewarmedLocation.longitude !== undefined;
-
-      // Get current location automatically
+      // Check if manual location was selected for this task
       let location;
       let permissionState: string | undefined;
-      try {
-        permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
-        .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
-        .catch(() => undefined));
+      
+      if (manualLocation[task.id]) {
+        // Use manually selected location
+        location = {
+          latitude: manualLocation[task.id].latitude,
+          longitude: manualLocation[task.id].longitude,
+          source: 'manual_selection',
+          timestamp: Date.now()
+        };
+        toast.dismiss(progressToast);
+        toast.loading('Uploading images...', { id: progressToast });
+      } else {
+        // Use prewarmed location if recent and fast mode is enabled and has valid coordinates
+        const now = Date.now();
+        const recentMs = 2 * 60 * 1000; // 2 minutes
+        const canUsePrewarm = fastMode && 
+          prewarmedLocation && 
+          prewarmedLocation.timestamp && 
+          (now - prewarmedLocation.timestamp) <= recentMs &&
+          prewarmedLocation.latitude !== undefined &&
+          prewarmedLocation.longitude !== undefined;
 
-        location = canUsePrewarm ? prewarmedLocation! : await getLocation();
-        
-        if (location.latitude && location.longitude) {
-          toast.dismiss(progressToast);
-          toast.loading('Uploading images...', { id: progressToast });
+        // Get current location automatically
+        try {
+          permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+          .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
+          .catch(() => undefined));
+          
+          location = canUsePrewarm ? prewarmedLocation! : await getLocation();
+          
+          if (location.latitude && location.longitude) {
+            toast.dismiss(progressToast);
+            toast.loading('Uploading images...', { id: progressToast });
+          }
+        } catch (_locationError) {
+          // Continue without location
+          location = { source: 'location_unavailable', timestamp: Date.now() };
         }
-      } catch (_locationError) {
-        // Continue without location
-        location = { source: 'location_unavailable', timestamp: Date.now() };
       }
       
       const formData = new FormData();
@@ -731,6 +749,51 @@ export default function OngoingPage() {
                 )}
               </div>
 
+              {/* Location Selection */}
+              <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Planting Location
+                </label>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {manualLocation[task.id] ? (
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-green-100 text-green-800 rounded-md text-xs">
+                      <MapPinIcon className="h-3 w-3" />
+                      <span>Location Selected</span>
+                      <button
+                        onClick={() => {
+                          setManualLocation(prev => {
+                            const updated = { ...prev };
+                            delete updated[task.id];
+                            return updated;
+                          });
+                        }}
+                        className="ml-1 text-green-600 hover:text-green-800"
+                        type="button"
+                      >
+                        <XMarkIcon className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setLocationPickerTaskId(task.id);
+                        setShowLocationPicker(true);
+                      }}
+                      className="px-2.5 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors flex items-center space-x-1"
+                      type="button"
+                    >
+                      <MapPinIcon className="h-3 w-3" />
+                      <span>Select Location on Map</span>
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    {manualLocation[task.id] 
+                      ? 'Location will be used when completing planting'
+                      : 'Optional: Select location manually or use device location'}
+                  </p>
+                </div>
+              </div>
+
               {/* Status Switcher - Only show valid transitions */}
               <div className="mb-3 p-2 bg-gray-50 rounded-lg">
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -880,6 +943,27 @@ export default function OngoingPage() {
           ))}
         </div>
       )}
+
+      {/* Location Picker Modal */}
+      <LocationPicker
+        isOpen={showLocationPicker}
+        onClose={() => {
+          setShowLocationPicker(false);
+          setLocationPickerTaskId(null);
+        }}
+        onSelect={(latitude, longitude) => {
+          if (locationPickerTaskId) {
+            setManualLocation(prev => ({
+              ...prev,
+              [locationPickerTaskId]: { latitude, longitude }
+            }));
+          }
+          setShowLocationPicker(false);
+          setLocationPickerTaskId(null);
+        }}
+        initialLatitude={locationPickerTaskId && manualLocation[locationPickerTaskId]?.latitude ? manualLocation[locationPickerTaskId].latitude : undefined}
+        initialLongitude={locationPickerTaskId && manualLocation[locationPickerTaskId]?.longitude ? manualLocation[locationPickerTaskId].longitude : undefined}
+      />
     </div>
   );
 }

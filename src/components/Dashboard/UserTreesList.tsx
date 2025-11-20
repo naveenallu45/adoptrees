@@ -14,37 +14,90 @@ import {
   DocumentArrowDownIcon,
   ArrowRightIcon,
   PlusCircleIcon,
-  SparklesIcon
+  SparklesIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
 function LocationToggle({ latitude, longitude, treeName }: { latitude: number; longitude: number; treeName: string }) {
-  const [show, setShow] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
+  const openInMaps = () => {
+    // Detect if iOS device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (isIOS) {
+      // Open in Apple Maps
+      window.open(`https://maps.apple.com/?q=${latitude},${longitude}&ll=${latitude},${longitude}`, '_blank');
+    } else {
+      // Open in Google Maps
+      window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
+    }
+  };
+
   return (
-    <div>
+    <>
       <button
         type="button"
-        onClick={() => setShow(!show)}
+        onClick={() => setShowMap(true)}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
       >
         <MapPinIcon className="h-4 w-4 flex-shrink-0" />
-        <span>{show ? 'Hide location' : 'View location'}</span>
+        <span>View location</span>
       </button>
-      {show && (
-        <div className="mt-3">
-          <PlantingLocationMap
-            latitude={latitude}
-            longitude={longitude}
-            treeName={treeName}
-            className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
-            showOpenInMaps={true}
-          />
-          <p className="mt-2 text-xs text-gray-500 text-center">
-            Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
-          </p>
+      
+      {/* Map Modal */}
+      {showMap && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowMap(false);
+            }
+          }}
+        >
+          <div className="relative bg-white rounded-2xl overflow-hidden shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-green-50">
+              <h3 className="text-lg font-bold text-gray-900">Tree Planting Location</h3>
+              <button
+                onClick={() => setShowMap(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+                type="button"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            {/* Map */}
+            <div className="p-4 flex-1 min-h-0">
+              <PlantingLocationMap
+                latitude={latitude}
+                longitude={longitude}
+                treeName={treeName}
+                className="w-full h-80 rounded-lg border border-green-200/50 shadow-sm"
+                showOpenInMaps={false}
+              />
+              <p className="mt-3 text-sm text-gray-600 text-center">
+                Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              </p>
+            </div>
+            
+            {/* Footer with Open in Maps button */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={openInMaps}
+                className="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+                type="button"
+              >
+                <MapPinIcon className="h-5 w-5" />
+                <span>Open in Maps</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -507,25 +560,23 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                           </div>
                         </div>
 
-                        {/* Planting location (collapsed by default) */}
+                        {/* Planting location (show by default) */}
                         {(() => {
-                          // Check all orders for this tree for planting locations
-                          for (const treeOrder of treeOrders) {
-                            const completedTask = treeOrder.wellwisherTasks?.find(task => 
-                              task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
+                          // Check only the primary order for this specific tree adoption's planting location
+                          const completedTask = primaryOrder.wellwisherTasks?.find(task => 
+                            task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
+                          );
+                          if (completedTask?.plantingDetails?.plantingLocation) {
+                            const coords = completedTask.plantingDetails.plantingLocation.coordinates;
+                            return (
+                              <div className="mt-1 pt-1.5 border-t border-green-100/50" key={`location-${uniqueKey}`}>
+                                <LocationToggle
+                                  latitude={coords[1]}
+                                  longitude={coords[0]}
+                                  treeName={item.treeName}
+                                />
+                              </div>
                             );
-                            if (completedTask?.plantingDetails?.plantingLocation) {
-                              const coords = completedTask.plantingDetails.plantingLocation.coordinates;
-                              return (
-                                <div className="mt-1 pt-1.5 border-t border-green-100/50">
-                                  <LocationToggle
-                                    latitude={coords[1]}
-                                    longitude={coords[0]}
-                                    treeName={item.treeName}
-                                  />
-                                </div>
-                              );
-                            }
                           }
                           return null;
                         })()}
