@@ -85,7 +85,9 @@ export default function TreeInfoPage() {
   const [error, setError] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [flyingTree, setFlyingTree] = useState<{ id: string; imageUrl: string; startPos: { x: number; y: number }; endPos: { x: number; y: number } } | null>(null);
+  const [displayedImage, setDisplayedImage] = useState<string>('');
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const imageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchTree = async () => {
@@ -96,6 +98,8 @@ export default function TreeInfoPage() {
 
         if (result.success) {
           setTree(result.data);
+          // Set initial displayed image to main image
+          setDisplayedImage(result.data.imageUrl || '');
         } else {
           setError(result.error || 'Tree not found');
         }
@@ -110,6 +114,15 @@ export default function TreeInfoPage() {
       fetchTree();
     }
   }, [treeId]);
+
+  // Cleanup timeout on unmount or when tree changes
+  useEffect(() => {
+    return () => {
+      if (imageTimeoutRef.current) {
+        clearTimeout(imageTimeoutRef.current);
+      }
+    };
+  }, [tree]);
 
   const getCartIconPosition = useCallback(() => {
     // Check if mobile or desktop
@@ -283,13 +296,13 @@ export default function TreeInfoPage() {
           {/* Left Column - Images */}
           <div className="flex justify-center lg:justify-start">
             <div className="w-full max-w-lg">
-              {/* Main Image - Always shows the main product image */}
+              {/* Main Image - Shows selected image or main product image */}
               <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-white shadow-lg mb-4">
                 <Image
-                  src={tree.imageUrl}
+                  src={displayedImage || tree.imageUrl}
                   alt={tree.name}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-opacity duration-300"
                   priority
                   quality={90}
                 />
@@ -301,7 +314,24 @@ export default function TreeInfoPage() {
                   {tree.smallImageUrls.map((smallImageUrl, index) => (
                     <div
                       key={index}
-                      className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all cursor-pointer"
+                      onClick={() => {
+                        // Clear existing timeout if any
+                        if (imageTimeoutRef.current) {
+                          clearTimeout(imageTimeoutRef.current);
+                        }
+                        // Set the clicked small image as displayed
+                        setDisplayedImage(smallImageUrl);
+                        // Set timeout to revert to main image after 3 seconds
+                        imageTimeoutRef.current = setTimeout(() => {
+                          setDisplayedImage(tree.imageUrl);
+                          imageTimeoutRef.current = null;
+                        }, 3000); // 3 seconds
+                      }}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                        displayedImage === smallImageUrl
+                          ? 'border-green-500 shadow-lg scale-105'
+                          : 'border-gray-200 hover:border-green-400'
+                      }`}
                     >
                       <Image
                         src={smallImageUrl}
