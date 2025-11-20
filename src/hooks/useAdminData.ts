@@ -34,11 +34,13 @@ export function useAdminStats() {
         totalRevenue,
       };
     },
-    staleTime: 0, // Always refetch to ensure UI matches database
+    staleTime: 0, // No cache - always fetch fresh data
+    gcTime: 0, // No cache - remove immediately when unused
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
     refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    cacheTime: 0, // Legacy prop for older React Query versions - no cache
   });
 }
 
@@ -67,11 +69,13 @@ export function useTrees() {
         throw error;
       }
     },
-    staleTime: 0, // Always refetch to ensure UI matches database
+    staleTime: 0, // No cache - always fetch fresh data
+    gcTime: 0, // No cache - remove immediately when unused
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
     refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    cacheTime: 0, // Legacy prop for older React Query versions - no cache
     retry: 2, // Retry failed requests 2 times
     retryDelay: 1000, // Wait 1 second between retries
   });
@@ -89,11 +93,13 @@ export function useIndividualUsers() {
       if (!data.success) throw new Error(data.message);
       return data.data;
     },
-    staleTime: 0, // Always refetch to ensure UI matches database
+    staleTime: 0, // No cache - always fetch fresh data
+    gcTime: 0, // No cache - remove immediately when unused
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
     refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    cacheTime: 0, // Legacy prop for older React Query versions - no cache
   });
 }
 
@@ -109,11 +115,13 @@ export function useCompanyUsers() {
       if (!data.success) throw new Error(data.message);
       return data.data;
     },
-    staleTime: 0, // Always refetch to ensure UI matches database
+    staleTime: 0, // No cache - always fetch fresh data
+    gcTime: 0, // No cache - remove immediately when unused
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
     refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    cacheTime: 0, // Legacy prop for older React Query versions - no cache
   });
 }
 
@@ -129,10 +137,12 @@ export function useWellWishers() {
       if (!data.success) throw new Error(data.message);
       return data.data;
     },
-    staleTime: 0, // Always refetch to ensure UI matches database
+    staleTime: 0, // No cache - always fetch fresh data
+    gcTime: 0, // No cache - remove immediately when unused
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
     refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    cacheTime: 0, // Legacy prop for older React Query versions - no cache
   });
 }

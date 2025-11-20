@@ -17,11 +17,12 @@ export default function AdminLayout({
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 0, // Always consider data stale for admin dashboard (individual queries override this)
-        gcTime: 5 * 60 * 1000, // Keep unused data in cache for 5 minutes
+        staleTime: 0, // No cache - always fetch fresh data
+        gcTime: 0, // No garbage collection time - remove immediately when unused
         retry: 1,
         refetchOnWindowFocus: true, // Refetch when window regains focus
         refetchOnMount: true, // Always refetch when component mounts
+        refetchOnReconnect: true, // Refetch when network reconnects
       },
     },
   }));
