@@ -4,19 +4,10 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'framer-motion', '@tanstack/react-table'],
-    // Optimize filesystem operations
-    outputFileTracingIncludes: {
-      '/api/**/*': ['./node_modules/**/*.wasm', './node_modules/**/*.node'],
-    },
-    // Reduce filesystem reads
-    optimizeCss: true,
   },
   
   // Output configuration for better caching
   output: 'standalone',
-  
-  // Optimize build output
-  swcMinify: true,
   
   // Reduce filesystem operations during build
   generateBuildId: async () => {
