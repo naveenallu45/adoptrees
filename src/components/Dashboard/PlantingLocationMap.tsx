@@ -20,6 +20,7 @@ interface GoogleMapsWindow extends Window {
       Size: new (width: number, height: number) => unknown;
       Point: new (x: number, y: number) => unknown;
       InfoWindow: new (options: unknown) => GoogleInfoWindow;
+      MapTypeId: { SATELLITE: string };
     };
   };
 }
@@ -93,6 +94,7 @@ export default function PlantingLocationMap({
         mapInstanceRef.current = new maps.Map(mapRef.current, {
           center: location,
           zoom: 15,
+          mapTypeId: maps.MapTypeId.SATELLITE,
           mapTypeControl: false,
           streetViewControl: true,
           fullscreenControl: true,

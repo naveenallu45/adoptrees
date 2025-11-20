@@ -19,6 +19,7 @@ interface GoogleMapsWindow extends Window {
       Size: new (width: number, height: number) => unknown;
       Point: new (x: number, y: number) => unknown;
       LatLng: new (lat: number, lng: number) => unknown;
+      MapTypeId: { SATELLITE: string };
     };
   };
 }
@@ -89,6 +90,7 @@ export default function LocationPicker({
         mapInstanceRef.current = new maps.Map(mapRef.current, {
           center: defaultCenter,
           zoom: initialLatitude && initialLongitude ? 15 : 5,
+          mapTypeId: maps.MapTypeId.SATELLITE,
           mapTypeControl: true,
           streetViewControl: true,
           fullscreenControl: true,
