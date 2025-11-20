@@ -132,6 +132,83 @@ export default function TreesManagement() {
       }
     });
 
+    // Store previous state for rollback on error
+    const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
+    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
+
+    // Optimistic update for CREATE operation
+    if (!editingTree) {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticTree: Tree = {
+        _id: tempId,
+        name: formData.name,
+        price: parseFloat(formData.price) || (formData.treeType === 'company' ? parseFloat(formData.packagePrice || '0') / parseInt(formData.packageQuantity || '1') : 0),
+        info: formData.info,
+        oxygenKgs: parseFloat(formData.oxygenKgs) || 0,
+        imageUrl: formData.image ? URL.createObjectURL(formData.image) : '',
+        treeType: formData.treeType as 'individual' | 'company',
+        packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : undefined,
+        packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : undefined,
+        scientificSpecies: formData.scientificSpecies || undefined,
+        speciesInfoAvailable: formData.speciesInfoAvailable,
+        co2: formData.co2 ? parseFloat(formData.co2) : undefined,
+        foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : undefined,
+        economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : undefined,
+        co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : undefined,
+        environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : undefined,
+        localUses: formData.localUses,
+        smallImageUrls: formData.smallImages.filter(img => img !== null).map(img => img ? URL.createObjectURL(img) : ''),
+        createdAt: new Date().toISOString(),
+      };
+
+      // Optimistically add tree to cache
+      queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
+        if (!old) return [optimisticTree];
+        return [optimisticTree, ...old];
+      });
+
+      // Optimistically update stats
+      queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          totalTrees: (old.totalTrees || 0) + 1
+        };
+      });
+    } else {
+      // Optimistic update for UPDATE operation
+      queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
+        if (!old) return old;
+        return old.map(tree => {
+          if (tree._id === editingTree._id) {
+            return {
+              ...tree,
+              name: formData.name,
+              price: parseFloat(formData.price) || (formData.treeType === 'company' ? parseFloat(formData.packagePrice || '0') / parseInt(formData.packageQuantity || '1') : tree.price),
+              info: formData.info,
+              oxygenKgs: parseFloat(formData.oxygenKgs) || tree.oxygenKgs,
+              treeType: formData.treeType as 'individual' | 'company',
+              packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : tree.packageQuantity,
+              packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : tree.packagePrice,
+              scientificSpecies: formData.scientificSpecies || tree.scientificSpecies,
+              speciesInfoAvailable: formData.speciesInfoAvailable,
+              co2: formData.co2 ? parseFloat(formData.co2) : tree.co2,
+              foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : tree.foodSecurity,
+              economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : tree.economicDevelopment,
+              co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : tree.co2Absorption,
+              environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : tree.environmentalProtection,
+              localUses: formData.localUses,
+              imageUrl: formData.image ? URL.createObjectURL(formData.image) : tree.imageUrl,
+              smallImageUrls: formData.smallImages.filter(img => img !== null).map((img, idx) => 
+                img ? URL.createObjectURL(img) : (tree.smallImageUrls?.[idx] || '')
+              ).filter(url => url !== ''),
+            };
+          }
+          return tree;
+        });
+      });
+    }
+
     try {
       const url = editingTree 
         ? `/api/admin/trees/${editingTree._id}` 
@@ -147,6 +224,14 @@ export default function TreesManagement() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Rollback optimistic update on error
+        if (previousTrees) {
+          queryClient.setQueryData(['admin', 'trees'], previousTrees);
+        }
+        if (previousStats) {
+          queryClient.setQueryData(['admin', 'stats'], previousStats);
+        }
+
         // Handle validation errors with details
         if (data.details && Array.isArray(data.details)) {
           const errorMessages = data.details.map((detail: { field: string; message: string }) => 
@@ -155,15 +240,19 @@ export default function TreesManagement() {
           toast.error(`Validation failed:\n${errorMessages}`, { duration: 5000 });
         } else {
           toast.error(data.error || `Failed to ${editingTree ? 'update' : 'create'} tree`);
-      }
+        }
         return;
       }
       
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
-        // Invalidate and refetch in background (non-blocking)
-        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        
+        // Force immediate refetch to get server data (replaces optimistic update)
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        ]);
+
         setShowForm(false);
         setEditingTree(null);
         setFormData({
@@ -186,10 +275,24 @@ export default function TreesManagement() {
           smallImages: [null, null, null, null]
         });
       } else {
+        // Rollback optimistic update on error
+        if (previousTrees) {
+          queryClient.setQueryData(['admin', 'trees'], previousTrees);
+        }
+        if (previousStats) {
+          queryClient.setQueryData(['admin', 'stats'], previousStats);
+        }
         const errorMsg = data.error || 'Failed to save tree';
         toast.error(errorMsg);
       }
     } catch (error) {
+      // Rollback optimistic update on error
+      if (previousTrees) {
+        queryClient.setQueryData(['admin', 'trees'], previousTrees);
+      }
+      if (previousStats) {
+        queryClient.setQueryData(['admin', 'stats'], previousStats);
+      }
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to ${editingTree ? 'update' : 'create'} tree: ${errorMessage}`);
     } finally {
@@ -243,6 +346,8 @@ export default function TreesManagement() {
 
     // Optimistically remove tree from UI IMMEDIATELY (before API call)
     const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
+    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
+    
     queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
       if (!old) return old;
       return old.filter((tree) => tree._id !== id);
@@ -271,23 +376,20 @@ export default function TreesManagement() {
         // If 404, tree doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('Tree was already deleted from database.');
-          // Invalidate and refetch in background (non-blocking)
-          queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-          queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+          // Force immediate refetch to sync with server
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+          ]);
           return;
         }
         
         // Rollback optimistic update on other errors
         if (previousTrees) {
           queryClient.setQueryData(['admin', 'trees'], previousTrees);
-          // Rollback stats too
-          queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
-            if (!old) return old;
-            return {
-              ...old,
-              totalTrees: (old.totalTrees || 0) + 1
-            };
-          });
+        }
+        if (previousStats) {
+          queryClient.setQueryData(['admin', 'stats'], previousStats);
         }
         // Show specific error message based on status code
         if (response.status === 400) {
@@ -299,13 +401,18 @@ export default function TreesManagement() {
       }
       
       toast.success('Tree deleted successfully!');
-      // Invalidate and refetch in background (non-blocking)
-      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      // Force immediate refetch to sync with server (replaces optimistic update)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+      ]);
     } catch (error) {
       // Rollback optimistic update on error
       if (previousTrees) {
         queryClient.setQueryData(['admin', 'trees'], previousTrees);
+      }
+      if (previousStats) {
+        queryClient.setQueryData(['admin', 'stats'], previousStats);
       }
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete tree: ${errorMessage}`);
