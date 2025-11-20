@@ -41,6 +41,27 @@ export const metadata: Metadata = {
   authors: [{ name: "Adoptrees Team" }],
   creator: "Adoptrees",
   publisher: "Adoptrees",
+  icons: {
+    icon: [
+      {
+        url: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763652126/WhatsApp_Image_2025-11-20_at_8.13.58_PM_jzpbwb.jpg',
+        sizes: 'any',
+        type: 'image/jpeg',
+      },
+    ],
+    apple: [
+      {
+        url: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763652126/WhatsApp_Image_2025-11-20_at_8.13.58_PM_jzpbwb.jpg',
+        sizes: '180x180',
+        type: 'image/jpeg',
+      },
+    ],
+    shortcut: [
+      {
+        url: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763652126/WhatsApp_Image_2025-11-20_at_8.13.58_PM_jzpbwb.jpg',
+      },
+    ],
+  },
   formatDetection: {
     email: false,
     address: false,
