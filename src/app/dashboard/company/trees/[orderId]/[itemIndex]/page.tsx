@@ -114,7 +114,7 @@ export default function TreeDetailPage() {
   const [selectedImage, setSelectedImage] = useState<{ url: string; caption?: string; index?: number } | null>(null);
   const [allImagesForModal, setAllImagesForModal] = useState<Array<{ url: string; caption?: string }>>([]);
   const [wellwisherName, setWellwisherName] = useState<string | null>(null);
-  const [showLocationMap, setShowLocationMap] = useState(false);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
   // Keyboard navigation for image gallery
   useEffect(() => {
@@ -461,14 +461,25 @@ export default function TreeDetailPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-green-800 font-semibold">Tree Location</p>
                     <button
-                      onClick={() => setShowLocationMap(true)}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100"
+                      onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
                       type="button"
                     >
                       <MapPinIcon className="h-4 w-4 flex-shrink-0" />
-                      <span>View location</span>
+                      <span>{showLocationDropdown ? 'Hide location' : 'View location'}</span>
                     </button>
                   </div>
+                  {showLocationDropdown && (
+                    <div className="mt-3">
+                      <PlantingLocationMap
+                        latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
+                        longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
+                        treeName={item.treeName}
+                        className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
+                        showOpenInMaps={true}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -865,39 +876,6 @@ export default function TreeDetailPage() {
         </div>
       )}
 
-      {/* Location Map Modal */}
-      {showLocationMap && completedTask?.plantingDetails?.plantingLocation?.coordinates && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowLocationMap(false);
-            }
-          }}
-        >
-          <div className="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Tree Planting Location</h3>
-              <button
-                onClick={() => setShowLocationMap(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                type="button"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-4">
-              <PlantingLocationMap
-                latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
-                longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
-                treeName={item.treeName}
-                className="w-full h-96 rounded-lg"
-                showOpenInMaps={true}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

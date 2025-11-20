@@ -158,7 +158,7 @@ export default function PaymentDialog({
                             <div className="h-px bg-green-200"></div>
                             <div className="flex justify-between items-center">
                               <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Amount</span>
-                              <span className="text-xl font-bold text-green-600">₹{orderDetails.totalAmount.toFixed(2)}</span>
+                              <span className="text-xl font-bold text-green-600">₹{orderDetails.totalAmount.toLocaleString()}</span>
                             </div>
                             <div className="h-px bg-green-200"></div>
                             <div className="flex justify-between items-center">

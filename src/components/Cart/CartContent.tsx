@@ -367,7 +367,7 @@ export default function CartContent() {
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">{item.name}</h3>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
-                          <p className="text-green-600 font-semibold text-sm sm:text-base">₹{item.price}</p>
+                          <p className="text-green-600 font-semibold text-sm sm:text-base">₹{item.price.toLocaleString()}</p>
                           <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
                             {item.oxygenKgs} kg/year oxygen
                           </span>
@@ -399,7 +399,7 @@ export default function CartContent() {
                           </button>
                         </div>
                         <div className="text-right">
-                          <p className="text-base sm:text-lg font-semibold text-gray-800">₹{(item.price * item.quantity).toFixed(2)}</p>
+                          <p className="text-base sm:text-lg font-semibold text-gray-800">₹{(item.price * item.quantity).toLocaleString()}</p>
                           <button
                             onClick={() => removeFromCart(item.id)}
                             className="text-red-500 hover:text-red-700 text-xs sm:text-sm font-medium transition-colors duration-200"
@@ -431,12 +431,12 @@ export default function CartContent() {
                 <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
                   <div className="flex justify-between text-sm sm:text-base">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold text-black">₹{subtotal.toFixed(2)}</span>
+                    <span className="font-semibold text-black">₹{subtotal.toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 sm:pt-3">
                     <div className="flex justify-between text-base sm:text-lg font-bold">
                       <span className="text-black">Total</span>
-                      <span className="text-black">₹{total.toFixed(2)}</span>
+                      <span className="text-black">₹{total.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

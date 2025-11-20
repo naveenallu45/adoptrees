@@ -344,13 +344,13 @@ export default function TreeInfoPage() {
             <div className="mb-6 p-4 bg-green-50 rounded-lg">
               <div className="flex items-baseline gap-3">
                 {originalPrice && (
-                  <span className="text-lg text-gray-500 line-through">₹{originalPrice}</span>
+                  <span className="text-lg text-gray-500 line-through">₹{originalPrice.toLocaleString()}</span>
                 )}
-                <span className="text-3xl font-bold text-green-600">₹{displayPrice}</span>
+                <span className="text-3xl font-bold text-green-600">₹{displayPrice.toLocaleString()}</span>
               </div>
               {tree.packageQuantity && tree.packageQuantity > 1 && (
                 <p className="text-sm text-gray-600 mt-2">
-                  Package: {tree.packageQuantity} trees (₹{Math.round(displayPrice / tree.packageQuantity)} per tree)
+                  Package: {tree.packageQuantity} trees (₹{Math.round(displayPrice / tree.packageQuantity).toLocaleString()} per tree)
                 </p>
               )}
             </div>

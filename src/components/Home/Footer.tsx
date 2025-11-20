@@ -49,7 +49,7 @@ export default function Footer() {
 
             {/* Copyright */}
             <p className="text-green-200 text-xs sm:text-sm">
-              © 2024 All rights reserved Adoptrees
+              © 2025 All rights reserved Adoptrees
             </p>
           </div>
 

@@ -1,3 +1,7 @@
+'use client';
+
+import Link from 'next/link';
+
 export default function HeroSection() {
   return (
     <section id="companies-hero" className="mt-16 sm:mt-20 md:mt-24 min-h-[40vh] sm:min-h-[60vh] md:min-h-[60vh] relative overflow-hidden bg-gradient-to-br from-teal-900 via-teal-800 to-cyan-900">
@@ -31,15 +35,15 @@ export default function HeroSection() {
 
           {/* CTA Button */}
           <div className="flex justify-center">
-            <a 
-              href="#trees" 
+            <Link 
+              href="/companies#trees"
               className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-sm sm:text-base font-semibold hover:bg-white/30 transition-all duration-300 shadow-lg hover:scale-105 border border-white/30"
             >
               Explore Programs
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

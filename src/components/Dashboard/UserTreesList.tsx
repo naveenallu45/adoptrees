@@ -643,7 +643,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-medium text-gray-900 truncate">{item.treeName}</h4>
                             <p className="text-xs text-gray-500">
-                              ₹{item.price} each
+                              ₹{item.price.toLocaleString()} each
                             </p>
                             <p className="text-xs text-green-600">
                               {item.oxygenKgs} kg/year O₂
@@ -660,7 +660,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
 
                     <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-900">
-                        Total: ₹{order.totalAmount.toFixed(2)}
+                        Total: ₹{order.totalAmount.toLocaleString()}
                       </span>
                       {order.isGift && order.giftMessage && (
                         <p className="text-xs text-gray-600 italic">

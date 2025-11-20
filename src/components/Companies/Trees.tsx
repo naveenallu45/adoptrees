@@ -148,7 +148,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
         setFlyingTree(null);
         setAddingTreeId(null);
         const displayPrice = tree.packagePrice || tree.price;
-        toast.success(`Corporate Program: ${tree.name} (₹${displayPrice}) added to cart!`);
+        toast.success(`Corporate Program: ${tree.name} (₹${displayPrice.toLocaleString()}) added to cart!`);
       }, 800);
     }, 50);
 
@@ -164,12 +164,12 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
     }, 2000);
     
     const displayPrice = tree.packagePrice || tree.price;
-    toast.success(`Corporate Program: ${tree.name} (₹${displayPrice}) added to cart!`);
+    toast.success(`Corporate Program: ${tree.name} (₹${displayPrice.toLocaleString()}) added to cart!`);
 
   };
 
   return (
-    <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-white via-gray-50 to-green-50">
+    <section id="trees" className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-white via-gray-50 to-green-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12 sm:mb-16">
@@ -229,7 +229,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                     <div>
                       <p className="text-xs text-gray-600 mb-1 font-medium">Price</p>
                       <span className="text-xl sm:text-2xl font-bold text-gray-900">
-                        {tree.packagePrice ? `₹${tree.packagePrice}` : `₹${tree.price}`}
+                        {tree.packagePrice ? `₹${tree.packagePrice.toLocaleString()}` : `₹${tree.price.toLocaleString()}`}
                       </span>
                     </div>
                     <div className="text-right bg-white/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 shadow-sm border border-green-200/50">
@@ -243,7 +243,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                         Package: {tree.packageQuantity} trees
                         {tree.packagePrice && (
                           <span className="ml-2 text-gray-600">
-                            (₹{Math.round(tree.packagePrice / tree.packageQuantity)} per tree)
+                            (₹{Math.round(tree.packagePrice / tree.packageQuantity).toLocaleString()} per tree)
                           </span>
                         )}
                       </p>

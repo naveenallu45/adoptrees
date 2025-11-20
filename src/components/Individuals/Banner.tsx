@@ -1,3 +1,7 @@
+'use client';
+
+import Link from 'next/link';
+
 export default function Banner() {
   return (
     <section className="py-16 sm:py-20 md:py-24 bg-gradient-to-br from-green-600 via-emerald-600 to-green-700 relative overflow-hidden">
@@ -25,12 +29,18 @@ export default function Banner() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button className="inline-flex bg-white text-green-700 px-5 py-2.5 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+            <Link 
+              href="/individuals#trees"
+              className="inline-flex bg-white text-green-700 px-5 py-2.5 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+            >
               Get Started Now
-            </button>
-            <button className="inline-flex border-2 border-white text-white px-5 py-2.5 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-white/20 transition-all duration-300 shadow-lg hover:scale-105 backdrop-blur-sm">
+            </Link>
+            <Link 
+              href="/about"
+              className="inline-flex border-2 border-white text-white px-5 py-2.5 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-white/20 transition-all duration-300 shadow-lg hover:scale-105 backdrop-blur-sm"
+            >
               Learn More
-            </button>
+            </Link>
           </div>
         </div>
       </div>
