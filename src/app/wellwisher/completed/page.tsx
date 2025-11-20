@@ -189,6 +189,30 @@ export default function CompletedPage() {
                         {task.plantingDetails.plantingLocation?.coordinates ? `${task.plantingDetails.plantingLocation.coordinates[1].toFixed(6)}, ${task.plantingDetails.plantingLocation.coordinates[0].toFixed(6)}` : 'Not available'}
                       </p>
                     </div>
+                    {task.plantingDetails.plantingLocation?.coordinates && (
+                      <div className="md:col-span-2">
+                        <button
+                          onClick={() => {
+                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                            const lat = task.plantingDetails!.plantingLocation!.coordinates[1];
+                            const lng = task.plantingDetails!.plantingLocation!.coordinates[0];
+                            if (isIOS) {
+                              window.open(`https://maps.apple.com/?q=${lat},${lng}&ll=${lat},${lng}`, '_blank');
+                            } else {
+                              window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-800 transition-colors bg-green-100 px-2 py-1 rounded"
+                          type="button"
+                        >
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span>Open in Maps</span>
+                        </button>
+                      </div>
+                    )}
                     <div className="md:col-span-2">
                       <span className="font-medium text-green-800">Images:</span>
                       <p className="text-green-700">{task.plantingDetails.plantingImages.length} photo(s) uploaded</p>

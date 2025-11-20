@@ -66,6 +66,7 @@ export default function UpdatingPage() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [taskImages, setTaskImages] = useState<Record<string, File[]>>({});
   const [taskNotes, setTaskNotes] = useState<Record<string, string>>({});
+  const [_previewUpdateTrigger, setPreviewUpdateTrigger] = useState(0); // Force re-render when previews change
   const previewUrlsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
@@ -103,7 +104,7 @@ export default function UpdatingPage() {
         
         return await response.json();
       });
-
+      
       if (result.success) {
         setTasks(result.data || []);
         if (showRetryToast) {
@@ -141,7 +142,7 @@ export default function UpdatingPage() {
       e.target.value = '';
       return;
     }
-
+    
     // Show loading toast for compression
     const compressToast = toast.loading('Processing images...', { duration: 5000 });
 
@@ -171,6 +172,9 @@ export default function UpdatingPage() {
         ...prev,
         [taskId]: compressedFiles
       }));
+      
+      // Force re-render to show previews
+      setPreviewUpdateTrigger(prev => prev + 1);
 
       const totalSize = compressedFiles.reduce((sum, file) => sum + file.size, 0);
       toast.success(
@@ -212,6 +216,9 @@ export default function UpdatingPage() {
         ...prev,
         [taskId]: newImages
       }));
+      
+      // Force re-render to update previews
+      setPreviewUpdateTrigger(prev => prev + 1);
     }
   };
 
@@ -250,10 +257,10 @@ export default function UpdatingPage() {
       });
 
       const result = await retryWithBackoff(async () => {
-        const response = await fetch('/api/wellwisher/growth-update', {
-          method: 'POST',
-          body: formData,
-        });
+      const response = await fetch('/api/wellwisher/growth-update', {
+        method: 'POST',
+        body: formData,
+      });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -474,29 +481,39 @@ export default function UpdatingPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                           {taskImages[task.id].map((image, idx) => {
                             const urlKey = `${task.id}-${idx}`;
+                            // Create preview URL if it doesn't exist
+                            if (!previewUrlsRef.current[urlKey]) {
+                              previewUrlsRef.current[urlKey] = URL.createObjectURL(image);
+                            }
+                            const previewUrl = previewUrlsRef.current[urlKey];
+                            
                             return (
                               <div key={idx} className="relative group">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={previewUrlsRef.current[urlKey]}
-                              alt={`Preview ${idx + 1}`}
-                              className="w-full h-16 object-cover rounded-lg border border-gray-200"
-                            />
-                            <button
-                              onClick={() => removeImage(task.id, idx)}
-                              className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                              type="button"
-                              disabled={uploading === task.id}
-                              title="Remove image"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <img
+                                  src={previewUrl}
+                                  alt={`Preview ${idx + 1}`}
+                                  className="w-full h-16 object-cover rounded-lg border border-gray-200"
+                                  onError={(_e) => {
+                                    // Fallback if image fails to load
+                                    console.error('Preview image failed to load:', urlKey);
+                                  }}
+                                />
+                                <button
+                                  onClick={() => removeImage(task.id, idx)}
+                                  className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 z-10"
+                                  type="button"
+                                  disabled={uploading === task.id}
+                                  title="Remove image"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                   </svg>
                                 </button>
                               </div>
                             );
                           })}
-              </div>
+                        </div>
                       </div>
                     )}
             </div>

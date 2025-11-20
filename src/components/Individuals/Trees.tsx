@@ -99,10 +99,10 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
       };
     } else {
       // Desktop: cart is in top right
-      return {
+    return {
         x: window.innerWidth - 100,
         y: 50
-      };
+    };
     }
   }, []);
 

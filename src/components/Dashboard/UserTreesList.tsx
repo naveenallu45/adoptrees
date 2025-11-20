@@ -37,6 +37,7 @@ function LocationToggle({ latitude, longitude, treeName }: { latitude: number; l
             longitude={longitude}
             treeName={treeName}
             className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
+            showOpenInMaps={true}
           />
           <p className="mt-2 text-xs text-gray-500 text-center">
             Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
@@ -142,11 +143,24 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     fetchUserOrders();
   }, [publicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Filter orders based on page type
+  const displayedOrders = useMemo(() => {
+    if (isTransactionsPage) {
+      // On transactions page: exclude pending payment status
+      return orders.filter(order => order.paymentStatus !== 'pending');
+    }
+    // On trees page: only show paid orders (handled in groupedTrees)
+    return orders;
+  }, [orders, isTransactionsPage]);
+
   // Memoize tree list computation - show each adoption separately
   const groupedTrees = useMemo(() => {
     if (isTransactionsPage || orders.length === 0) {
       return [];
     }
+
+    // Filter to only show successfully paid orders (exclude pending and failed)
+    const paidOrders = orders.filter(order => order.paymentStatus === 'paid');
 
     // Show each adoption separately - don't group by treeId
     const treeList: Array<{
@@ -158,7 +172,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
       firstItemIndex: number;
     }> = [];
 
-    orders.forEach((order, orderIndex) => {
+    paidOrders.forEach((order, orderIndex) => {
       order.items.forEach((item, itemIndex) => {
         // For each item, create separate entries for each quantity
         // This ensures each adoption is shown separately
@@ -533,7 +547,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
           <div className="p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Transaction History</h2>
             
-            {orders.length === 0 ? (
+            {displayedOrders.length === 0 ? (
               <div className="text-center py-12">
                 <HeartIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions yet</h3>
@@ -543,7 +557,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
               </div>
             ) : (
               <div className="space-y-4">
-                {orders.map((order, orderIndex) => (
+                {displayedOrders.map((order, orderIndex) => (
                   <motion.div
                     key={order._id}
                     className="border border-gray-200 rounded-lg p-4"
@@ -563,7 +577,24 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-wrap gap-2">
+                        {/* Payment Status Badge - Only show on transactions page and exclude pending */}
+                        {isTransactionsPage && order.paymentStatus && order.paymentStatus !== 'pending' && (
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            order.paymentStatus === 'paid' 
+                              ? 'bg-green-100 text-green-800' 
+                              : order.paymentStatus === 'failed'
+                              ? 'bg-red-100 text-red-800'
+                              : order.paymentStatus === 'refunded'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.paymentStatus === 'paid' && '✓ Paid'}
+                            {order.paymentStatus === 'failed' && '✗ Failed'}
+                            {order.paymentStatus === 'refunded' && '↻ Refunded'}
+                            {order.paymentStatus !== 'paid' && order.paymentStatus !== 'failed' && order.paymentStatus !== 'refunded' && order.paymentStatus}
+                          </span>
+                        )}
                         {!isTransactionsPage && getStatusText(order) === 'Certificate' && order.orderId && (
                           <button
                             onClick={() => handleDownloadCertificate(order.orderId!)}

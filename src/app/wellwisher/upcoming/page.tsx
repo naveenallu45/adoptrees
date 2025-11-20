@@ -60,7 +60,7 @@ export default function UpcomingPage() {
         
         return await response.json();
       });
-
+      
       if (result.success) {
         setTasks(result.data || []);
         if (showRetryToast) {
@@ -107,17 +107,17 @@ export default function UpcomingPage() {
 
     try {
       const result = await retryWithBackoff(async () => {
-        const response = await fetch('/api/wellwisher/tasks', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            taskId,
-            orderId,
-            status: 'in_progress'
-          }),
-        });
+      const response = await fetch('/api/wellwisher/tasks', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId,
+          orderId,
+          status: 'in_progress'
+        }),
+      });
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -188,8 +188,8 @@ export default function UpcomingPage() {
       <div className="p-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
-            <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
+          <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
           </div>
           <button
             onClick={() => fetchTasks(true)}
@@ -225,8 +225,8 @@ export default function UpcomingPage() {
         className="mb-8 flex items-center justify-between"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
-          <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Upcoming Tasks</h1>
+        <p className="text-gray-600">Tasks scheduled for the upcoming days</p>
         </div>
         <button
           onClick={() => fetchTasks(true)}

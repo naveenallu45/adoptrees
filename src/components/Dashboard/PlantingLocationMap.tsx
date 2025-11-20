@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { MapPinIcon } from '@heroicons/react/24/outline';
 
 interface PlantingLocationMapProps {
   latitude: number;
   longitude: number;
   treeName?: string;
   className?: string;
+  showOpenInMaps?: boolean;
 }
 
 interface GoogleMapsWindow extends Window {
@@ -40,11 +42,25 @@ export default function PlantingLocationMap({
   latitude, 
   longitude, 
   treeName,
-  className = 'w-full h-64 rounded-lg'
+  className = 'w-full h-64 rounded-lg',
+  showOpenInMaps = true
 }: PlantingLocationMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<GoogleMap | null>(null);
   const markerRef = useRef<GoogleMarker | null>(null);
+
+  const openInMaps = () => {
+    // Detect if iOS device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (isIOS) {
+      // Open in Apple Maps
+      window.open(`https://maps.apple.com/?q=${latitude},${longitude}&ll=${latitude},${longitude}`, '_blank');
+    } else {
+      // Open in Google Maps
+      window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
+    }
+  };
 
   useEffect(() => {
     // Only initialize if Google Maps API is loaded
@@ -101,13 +117,24 @@ export default function PlantingLocationMap({
           animation: maps.Animation.DROP,
           icon: {
             url: 'data:image/svg+xml;base64,' + btoa(`
-              <svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16 0C7.163 0 0 7.163 0 16C0 27.045 16 40 16 40C16 40 32 27.045 32 16C32 7.163 24.837 0 16 0Z" fill="#22c55e"/>
-                <circle cx="16" cy="16" r="8" fill="white"/>
+              <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Pin shadow -->
+                <ellipse cx="20" cy="44" rx="6" ry="2" fill="#000" opacity="0.2"/>
+                <!-- Pin base -->
+                <path d="M20 0C12.268 0 6 6.268 6 14C6 24.5 20 48 20 48C20 48 34 24.5 34 14C34 6.268 27.732 0 20 0Z" fill="#22c55e"/>
+                <!-- Tree trunk -->
+                <rect x="18" y="28" width="4" height="8" fill="#8b4513"/>
+                <!-- Tree leaves/crown -->
+                <path d="M20 12C16 12 12 16 12 20C12 24 16 28 20 28C24 28 28 24 28 20C28 16 24 12 20 12Z" fill="#16a34a"/>
+                <path d="M20 8C18 8 16 10 16 12C16 14 18 16 20 16C22 16 24 14 24 12C24 10 22 8 20 8Z" fill="#15803d"/>
+                <!-- Small decorative leaves -->
+                <circle cx="16" cy="18" r="2" fill="#22c55e"/>
+                <circle cx="24" cy="18" r="2" fill="#22c55e"/>
+                <circle cx="20" cy="14" r="1.5" fill="#16a34a"/>
               </svg>
             `),
-            scaledSize: new maps.Size(32, 40),
-            anchor: new maps.Point(16, 40)
+            scaledSize: new maps.Size(40, 48),
+            anchor: new maps.Point(20, 48)
           }
         } as never);
 
@@ -174,7 +201,19 @@ export default function PlantingLocationMap({
           </div>
         </div>
       ) : (
-        <div ref={mapRef} className="w-full h-full rounded-lg" />
+        <div className="relative w-full h-full rounded-lg overflow-hidden">
+          <div ref={mapRef} className="w-full h-full rounded-lg" />
+          {showOpenInMaps && (
+            <button
+              onClick={openInMaps}
+              className="absolute bottom-3 right-3 bg-white hover:bg-gray-50 text-gray-800 px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium transition-all hover:shadow-xl z-10 border border-gray-200"
+              type="button"
+            >
+              <MapPinIcon className="h-4 w-4 text-green-600" />
+              <span>Open in Maps</span>
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

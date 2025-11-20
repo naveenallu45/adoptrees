@@ -7,8 +7,10 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeftIcon,
   XMarkIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline';
+import PlantingLocationMap from '@/components/Dashboard/PlantingLocationMap';
 
 interface OrderItem {
   treeId: string;
@@ -100,6 +102,7 @@ export default function TreeDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; caption?: string; index?: number } | null>(null);
   const [allImagesForModal, setAllImagesForModal] = useState<Array<{ url: string; caption?: string }>>([]);
+  const [showLocationMap, setShowLocationMap] = useState(false);
   const [wellwisherName, setWellwisherName] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -154,10 +157,11 @@ export default function TreeDetailPage() {
       if (result.success) {
         const foundOrder = result.data.find((o: Order) => 
           (o.orderId === orderId || o._id === orderId) && 
-          o.items[itemIndex]
+          o.items[itemIndex] &&
+          o.paymentStatus === 'paid' // Only show paid orders
         );
         
-        if (foundOrder && foundOrder.items[itemIndex]) {
+        if (foundOrder && foundOrder.items[itemIndex] && foundOrder.paymentStatus === 'paid') {
           setOrder(foundOrder);
           
           // Fetch wellwisher name if assigned
@@ -413,6 +417,29 @@ export default function TreeDetailPage() {
                       </p>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Planting Location */}
+            {completedTask?.plantingDetails?.plantingLocation?.coordinates && (
+              <div>
+                <h3 className="text-white font-semibold mb-3 text-lg">Planting Location</h3>
+                <div className="bg-white rounded-2xl p-5 border-2 border-green-200 shadow-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-green-800 font-semibold">Tree Location</p>
+                    <button
+                      onClick={() => setShowLocationMap(true)}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100"
+                      type="button"
+                    >
+                      <MapPinIcon className="h-4 w-4 flex-shrink-0" />
+                      <span>View location</span>
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Coordinates: {completedTask.plantingDetails.plantingLocation.coordinates[1].toFixed(6)}, {completedTask.plantingDetails.plantingLocation.coordinates[0].toFixed(6)}
+                  </p>
                 </div>
               </div>
             )}
@@ -850,6 +877,43 @@ export default function TreeDetailPage() {
                   <p className="text-sm text-gray-700">{selectedImage.caption}</p>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Location Map Modal */}
+      {showLocationMap && completedTask?.plantingDetails?.plantingLocation?.coordinates && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowLocationMap(false);
+            }
+          }}
+        >
+          <div className="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">Tree Planting Location</h3>
+              <button
+                onClick={() => setShowLocationMap(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                type="button"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-4">
+              <PlantingLocationMap
+                latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
+                longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
+                treeName={item.treeName}
+                className="w-full h-96 rounded-lg"
+                showOpenInMaps={true}
+              />
+              <p className="mt-3 text-sm text-gray-600 text-center">
+                Coordinates: {completedTask.plantingDetails.plantingLocation.coordinates[1].toFixed(6)}, {completedTask.plantingDetails.plantingLocation.coordinates[0].toFixed(6)}
+              </p>
             </div>
           </div>
         </div>

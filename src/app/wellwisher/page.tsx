@@ -265,7 +265,7 @@ export default function WellWisherDashboard() {
       >
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
         {stats && stats.recentActivity.length > 0 ? (
-          <div className="space-y-4">
+        <div className="space-y-4">
             {stats.recentActivity.map((activity) => {
               const StatusIcon = getStatusIcon(activity.status);
               const colors = getStatusColor(activity.status);
@@ -296,8 +296,8 @@ export default function WellWisherDashboard() {
                     <p className="text-sm text-gray-600">
                       {getStatusText(activity.status)} • {activity.timeAgo}
                     </p>
-                  </div>
-                </div>
+            </div>
+          </div>
               );
             })}
           </div>

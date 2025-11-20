@@ -91,20 +91,21 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     // Debug: Log calculation start
     console.log('[ForestProfileCard] Calculating stats from', ordersData.length, 'orders');
 
-    ordersData.forEach((order) => {
-      // Count trees from confirmed/paid orders (adopted trees)
+    // Filter to only include successfully paid orders (exclude pending and failed)
+    const paidOrders = ordersData.filter(order => order.paymentStatus === 'paid');
+
+    paidOrders.forEach((order) => {
+      // Count trees from paid orders (adopted trees)
       // Also count planted/completed orders
       const hasCompletedPlanting = order.wellwisherTasks?.some(
         task => task.status === 'completed' && task.plantingDetails?.plantedAt
       );
       
-      // Include confirmed orders (adopted trees) and planted/completed orders
-      const isAdoptedOrPlanted = order.paymentStatus === 'paid' && (
-        order.status === 'confirmed' || 
+      // Include confirmed/planted/completed orders
+      const isAdoptedOrPlanted = order.status === 'confirmed' || 
         order.status === 'planted' || 
         order.status === 'completed' || 
-        hasCompletedPlanting
-      );
+        hasCompletedPlanting;
 
       if (isAdoptedOrPlanted) {
         // Only count as "completed" for impacts if actually planted

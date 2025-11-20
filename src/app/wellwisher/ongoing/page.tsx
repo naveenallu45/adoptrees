@@ -51,6 +51,7 @@ export default function OngoingPage() {
   const [uploading, setUploading] = useState<string | null>(null); // Track which task is uploading
   const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set()); // Track tasks with status updates
   const [taskImages, setTaskImages] = useState<Record<string, File[]>>({}); // Store images per task
+  const [_previewUpdateTrigger, setPreviewUpdateTrigger] = useState(0); // Force re-render when previews change
   const previewUrlsRef = useRef<Record<string, string>>({}); // Store preview URLs for cleanup
   const [fastMode] = useState<boolean>(true); // Faster location with lower accuracy
   const [prewarmedLocation, setPrewarmedLocation] = useState<{
@@ -138,7 +139,7 @@ export default function OngoingPage() {
         
         return await response.json();
       });
-
+      
       if (result.success) {
         setTasks(result.data || []);
         if (showRetryToast) {
@@ -281,7 +282,7 @@ export default function OngoingPage() {
 
       toast.dismiss(compressToast);
 
-      // Clean up old preview URLs for this task
+    // Clean up old preview URLs for this task
       Object.keys(previewUrlsRef.current).forEach(key => {
         if (key.startsWith(`${taskId}-`)) {
           URL.revokeObjectURL(previewUrlsRef.current[key]);
@@ -294,11 +295,14 @@ export default function OngoingPage() {
         const urlKey = `${taskId}-${index}`;
         previewUrlsRef.current[urlKey] = URL.createObjectURL(file);
       });
-      
+    
       setTaskImages(prev => ({
         ...prev,
         [taskId]: compressedFiles
       }));
+      
+      // Force re-render to show previews
+      setPreviewUpdateTrigger(prev => prev + 1);
 
       const totalSize = compressedFiles.reduce((sum, file) => sum + file.size, 0);
       toast.success(
@@ -343,6 +347,9 @@ export default function OngoingPage() {
         ...prev,
         [taskId]: newImages
       }));
+      
+      // Force re-render to update previews
+      setPreviewUpdateTrigger(prev => prev + 1);
     }
   };
 
@@ -463,7 +470,7 @@ export default function OngoingPage() {
 
     // Declare progressToast outside try block so it's accessible in catch
     let progressToast: string | undefined;
-    
+
     try {
       setUploading(task.id);
       
@@ -487,8 +494,8 @@ export default function OngoingPage() {
       let permissionState: string | undefined;
       try {
         permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
-          .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
-          .catch(() => undefined));
+        .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
+        .catch(() => undefined));
 
         location = canUsePrewarm ? prewarmedLocation! : await getLocation();
         
@@ -529,10 +536,10 @@ export default function OngoingPage() {
       });
 
       const result = await retryWithBackoff(async () => {
-        const response = await fetch('/api/wellwisher/planting', {
-          method: 'POST',
-          body: formData,
-        });
+      const response = await fetch('/api/wellwisher/planting', {
+        method: 'POST',
+        body: formData,
+      });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -585,9 +592,9 @@ export default function OngoingPage() {
       toast.error(`Failed to upload: ${errorMessage}`, {
         duration: 5000,
       });
-    } finally {
-      setUploading(null);
-    }
+          } finally {
+            setUploading(null);
+          }
   };
 
   if (loading) {
@@ -642,8 +649,8 @@ export default function OngoingPage() {
         className="mb-8 flex items-center justify-between"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Ongoing Tasks</h1>
-          <p className="text-gray-600">Tasks currently in progress - Upload planting details to complete</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Ongoing Tasks</h1>
+        <p className="text-gray-600">Tasks currently in progress - Upload planting details to complete</p>
         </div>
         <button
           onClick={() => fetchTasks(true)}
@@ -763,16 +770,16 @@ export default function OngoingPage() {
                   
                   {/* Custom File Input */}
                   <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      multiple
-                      onChange={(e) => handleImageChange(task.id, e)}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={(e) => handleImageChange(task.id, e)}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      disabled={uploading === task.id}
+                    disabled={uploading === task.id}
                       id={`file-input-${task.id}`}
-                    />
+                  />
                     <label
                       htmlFor={`file-input-${task.id}`}
                       className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
@@ -799,8 +806,8 @@ export default function OngoingPage() {
                     <div className="mt-3">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs text-green-600 font-semibold">
-                          {taskImages[task.id].length} image(s) selected
-                        </p>
+                        {taskImages[task.id].length} image(s) selected
+                      </p>
                         <p className="text-xs text-gray-500">
                           Total: {formatFileSize(taskImages[task.id].reduce((sum, file) => sum + file.size, 0))}
                         </p>
@@ -813,14 +820,21 @@ export default function OngoingPage() {
                           if (!previewUrlsRef.current[urlKey]) {
                             previewUrlsRef.current[urlKey] = URL.createObjectURL(image);
                           }
+                          const previewUrl = previewUrlsRef.current[urlKey];
                           
                           return (
                           <div key={idx} className="relative group">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={previewUrlsRef.current[urlKey]}
+                              src={previewUrl}
                               alt={`Preview ${idx + 1}`}
                               className="w-full h-20 object-cover rounded-lg border-2 border-gray-200 group-hover:border-green-400 transition-colors"
+                              onError={(e) => {
+                                // Fallback if image fails to load
+                                console.error('Preview image failed to load:', urlKey);
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
                             />
                             <button
                               onClick={() => removeImage(task.id, idx)}

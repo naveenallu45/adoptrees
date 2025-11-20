@@ -195,30 +195,30 @@ export default function TreeInfoPage() {
     
     // Add to cart after animation starts
     setTimeout(() => {
-      try {
-        addToCart({
-          id: tree._id,
-          name: tree.treeType === 'company' ? `Corporate ${tree.name}` : tree.name,
-          price: tree.packagePrice || tree.price,
-          imageUrl: tree.imageUrl,
-          info: tree.info,
-          oxygenKgs: tree.oxygenKgs,
-          type: tree.treeType,
-          packageQuantity: tree.packageQuantity,
-          packagePrice: tree.packagePrice
-        });
+    try {
+      addToCart({
+        id: tree._id,
+        name: tree.treeType === 'company' ? `Corporate ${tree.name}` : tree.name,
+        price: tree.packagePrice || tree.price,
+        imageUrl: tree.imageUrl,
+        info: tree.info,
+        oxygenKgs: tree.oxygenKgs,
+        type: tree.treeType,
+        packageQuantity: tree.packageQuantity,
+        packagePrice: tree.packagePrice
+      });
 
         // Complete animation and show toast
         setTimeout(() => {
           setFlyingTree(null);
           setAddingToCart(false);
-          toast.success(`${tree.name} added to cart!`);
+      toast.success(`${tree.name} added to cart!`);
         }, 800);
-      } catch (_error) {
+    } catch (_error) {
         setFlyingTree(null);
         setAddingToCart(false);
-        toast.error('Failed to add to cart. Please try again.');
-      }
+      toast.error('Failed to add to cart. Please try again.');
+    }
     }, 50);
   };
 
