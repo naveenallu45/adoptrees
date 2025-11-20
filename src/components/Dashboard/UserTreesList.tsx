@@ -142,40 +142,33 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     fetchUserOrders();
   }, [publicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Memoize tree grouping computation - must be at top level (Rules of Hooks)
+  // Memoize tree list computation - show each adoption separately
   const groupedTrees = useMemo(() => {
     if (isTransactionsPage || orders.length === 0) {
       return [];
     }
 
-    // Group items by treeId to prevent duplicate cards for the same tree
-    const treeMap = new Map<string, {
+    // Show each adoption separately - don't group by treeId
+    const treeList: Array<{
       item: OrderItem;
       totalQuantity: number;
       orders: Order[];
       earliestDate: Date;
       firstOrderIndex: number;
       firstItemIndex: number;
-    }>();
+    }> = [];
 
     orders.forEach((order, orderIndex) => {
       order.items.forEach((item, itemIndex) => {
-        const key = `${item.treeId}-${item.adoptionType || 'self'}`;
-        const existing = treeMap.get(key);
-        
-        if (existing) {
-          // Aggregate quantities and track orders
-          existing.totalQuantity += item.quantity;
-          existing.orders.push(order);
-          const itemDate = new Date(order.createdAt);
-          if (itemDate < existing.earliestDate) {
-            existing.earliestDate = itemDate;
-          }
-        } else {
-          // First occurrence of this tree
-          treeMap.set(key, {
-            item,
-            totalQuantity: item.quantity,
+        // For each item, create separate entries for each quantity
+        // This ensures each adoption is shown separately
+        for (let qty = 0; qty < item.quantity; qty++) {
+          treeList.push({
+            item: {
+              ...item,
+              quantity: 1, // Each entry represents one tree adoption
+            },
+            totalQuantity: 1, // Each entry is a single tree
             orders: [order],
             earliestDate: new Date(order.createdAt),
             firstOrderIndex: orderIndex,
@@ -185,8 +178,8 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
       });
     });
 
-    // Convert map to array
-    return Array.from(treeMap.values());
+    // Sort by date (newest first)
+    return treeList.sort((a, b) => b.earliestDate.getTime() - a.earliestDate.getTime());
   }, [orders, isTransactionsPage]);
 
   const fetchUserOrders = async () => {
@@ -400,12 +393,15 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {groupedTrees.map((treeData, treeIndex) => {
-                    const { item, totalQuantity, orders: treeOrders, earliestDate, firstOrderIndex: _firstOrderIndex, firstItemIndex } = treeData;
+                    const { item, orders: treeOrders, earliestDate, firstOrderIndex: _firstOrderIndex, firstItemIndex } = treeData;
                     const primaryOrder = treeOrders[0]; // Use first order for navigation
+                    
+                    // Create unique key for each adoption
+                    const uniqueKey = `${primaryOrder._id}-${firstItemIndex}-${treeIndex}`;
                     
                     return (
                       <motion.div
-                        key={`${item.treeId}-${treeIndex}`}
+                        key={uniqueKey}
                         className="bg-gradient-to-br from-green-100/80 via-emerald-100/60 to-green-100/70 border border-green-300/80 rounded-lg p-3 sm:p-4 md:p-5 hover:shadow-lg hover:border-green-400 hover:from-green-100 hover:via-emerald-100/80 hover:to-green-100/90 transition-all duration-300 w-full backdrop-blur-sm"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -437,16 +433,11 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                             <div className="flex-1 min-w-0">
                               <h4 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-green-800 to-emerald-800 bg-clip-text text-transparent mb-2 text-left">
                                 {item.treeName}
-                                {totalQuantity > 1 && (
-                                  <span className="ml-2 text-sm text-gray-600 font-normal">
-                                    (×{totalQuantity})
-                                  </span>
-                                )}
                               </h4>
                               <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
                                 <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
                                   <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                  {item.oxygenKgs * totalQuantity} kg/year O₂
+                                  {item.oxygenKgs} kg/year O₂
                                 </span>
                                 {item.adoptionType === 'gift' && (
                                   <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
