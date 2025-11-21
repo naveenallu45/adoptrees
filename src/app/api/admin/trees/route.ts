@@ -80,8 +80,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse numeric values
-    const price = parseFloat(priceStr);
+    // Parse numeric values - use parseInt for price to avoid floating point precision issues
+    const price = parseInt(priceStr, 10);
     const oxygenKgs = parseFloat(oxygenKgsStr);
     const packageQuantity = packageQuantityStr ? parseInt(packageQuantityStr) : 1;
     const packagePrice = packagePriceStr ? parseFloat(packagePriceStr) : undefined;
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
       environmentalProtection?: number;
     } = {
       name: validationResult.data.name.trim(),
-      price: validationResult.data.price,
+      price: Number.isInteger(validationResult.data.price) ? validationResult.data.price : Math.round(validationResult.data.price), // Ensure integer price
       info: validationResult.data.info.trim(),
       oxygenKgs: validationResult.data.oxygenKgs,
       imageUrl: result.secure_url,

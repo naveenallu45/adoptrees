@@ -77,7 +77,15 @@ export default function TreesManagement() {
       const singleTreePrice = Math.round(packagePrice / packageQuantity);
       formDataToSend.append('price', singleTreePrice.toString());
     } else {
-      formDataToSend.append('price', formData.price);
+      // For individual trees, parse as integer directly (no floating point)
+      const priceValue = parseInt(formData.price, 10);
+      if (isNaN(priceValue) || priceValue <= 0) {
+        toast.error('Price must be a valid positive number');
+        setSubmitting(false);
+        return;
+      }
+      // Send as integer string - no rounding needed
+      formDataToSend.append('price', priceValue.toString());
     }
     
     formDataToSend.append('info', formData.info);
@@ -126,10 +134,22 @@ export default function TreesManagement() {
         imageUrl = '/placeholder-tree.jpg';
       }
       
+      // Calculate price for optimistic tree - must match what we send to API
+      let optimisticPrice: number;
+      if (formData.treeType === 'company') {
+        const packagePrice = parseFloat(formData.packagePrice || '0');
+        const packageQuantity = parseInt(formData.packageQuantity || '1');
+        optimisticPrice = packageQuantity > 0 ? Math.round(packagePrice / packageQuantity) : 0;
+      } else {
+        // Use parseInt to avoid floating point issues
+        const priceValue = parseInt(formData.price, 10);
+        optimisticPrice = !isNaN(priceValue) ? priceValue : 0;
+      }
+      
       const optimisticTree: Tree = {
         _id: tempId,
         name: formData.name,
-        price: parseFloat(formData.price) || (formData.treeType === 'company' ? parseFloat(formData.packagePrice || '0') / parseInt(formData.packageQuantity || '1') : 0),
+        price: optimisticPrice,
         info: formData.info,
         oxygenKgs: parseFloat(formData.oxygenKgs) || 0,
         imageUrl,
@@ -169,14 +189,15 @@ export default function TreesManagement() {
         };
       });
     } else {
-      // Calculate price correctly for optimistic update
+      // Calculate price correctly for optimistic update - must match what we send to API
       let calculatedPrice: number;
       if (formData.treeType === 'company') {
         const packagePrice = parseFloat(formData.packagePrice || '0');
         const packageQuantity = parseInt(formData.packageQuantity || '1');
         calculatedPrice = packageQuantity > 0 ? Math.round(packagePrice / packageQuantity) : (editingTree?.price || 0);
       } else {
-        const priceValue = parseFloat(formData.price);
+        // Use parseInt to avoid floating point issues - matches what we send to API
+        const priceValue = parseInt(formData.price, 10);
         calculatedPrice = !isNaN(priceValue) ? priceValue : (editingTree?.price || 0);
       }
 
@@ -353,9 +374,11 @@ export default function TreesManagement() {
 
   const handleEdit = (tree: Tree) => {
     setEditingTree(tree);
+    // Ensure price is an integer when loading into form
+    const priceValue = Number.isInteger(tree.price) ? tree.price : Math.round(tree.price);
     setFormData({
       name: tree.name,
-      price: tree.price.toString(),
+      price: priceValue.toString(),
       info: tree.info,
       oxygenKgs: tree.oxygenKgs.toString(),
       treeType: (tree as Tree & { treeType?: string }).treeType || 'individual',

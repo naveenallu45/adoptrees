@@ -22,6 +22,7 @@ export const treeSchema = z.object({
     .trim(),
   price: z
     .number()
+    .int('Price must be a whole number')
     .positive('Price must be positive')
     .max(1000000, 'Price seems unreasonably high'),
   info: z

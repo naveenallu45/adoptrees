@@ -58,8 +58,8 @@ export async function PUT(
       localUsesCount: localUsesArray.length,
     });
 
-    // Parse numeric values
-    const price = parseFloat(priceStr);
+    // Parse numeric values - use parseInt for price to avoid floating point precision issues
+    const price = parseInt(priceStr, 10);
     const oxygenKgs = parseFloat(oxygenKgsStr);
     const packageQuantity = packageQuantityStr ? parseInt(packageQuantityStr) : 1;
     const packagePrice = packagePriceStr ? parseFloat(packagePriceStr) : undefined;
@@ -204,6 +204,9 @@ export async function PUT(
       packagePrice: validatedPackagePrice
     } = validationResult.data;
 
+    // Ensure price is an integer (Zod validates it, but ensure it's an integer)
+    const finalPrice = Number.isInteger(validatedPrice) ? validatedPrice : Math.round(validatedPrice);
+
     // Handle image update if provided
     // Use parsed values directly for additional fields to ensure they're saved
     const updateData: {
@@ -228,7 +231,7 @@ export async function PUT(
       smallImagePublicIds?: string[];
     } = { 
       name: validatedName, 
-      price: validatedPrice, 
+      price: finalPrice, 
       info: validatedInfo, 
       oxygenKgs: validatedOxygenKgs, 
       treeType: validatedTreeType, 
