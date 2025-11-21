@@ -168,19 +168,6 @@ export default function TreeImageModal({
                 </div>
               </motion.div>
 
-              {/* Caption if available */}
-              {currentImage.caption && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="mt-4 pt-4 border-t border-green-200"
-                >
-                  <p className="text-xs sm:text-sm text-gray-600 text-center italic">
-                    {currentImage.caption}
-                  </p>
-                </motion.div>
-              )}
 
             </div>
           </motion.div>

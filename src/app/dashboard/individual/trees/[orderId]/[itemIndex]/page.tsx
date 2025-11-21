@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   ArrowLeftIcon,
-  XMarkIcon,
   CheckCircleIcon,
   MapPinIcon,
   SparklesIcon,
@@ -387,14 +386,12 @@ export default function TreeDetailPage() {
               <div className="flex flex-wrap gap-3 mb-4">
                 <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 text-white font-medium text-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                   <span>{currentOxygen.toFixed(2)} kg/year O₂</span>
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 text-white font-medium text-sm">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
+                  <CloudIcon className="w-4 h-4" />
                   <span>-{currentCO2Absorption.toFixed(2)} kg/year CO₂</span>
                 </div>
               </div>
@@ -427,7 +424,6 @@ export default function TreeDetailPage() {
             {/* My Connections */}
             {order.userName && (
               <div>
-                <h3 className="text-white font-semibold mb-3 text-lg">My connections</h3>
                 <div className="bg-amber-50 rounded-2xl p-5 border-2 border-amber-200 shadow-lg">
                   <p className="text-green-800 font-semibold mb-2">Adopted by</p>
                   <div className="flex items-center">
@@ -581,13 +577,6 @@ export default function TreeDetailPage() {
                       className="object-cover group-hover:brightness-110 transition-all duration-300"
                       sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-0 left-0 right-0 p-3">
-                        {img.caption && (
-                          <p className="text-white text-xs font-medium truncate">{img.caption}</p>
-                        )}
-                      </div>
-                    </div>
                     {img.type === 'planting' && (
                       <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm">
                         🌱 Planting
