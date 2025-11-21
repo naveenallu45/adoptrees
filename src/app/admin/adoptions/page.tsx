@@ -284,8 +284,10 @@ export default function AdminAdoptionsPage() {
         // If 404, adoption doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('Adoption was already deleted from database.');
-          // Invalidate and refetch in background (non-blocking)
-          queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
+          // Force immediate refetch to sync with server
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] })
+          ]);
           return;
         }
         
@@ -303,8 +305,10 @@ export default function AdminAdoptionsPage() {
       }
       
       toast.success('Adoption deleted successfully!');
-      // Invalidate and refetch in background (non-blocking)
-      queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
+      // Force immediate refetch to sync with server (replaces optimistic update)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] })
+      ]);
     } catch (error) {
       // Rollback optimistic update on error
       if (previousData) {
