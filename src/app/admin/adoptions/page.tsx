@@ -213,7 +213,10 @@ export default function AdminAdoptionsPage() {
   const metrics = useMemo(() => {
     if (!allData?.data) return { totalRevenue: 0, statusCounts: {}, userTypeCounts: {}, giftOrders: 0 };
     
-    const totalRevenue = filteredAdoptions.reduce((sum, adoption) => sum + adoption.totalAmount, 0);
+    // Only count revenue from paid orders (exclude pending, failed, cancelled)
+    const totalRevenue = filteredAdoptions
+      .filter(adoption => adoption.paymentStatus === 'paid' && adoption.status !== 'pending')
+      .reduce((sum, adoption) => sum + adoption.totalAmount, 0);
     
     const statusCounts = filteredAdoptions.reduce((acc, adoption) => {
       acc[adoption.status] = (acc[adoption.status] || 0) + 1;

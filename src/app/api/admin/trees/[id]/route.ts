@@ -58,8 +58,9 @@ export async function PUT(
       localUsesCount: localUsesArray.length,
     });
 
-    // Parse numeric values - use parseInt for price to avoid floating point precision issues
-    const price = parseInt(priceStr, 10);
+    // Convert string to number (required: FormData sends strings, MongoDB needs numbers)
+    // Using Number() for direct conversion - no manipulation, exact value preserved
+    const price = Number(priceStr);
     const oxygenKgs = parseFloat(oxygenKgsStr);
     const packageQuantity = packageQuantityStr ? parseInt(packageQuantityStr) : 1;
     const packagePrice = packagePriceStr ? parseFloat(packagePriceStr) : undefined;
@@ -158,10 +159,10 @@ export async function PUT(
       );
     }
 
-    // Validate tree data
+    // Validate tree data - use the price we parsed with parseInt
     const validationResult = treeUpdateSchema.safeParse({
       name,
-      price,
+      price, // Use the integer price we parsed
       info,
       oxygenKgs,
       treeType: treeType || 'individual',
@@ -204,8 +205,8 @@ export async function PUT(
       packagePrice: validatedPackagePrice
     } = validationResult.data;
 
-    // Ensure price is an integer (Zod validates it, but ensure it's an integer)
-    const finalPrice = Number.isInteger(validatedPrice) ? validatedPrice : Math.round(validatedPrice);
+    // Use the price exactly as admin entered - no manipulation
+    const finalPrice = price;
 
     // Handle image update if provided
     // Use parsed values directly for additional fields to ensure they're saved

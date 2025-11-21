@@ -79,6 +79,13 @@ export async function GET(request: NextRequest) {
           totalCount: [{ $count: 'count' }],
           metrics: [
             {
+              // Filter out pending orders and non-paid orders for revenue calculation
+              $match: {
+                paymentStatus: 'paid',
+                status: { $ne: 'pending' }
+              }
+            },
+            {
               $group: {
                 _id: null,
                 totalRevenue: { $sum: '$totalAmount' },

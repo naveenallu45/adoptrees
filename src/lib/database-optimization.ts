@@ -86,17 +86,18 @@ export class QueryOptimizer {
    * Get optimized order statistics
    */
   static async getOrderStats(filters: Record<string, unknown> = {}) {
-    const pipeline: Record<string, unknown>[] = [];
+    const baseMatch: Record<string, unknown>[] = [];
     
     if (Object.keys(filters).length > 0) {
-      pipeline.push({ $match: filters });
+      baseMatch.push({ $match: filters });
     }
     
-    pipeline.push({
+    // Pipeline for all order stats
+    const statsPipeline: Record<string, unknown>[] = [...baseMatch];
+    statsPipeline.push({
       $group: {
         _id: null,
         totalOrders: { $sum: 1 },
-        totalRevenue: { $sum: '$totalAmount' },
         pendingOrders: {
           $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
         },
@@ -109,7 +110,35 @@ export class QueryOptimizer {
       }
     });
 
-    return await Order.aggregate(pipeline as never[]);
+    // Separate pipeline for revenue (exclude pending orders and non-paid orders)
+    const revenuePipeline: Record<string, unknown>[] = [...baseMatch];
+    revenuePipeline.push({
+      $match: {
+        paymentStatus: 'paid',
+        status: { $ne: 'pending' }
+      }
+    });
+    revenuePipeline.push({
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$totalAmount' }
+      }
+    });
+
+    // Run both pipelines
+    const [statsResult, revenueResult] = await Promise.all([
+      Order.aggregate(statsPipeline as never[]),
+      Order.aggregate(revenuePipeline as never[])
+    ]);
+
+    // Combine results
+    const stats = statsResult[0] || { totalOrders: 0, pendingOrders: 0, completedOrders: 0, giftOrders: 0 };
+    const revenue = revenueResult[0] || { totalRevenue: 0 };
+
+    return [{
+      ...stats,
+      totalRevenue: revenue.totalRevenue || 0
+    }];
   }
 
   /**

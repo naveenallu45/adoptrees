@@ -67,26 +67,18 @@ export default function TreesManagement() {
       }
     }
     
+    // Validate price before sending
+    const priceValue = parseFloat(formData.price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      toast.error('Price must be a valid positive number');
+      setSubmitting(false);
+      return;
+    }
+    
     const formDataToSend = new FormData();
     formDataToSend.append('name', formData.name);
-    
-    // For company trees, calculate single tree price from package
-    if (formData.treeType === 'company') {
-      const packageQuantity = parseInt(formData.packageQuantity);
-      const packagePrice = parseFloat(formData.packagePrice);
-      const singleTreePrice = Math.round(packagePrice / packageQuantity);
-      formDataToSend.append('price', singleTreePrice.toString());
-    } else {
-      // For individual trees, parse as integer directly (no floating point)
-      const priceValue = parseInt(formData.price, 10);
-      if (isNaN(priceValue) || priceValue <= 0) {
-        toast.error('Price must be a valid positive number');
-        setSubmitting(false);
-        return;
-      }
-      // Send as integer string - no rounding needed
-      formDataToSend.append('price', priceValue.toString());
-    }
+    // Send price exactly as admin entered - no manipulation
+    formDataToSend.append('price', formData.price);
     
     formDataToSend.append('info', formData.info);
     formDataToSend.append('oxygenKgs', formData.oxygenKgs);
@@ -119,132 +111,7 @@ export default function TreesManagement() {
       }
     });
 
-    // Store previous state for rollback on error
-    const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
-    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
-
-    // Optimistic update for CREATE operation
-    if (!editingTree) {
-      const tempId = `temp-${Date.now()}`;
-      // Use placeholder or existing image URL instead of object URL to avoid memory leaks
-      let imageUrl = '';
-      try {
-        imageUrl = formData.image ? URL.createObjectURL(formData.image) : '/placeholder-tree.jpg';
-      } catch (_e) {
-        imageUrl = '/placeholder-tree.jpg';
-      }
-      
-      // Calculate price for optimistic tree - must match what we send to API
-      let optimisticPrice: number;
-      if (formData.treeType === 'company') {
-        const packagePrice = parseFloat(formData.packagePrice || '0');
-        const packageQuantity = parseInt(formData.packageQuantity || '1');
-        optimisticPrice = packageQuantity > 0 ? Math.round(packagePrice / packageQuantity) : 0;
-      } else {
-        // Use parseInt to avoid floating point issues
-        const priceValue = parseInt(formData.price, 10);
-        optimisticPrice = !isNaN(priceValue) ? priceValue : 0;
-      }
-      
-      const optimisticTree: Tree = {
-        _id: tempId,
-        name: formData.name,
-        price: optimisticPrice,
-        info: formData.info,
-        oxygenKgs: parseFloat(formData.oxygenKgs) || 0,
-        imageUrl,
-        treeType: formData.treeType as 'individual' | 'company',
-        packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : undefined,
-        packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : undefined,
-        scientificSpecies: formData.scientificSpecies || undefined,
-        speciesInfoAvailable: formData.speciesInfoAvailable,
-        co2: formData.co2 ? parseFloat(formData.co2) : undefined,
-        foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : undefined,
-        economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : undefined,
-        co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : undefined,
-        environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : undefined,
-        localUses: formData.localUses,
-        smallImageUrls: formData.smallImages.filter(img => img !== null).map(img => {
-          try {
-            return img ? URL.createObjectURL(img) : '';
-          } catch (_e) {
-            return '';
-          }
-        }).filter(url => url !== ''),
-        createdAt: new Date().toISOString(),
-      };
-
-      // Optimistically add tree to cache
-      queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
-        if (!old) return [optimisticTree];
-        return [optimisticTree, ...old];
-      });
-
-      // Optimistically update stats
-      queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          totalTrees: (old.totalTrees || 0) + 1
-        };
-      });
-    } else {
-      // Calculate price correctly for optimistic update - must match what we send to API
-      let calculatedPrice: number;
-      if (formData.treeType === 'company') {
-        const packagePrice = parseFloat(formData.packagePrice || '0');
-        const packageQuantity = parseInt(formData.packageQuantity || '1');
-        calculatedPrice = packageQuantity > 0 ? Math.round(packagePrice / packageQuantity) : (editingTree?.price || 0);
-      } else {
-        // Use parseInt to avoid floating point issues - matches what we send to API
-        const priceValue = parseInt(formData.price, 10);
-        calculatedPrice = !isNaN(priceValue) ? priceValue : (editingTree?.price || 0);
-      }
-
-      // Optimistic update for UPDATE operation - update immediately in UI
-      const editingTreeId = String(editingTree._id);
-      queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
-        if (!old) return old;
-        return old.map(tree => {
-          const treeId = String(tree._id);
-          if (treeId === editingTreeId) {
-            return {
-              ...tree,
-              name: formData.name,
-              price: calculatedPrice,
-              info: formData.info,
-              oxygenKgs: parseFloat(formData.oxygenKgs) || tree.oxygenKgs,
-              treeType: formData.treeType as 'individual' | 'company',
-              packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : tree.packageQuantity,
-              packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : tree.packagePrice,
-              scientificSpecies: formData.scientificSpecies || tree.scientificSpecies,
-              speciesInfoAvailable: formData.speciesInfoAvailable,
-              co2: formData.co2 ? parseFloat(formData.co2) : tree.co2,
-              foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : tree.foodSecurity,
-              economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : tree.economicDevelopment,
-              co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : tree.co2Absorption,
-              environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : tree.environmentalProtection,
-              localUses: formData.localUses,
-              imageUrl: (() => {
-                try {
-                  return formData.image ? URL.createObjectURL(formData.image) : tree.imageUrl;
-                } catch (_e) {
-                  return tree.imageUrl;
-                }
-              })(),
-              smallImageUrls: formData.smallImages.filter(img => img !== null).map((img, idx) => {
-                try {
-                  return img ? URL.createObjectURL(img) : (tree.smallImageUrls?.[idx] || '');
-                } catch (_e) {
-                  return tree.smallImageUrls?.[idx] || '';
-                }
-              }).filter(url => url !== ''),
-            };
-          }
-          return tree;
-        });
-      });
-    }
+    // No cache manipulation - always fetch fresh from server
 
     try {
       const url = editingTree 
@@ -261,14 +128,6 @@ export default function TreesManagement() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Rollback optimistic update on error
-        if (previousTrees) {
-          queryClient.setQueryData(['admin', 'trees'], previousTrees);
-        }
-        if (previousStats) {
-          queryClient.setQueryData(['admin', 'stats'], previousStats);
-        }
-
         // Handle validation errors with details
         if (data.details && Array.isArray(data.details)) {
           const errorMessages = data.details.map((detail: { field: string; message: string }) => 
@@ -284,46 +143,11 @@ export default function TreesManagement() {
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
         
-        // Update cache directly with server response data for instant update
-        if (editingTree && data.data) {
-          // Update the specific tree in cache with server data
-          queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
-            if (!old) return [data.data as Tree];
-            const updated = old.map(tree => {
-              // Match by _id (handle both string and object ID comparison)
-              const treeId = typeof tree._id === 'string' ? tree._id : String(tree._id);
-              const editingId = typeof editingTree._id === 'string' ? editingTree._id : String(editingTree._id);
-              const serverId = typeof data.data._id === 'string' ? data.data._id : String(data.data._id);
-              
-              if (treeId === editingId || treeId === serverId) {
-                return data.data as Tree;
-              }
-              return tree;
-            });
-            return updated;
-          });
-        } else if (!editingTree && data.data) {
-          // For new trees, replace optimistic tree with server data
-          queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
-            if (!old) return [data.data as Tree];
-            // Remove optimistic tree and add server tree at the beginning
-            const filtered = old.filter(t => {
-              const id = typeof t._id === 'string' ? t._id : String(t._id);
-              return !id.startsWith('temp-');
-            });
-            return [data.data as Tree, ...filtered];
-          });
-        }
-        
-        // Invalidate to trigger re-render, but don't refetch immediately to show cache update first
-        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-        
-        // Refetch after a short delay to ensure cache update is visible first
-        setTimeout(() => {
-          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] });
-          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] });
-        }, 100);
+        // Invalidate and refetch to get fresh data from server
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+        await queryClient.refetchQueries({ queryKey: ['admin', 'trees'] });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        await queryClient.refetchQueries({ queryKey: ['admin', 'stats'] });
 
         setShowForm(false);
         setEditingTree(null);
@@ -347,24 +171,10 @@ export default function TreesManagement() {
           smallImages: [null, null, null, null]
         });
       } else {
-        // Rollback optimistic update on error
-        if (previousTrees) {
-          queryClient.setQueryData(['admin', 'trees'], previousTrees);
-        }
-        if (previousStats) {
-          queryClient.setQueryData(['admin', 'stats'], previousStats);
-        }
         const errorMsg = data.error || 'Failed to save tree';
         toast.error(errorMsg);
       }
     } catch (error) {
-      // Rollback optimistic update on error
-      if (previousTrees) {
-        queryClient.setQueryData(['admin', 'trees'], previousTrees);
-      }
-      if (previousStats) {
-        queryClient.setQueryData(['admin', 'stats'], previousStats);
-      }
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to ${editingTree ? 'update' : 'create'} tree: ${errorMessage}`);
     } finally {
@@ -374,11 +184,10 @@ export default function TreesManagement() {
 
   const handleEdit = (tree: Tree) => {
     setEditingTree(tree);
-    // Ensure price is an integer when loading into form
-    const priceValue = Number.isInteger(tree.price) ? tree.price : Math.round(tree.price);
+    // Use price exactly as stored - no manipulation at all
     setFormData({
       name: tree.name,
-      price: priceValue.toString(),
+      price: String(tree.price),
       info: tree.info,
       oxygenKgs: tree.oxygenKgs.toString(),
       treeType: (tree as Tree & { treeType?: string }).treeType || 'individual',
@@ -418,23 +227,7 @@ export default function TreesManagement() {
 
     if (!result.isConfirmed) return;
 
-    // Optimistically remove tree from UI IMMEDIATELY (before API call)
-    const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
-    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
-    
-    queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
-      if (!old) return old;
-      return old.filter((tree) => tree._id !== id);
-    });
-
-    // Update stats optimistically
-    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        totalTrees: Math.max(0, (old.totalTrees || 0) - 1)
-      };
-    });
+    // No cache manipulation - wait for server response
 
     try {
       const response = await fetch(`/api/admin/trees/${id}`, {
@@ -447,24 +240,6 @@ export default function TreesManagement() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // If 404, tree doesn't exist in DB - keep it removed from UI (already deleted)
-        if (response.status === 404) {
-          toast.success('Tree was already deleted from database.');
-          // Force immediate refetch to sync with server
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
-          ]);
-          return;
-        }
-        
-        // Rollback optimistic update on other errors
-        if (previousTrees) {
-          queryClient.setQueryData(['admin', 'trees'], previousTrees);
-        }
-        if (previousStats) {
-          queryClient.setQueryData(['admin', 'stats'], previousStats);
-        }
         // Show specific error message based on status code
         if (response.status === 400) {
           toast.error(data.error || 'Invalid tree ID. Please refresh the page and try again.');
@@ -475,19 +250,12 @@ export default function TreesManagement() {
       }
       
       toast.success('Tree deleted successfully!');
-      // Force immediate refetch to sync with server (replaces optimistic update)
+      // Refetch fresh data from server
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
       ]);
     } catch (error) {
-      // Rollback optimistic update on error
-      if (previousTrees) {
-        queryClient.setQueryData(['admin', 'trees'], previousTrees);
-      }
-      if (previousStats) {
-        queryClient.setQueryData(['admin', 'stats'], previousStats);
-      }
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete tree: ${errorMessage}`);
     }

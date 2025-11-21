@@ -35,23 +35,7 @@ export default function CompanyUsersPage() {
 
     if (!result.isConfirmed) return;
 
-    // Optimistically remove company from UI IMMEDIATELY (before API call)
-    const previousUsers = queryClient.getQueryData<CompanyUser[]>(['admin', 'users', 'companies']);
-    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
-    
-    queryClient.setQueryData(['admin', 'users', 'companies'], (old: CompanyUser[] | undefined) => {
-      if (!old) return old;
-      return old.filter((user) => user._id !== id);
-    });
-
-    // Update stats optimistically
-    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        totalCompanies: Math.max(0, (old.totalCompanies || 0) - 1)
-      };
-    });
+    // No cache manipulation - wait for server response
 
     try {
       const response = await fetch(`/api/admin/users/${id}`, {
@@ -60,24 +44,6 @@ export default function CompanyUsersPage() {
       const data = await response.json();
       
       if (!response.ok || !data.success) {
-        // If 404, company doesn't exist in DB - keep it removed from UI (already deleted)
-        if (response.status === 404) {
-          toast.success('Company was already deleted from database.');
-          // Force immediate refetch to sync with server
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin', 'users', 'companies'] }),
-            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
-          ]);
-          return;
-        }
-        
-        // Rollback optimistic update on other errors
-        if (previousUsers) {
-          queryClient.setQueryData(['admin', 'users', 'companies'], previousUsers);
-        }
-        if (previousStats) {
-          queryClient.setQueryData(['admin', 'stats'], previousStats);
-        }
         // Show specific error message based on status code
         if (response.status === 400) {
           toast.error(data.error || 'Invalid company ID. Please refresh the page and try again.');
@@ -88,19 +54,12 @@ export default function CompanyUsersPage() {
       }
       
       toast.success('Company deleted successfully!');
-      // Force immediate refetch to sync with server (replaces optimistic update)
+      // Refetch fresh data from server
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'users', 'companies'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
       ]);
     } catch (error) {
-      // Rollback optimistic update on error
-      if (previousUsers) {
-        queryClient.setQueryData(['admin', 'users', 'companies'], previousUsers);
-      }
-      if (previousStats) {
-        queryClient.setQueryData(['admin', 'stats'], previousStats);
-      }
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete company: ${errorMessage}`);
     }

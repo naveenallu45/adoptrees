@@ -80,8 +80,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse numeric values - use parseInt for price to avoid floating point precision issues
-    const price = parseInt(priceStr, 10);
+    // Convert string to number (required: FormData sends strings, MongoDB needs numbers)
+    // Using Number() for direct conversion - no manipulation, exact value preserved
+    const price = Number(priceStr);
     const oxygenKgs = parseFloat(oxygenKgsStr);
     const packageQuantity = packageQuantityStr ? parseInt(packageQuantityStr) : 1;
     const packagePrice = packagePriceStr ? parseFloat(packagePriceStr) : undefined;
@@ -165,10 +166,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate tree data
+    // Validate tree data - use the price we parsed with parseInt (already an integer)
     const validationResult = treeSchema.safeParse({
       name,
-      price,
+      price, // Use the integer price we parsed with parseInt
       info,
       oxygenKgs,
       treeType: treeType || 'individual',
@@ -323,7 +324,7 @@ export async function POST(request: NextRequest) {
       environmentalProtection?: number;
     } = {
       name: validationResult.data.name.trim(),
-      price: Number.isInteger(validationResult.data.price) ? validationResult.data.price : Math.round(validationResult.data.price), // Ensure integer price
+      price: price, // Store exactly as admin entered - no manipulation
       info: validationResult.data.info.trim(),
       oxygenKgs: validationResult.data.oxygenKgs,
       imageUrl: result.secure_url,

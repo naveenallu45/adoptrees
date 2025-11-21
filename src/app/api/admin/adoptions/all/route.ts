@@ -20,7 +20,10 @@ export async function GET() {
 
     // Calculate metrics
     const totalCount = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    // Only count revenue from paid orders (exclude pending, failed, cancelled)
+    const totalRevenue = orders
+      .filter(order => order.paymentStatus === 'paid' && order.status !== 'pending')
+      .reduce((sum, order) => sum + order.totalAmount, 0);
     
     const statusCounts = orders.reduce((acc, order) => {
       acc[order.status] = (acc[order.status] || 0) + 1;

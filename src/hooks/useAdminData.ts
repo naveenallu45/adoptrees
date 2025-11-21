@@ -47,10 +47,10 @@ export function useAdminStats() {
     },
     staleTime: 0, // No cache - always fetch fresh data
     gcTime: 0, // No cache - remove immediately when unused
-    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    refetchOnReconnect: true, // Refetch when network reconnects
+    // No automatic refetch interval - only refetch on user actions
   });
 }
 
@@ -105,10 +105,10 @@ export function useTrees() {
     },
     staleTime: 0, // No cache - always fetch fresh data
     gcTime: 0, // No cache - remove immediately when unused
-    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    refetchOnReconnect: true, // Refetch when network reconnects
+    // No automatic refetch interval - only refetch on user actions
     retry: 2, // Retry failed requests 2 times
     retryDelay: 1000, // Wait 1 second between retries
   });
@@ -140,10 +140,10 @@ export function useIndividualUsers() {
     },
     staleTime: 0, // No cache - always fetch fresh data
     gcTime: 0, // No cache - remove immediately when unused
-    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    refetchOnReconnect: true, // Refetch when network reconnects
+    // No automatic refetch interval - only refetch on user actions
   });
 }
 
@@ -174,10 +174,10 @@ export function useCompanyUsers() {
     },
     staleTime: 0, // No cache - always fetch fresh data
     gcTime: 0, // No cache - remove immediately when unused
-    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    refetchOnReconnect: true, // Refetch when network reconnects
+    // No automatic refetch interval - only refetch on user actions
   });
 }
 
@@ -210,9 +210,9 @@ export function useWellWishers() {
     },
     staleTime: 0, // No cache - always fetch fresh data
     gcTime: 0, // No cache - remove immediately when unused
-    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    refetchOnReconnect: true, // Refetch when network reconnects
+    // No automatic refetch interval - only refetch on user actions
   });
 }

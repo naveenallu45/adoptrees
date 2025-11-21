@@ -42,39 +42,7 @@ export default function AdminWellWishersPage() {
   const handleRegisterWellWisher = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Store previous state for rollback on error
-    const previousWellWishers = queryClient.getQueryData<WellWisher[]>(['admin', 'wellwishers']);
-    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
-
-    // Optimistic update for CREATE operation
-    const tempId = `temp-${Date.now()}`;
-    const optimisticWellWisher: WellWisher = {
-      _id: tempId,
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone || undefined,
-      createdAt: new Date().toISOString(),
-      upcomingTasks: 0,
-      ongoingTasks: 0,
-      completedTasks: 0,
-      updatingTasks: 0,
-      hasPassword: true,
-    };
-
-    // Optimistically add wellwisher to cache
-    queryClient.setQueryData(['admin', 'wellwishers'], (old: WellWisher[] | undefined) => {
-      if (!old) return [optimisticWellWisher];
-      return [...old, optimisticWellWisher];
-    });
-
-    // Optimistically update stats
-    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        totalWellWishers: (old.totalWellWishers || 0) + 1
-      };
-    });
+    // No cache manipulation - always fetch fresh from server
 
     // Close form immediately for better UX
     setShowRegisterForm(false);
@@ -93,13 +61,6 @@ export default function AdminWellWishersPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // Rollback optimistic update on error
-        if (previousWellWishers) {
-          queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
-        }
-        if (previousStats) {
-          queryClient.setQueryData(['admin', 'stats'], previousStats);
-        }
         // Reopen form on error
         setShowRegisterForm(true);
         setFormData(formDataCopy);
@@ -109,19 +70,12 @@ export default function AdminWellWishersPage() {
 
       toast.success('Well-wisher registered successfully!');
       
-      // Force immediate refetch to get server data (replaces optimistic update)
+      // Refetch fresh data from server
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
       ]);
     } catch (error) {
-      // Rollback optimistic update on error
-      if (previousWellWishers) {
-        queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
-      }
-      if (previousStats) {
-        queryClient.setQueryData(['admin', 'stats'], previousStats);
-      }
       // Reopen form on error
       setShowRegisterForm(true);
       setFormData(formDataCopy);
@@ -167,9 +121,8 @@ export default function AdminWellWishersPage() {
     e.preventDefault();
     
     if (!editingWellWisher) return;
-    
-    // Store previous state for rollback on error
-    const previousWellWishers = queryClient.getQueryData<WellWisher[]>(['admin', 'wellwishers']);
+
+    // No cache manipulation - always fetch fresh from server
     const wellWisherId = String(editingWellWisher._id);
 
     // Optimistic update for UPDATE operation
@@ -208,10 +161,6 @@ export default function AdminWellWishersPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // Rollback optimistic update on error
-        if (previousWellWishers) {
-          queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
-        }
         // Reopen form on error
         setShowEditForm(true);
         setEditingWellWisher(editingWellWisherCopy);
@@ -229,16 +178,12 @@ export default function AdminWellWishersPage() {
       
       toast.success('Well-wisher updated successfully!');
       
-      // Force immediate refetch to get server data (replaces optimistic update)
+      // Refetch fresh data from server
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
       ]);
     } catch (error) {
-      // Rollback optimistic update on error
-      if (previousWellWishers) {
-        queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
-      }
       // Reopen form on error
       setShowEditForm(true);
       setEditingWellWisher(editingWellWisherCopy);
@@ -259,23 +204,7 @@ export default function AdminWellWishersPage() {
     // Ensure ID is a string
     const wellWisherId = String(deletingWellWisher._id);
     
-    // Optimistically remove well-wisher from UI IMMEDIATELY (before API call)
-    const previousWellWishers = queryClient.getQueryData<WellWisher[]>(['admin', 'wellwishers']);
-    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
-    
-    queryClient.setQueryData(['admin', 'wellwishers'], (old: WellWisher[] | undefined) => {
-      if (!old) return old;
-      return old.filter((w) => w._id !== wellWisherId);
-    });
-
-    // Update stats optimistically
-    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        totalWellWishers: Math.max(0, (old.totalWellWishers || 0) - 1)
-      };
-    });
+    // No cache manipulation - wait for server response
 
     // Close confirmation modal immediately for better UX
     setShowDeleteConfirm(false);
@@ -289,24 +218,6 @@ export default function AdminWellWishersPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // If 404, well-wisher doesn't exist in DB - keep it removed from UI (already deleted)
-        if (response.status === 404) {
-          toast.success('Well-wisher was already deleted from database.');
-          // Force immediate refetch to sync with server
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
-          ]);
-          return;
-        }
-        
-        // Rollback optimistic update on other errors
-        if (previousWellWishers) {
-          queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
-        }
-        if (previousStats) {
-          queryClient.setQueryData(['admin', 'stats'], previousStats);
-        }
         // Show specific error message based on status code
         if (response.status === 400) {
           toast.error(data.message || 'Invalid well-wisher ID. Please refresh the page and try again.');
@@ -317,19 +228,12 @@ export default function AdminWellWishersPage() {
       }
       
       toast.success('Well-wisher deleted successfully!');
-      // Force immediate refetch to sync with server (replaces optimistic update)
+      // Refetch fresh data from server
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
       ]);
     } catch (error) {
-      // Rollback optimistic update on error
-      if (previousWellWishers) {
-        queryClient.setQueryData(['admin', 'wellwishers'], previousWellWishers);
-      }
-      if (previousStats) {
-        queryClient.setQueryData(['admin', 'stats'], previousStats);
-      }
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Error deleting well-wisher: ${errorMessage}`);
     }

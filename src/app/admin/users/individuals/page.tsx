@@ -34,23 +34,7 @@ export default function IndividualUsersPage() {
 
     if (!result.isConfirmed) return;
 
-    // Optimistically remove user from UI IMMEDIATELY (before API call)
-    const previousUsers = queryClient.getQueryData<IndividualUser[]>(['admin', 'users', 'individuals']);
-    const previousStats = queryClient.getQueryData<{ totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number }>(['admin', 'stats']);
-    
-    queryClient.setQueryData(['admin', 'users', 'individuals'], (old: IndividualUser[] | undefined) => {
-      if (!old) return old;
-      return old.filter((user) => user._id !== id);
-    });
-
-    // Update stats optimistically
-    queryClient.setQueryData(['admin', 'stats'], (old: { totalTrees: number; totalIndividuals: number; totalCompanies: number; totalWellWishers: number; totalRevenue: number } | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        totalIndividuals: Math.max(0, (old.totalIndividuals || 0) - 1)
-      };
-    });
+    // No cache manipulation - wait for server response
 
     try {
       const response = await fetch(`/api/admin/users/${id}`, {
@@ -59,24 +43,6 @@ export default function IndividualUsersPage() {
       const data = await response.json();
       
       if (!response.ok || !data.success) {
-        // If 404, user doesn't exist in DB - keep it removed from UI (already deleted)
-        if (response.status === 404) {
-          toast.success('User was already deleted from database.');
-          // Force immediate refetch to sync with server
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'] }),
-            queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
-          ]);
-          return;
-        }
-        
-        // Rollback optimistic update on other errors
-        if (previousUsers) {
-          queryClient.setQueryData(['admin', 'users', 'individuals'], previousUsers);
-        }
-        if (previousStats) {
-          queryClient.setQueryData(['admin', 'stats'], previousStats);
-        }
         // Show specific error message based on status code
         if (response.status === 400) {
           toast.error(data.error || 'Invalid user ID. Please refresh the page and try again.');
@@ -87,19 +53,12 @@ export default function IndividualUsersPage() {
       }
       
       toast.success('User deleted successfully!');
-      // Force immediate refetch to sync with server (replaces optimistic update)
+      // Refetch fresh data from server
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
       ]);
     } catch (error) {
-      // Rollback optimistic update on error
-      if (previousUsers) {
-        queryClient.setQueryData(['admin', 'users', 'individuals'], previousUsers);
-      }
-      if (previousStats) {
-        queryClient.setQueryData(['admin', 'stats'], previousStats);
-      }
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete user: ${errorMessage}`);
     }
