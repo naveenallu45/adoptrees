@@ -13,6 +13,7 @@ import {
   CloudIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from '@/components/Dashboard/PlantingLocationMap';
+import TreeImageModal from '@/components/Dashboard/TreeImageModal';
 
 interface OrderItem {
   treeId: string;
@@ -114,42 +115,8 @@ export default function TreeDetailPage() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<{ url: string; caption?: string; index?: number } | null>(null);
-  const [allImagesForModal, setAllImagesForModal] = useState<Array<{ url: string; caption?: string }>>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-
-  // Keyboard navigation for image gallery
-  useEffect(() => {
-    if (!selectedImage || allImagesForModal.length === 0) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedImage.index === undefined) return;
-
-      if (e.key === 'ArrowLeft' && selectedImage.index > 0) {
-        e.preventDefault();
-        const prevIndex = selectedImage.index - 1;
-        setSelectedImage({ 
-          url: allImagesForModal[prevIndex].url, 
-          caption: allImagesForModal[prevIndex].caption,
-          index: prevIndex
-        });
-      } else if (e.key === 'ArrowRight' && selectedImage.index < allImagesForModal.length - 1) {
-        e.preventDefault();
-        const nextIndex = selectedImage.index + 1;
-        setSelectedImage({ 
-          url: allImagesForModal[nextIndex].url, 
-          caption: allImagesForModal[nextIndex].caption,
-          index: nextIndex
-        });
-      } else if (e.key === 'Escape') {
-        setSelectedImage(null);
-        setAllImagesForModal([]);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImage, allImagesForModal]);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -604,8 +571,7 @@ export default function TreeDetailPage() {
                     transition={{ delay: idx * 0.05 }}
                     className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden cursor-pointer hover:scale-105 transition-all duration-300 group shadow-lg hover:shadow-2xl"
                     onClick={() => {
-                      setAllImagesForModal(allImages);
-                      setSelectedImage({ url: img.url, caption: img.caption, index: idx });
+                      setSelectedImageIndex(idx);
                     }}
                   >
                     <Image
@@ -814,93 +780,14 @@ export default function TreeDetailPage() {
         </motion.section>
       </div>
 
-      {/* Image Modal/Lightbox */}
-      {selectedImage && allImagesForModal.length > 0 && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSelectedImage(null);
-              setAllImagesForModal([]);
-            }
-          }}
-        >
-          <div className="relative max-w-5xl max-h-[90vh] w-full">
-            <button
-              onClick={() => {
-                setSelectedImage(null);
-                setAllImagesForModal([]);
-              }}
-              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors z-10"
-              type="button"
-            >
-              <XMarkIcon className="h-8 w-8" />
-            </button>
-            
-            {selectedImage.index !== undefined && selectedImage.index > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const prevIndex = selectedImage.index! - 1;
-                  setSelectedImage({ 
-                    url: allImagesForModal[prevIndex].url, 
-                    caption: allImagesForModal[prevIndex].caption,
-                    index: prevIndex
-                  });
-                }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all z-10"
-                type="button"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
-            
-            {selectedImage.index !== undefined && selectedImage.index < allImagesForModal.length - 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const nextIndex = selectedImage.index! + 1;
-                  setSelectedImage({ 
-                    url: allImagesForModal[nextIndex].url, 
-                    caption: allImagesForModal[nextIndex].caption,
-                    index: nextIndex
-                  });
-                }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all z-10"
-                type="button"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
-            
-            <div className="bg-white rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="relative w-full aspect-video bg-black">
-                <Image
-                  src={selectedImage.url}
-                  alt={selectedImage.caption || 'Tree photo'}
-                  fill
-                  className="object-contain"
-                  sizes="100vw"
-                />
-              </div>
-              <div className="p-4 bg-white">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-gray-900">
-                    {selectedImage.index !== undefined && `${selectedImage.index + 1} of ${allImagesForModal.length}`}
-                  </p>
-                </div>
-                {selectedImage.caption && (
-                  <p className="text-sm text-gray-700">{selectedImage.caption}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Image Modal */}
+      <TreeImageModal
+        isOpen={selectedImageIndex !== null}
+        onClose={() => setSelectedImageIndex(null)}
+        images={allImages}
+        currentIndex={selectedImageIndex ?? 0}
+        onNavigate={(index) => setSelectedImageIndex(index)}
+      />
 
     </div>
   );
