@@ -201,11 +201,13 @@ export default function TreesManagement() {
         calculatedPrice = !isNaN(priceValue) ? priceValue : tree.price;
       }
 
-      // Optimistic update for UPDATE operation
+      // Optimistic update for UPDATE operation - update immediately in UI
+      const editingTreeId = String(editingTree._id);
       queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
         if (!old) return old;
         return old.map(tree => {
-          if (tree._id === editingTree._id) {
+          const treeId = String(tree._id);
+          if (treeId === editingTreeId) {
             return {
               ...tree,
               name: formData.name,
@@ -286,27 +288,42 @@ export default function TreesManagement() {
         if (editingTree && data.data) {
           // Update the specific tree in cache with server data
           queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
-            if (!old) return old;
-            return old.map(tree => {
-              if (tree._id === editingTree._id) {
+            if (!old) return [data.data as Tree];
+            const updated = old.map(tree => {
+              // Match by _id (handle both string and object ID comparison)
+              const treeId = typeof tree._id === 'string' ? tree._id : String(tree._id);
+              const editingId = typeof editingTree._id === 'string' ? editingTree._id : String(editingTree._id);
+              const serverId = typeof data.data._id === 'string' ? data.data._id : String(data.data._id);
+              
+              if (treeId === editingId || treeId === serverId) {
                 return data.data as Tree;
               }
               return tree;
             });
+            return updated;
           });
         } else if (!editingTree && data.data) {
           // For new trees, replace optimistic tree with server data
           queryClient.setQueryData(['admin', 'trees'], (old: Tree[] | undefined) => {
             if (!old) return [data.data as Tree];
             // Remove optimistic tree and add server tree at the beginning
-            const filtered = old.filter(t => !t._id.startsWith('temp-'));
+            const filtered = old.filter(t => {
+              const id = typeof t._id === 'string' ? t._id : String(t._id);
+              return !id.startsWith('temp-');
+            });
             return [data.data as Tree, ...filtered];
           });
         }
         
-        // Also refetch to ensure everything is in sync
-        queryClient.refetchQueries({ queryKey: ['admin', 'trees'] });
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] });
+        // Invalidate to trigger re-render, but don't refetch immediately to show cache update first
+        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        
+        // Refetch after a short delay to ensure cache update is visible first
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] });
+          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] });
+        }, 100);
 
         setShowForm(false);
         setEditingTree(null);
