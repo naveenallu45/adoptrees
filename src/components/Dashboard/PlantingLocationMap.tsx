@@ -7,6 +7,8 @@ interface PlantingLocationMapProps {
   latitude: number;
   longitude: number;
   treeName?: string;
+  userName?: string;
+  userImage?: string | null;
   className?: string;
   showOpenInMaps?: boolean;
 }
@@ -37,18 +39,22 @@ interface GoogleMarker {
 
 interface GoogleInfoWindow {
   open: (map: GoogleMap, marker: GoogleMarker) => void;
+  setContent: (content: string) => void;
 }
 
 export default function PlantingLocationMap({ 
   latitude, 
   longitude, 
   treeName,
+  userName,
+  userImage,
   className = 'w-full h-64 rounded-lg',
   showOpenInMaps = true
 }: PlantingLocationMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<GoogleMap | null>(null);
   const markerRef = useRef<GoogleMarker | null>(null);
+  const infoWindowRef = useRef<GoogleInfoWindow | null>(null);
 
   const openInMaps = () => {
     // Detect if iOS device
@@ -110,56 +116,177 @@ export default function PlantingLocationMap({
         mapInstanceRef.current.setCenter(location);
       }
 
-      // Add or update marker
-      if (!markerRef.current) {
-        markerRef.current = new maps.Marker({
-          position: location,
-          map: mapInstanceRef.current,
-          title: treeName || 'Tree Planting Location',
-          animation: maps.Animation.DROP,
-          icon: {
-            url: 'data:image/svg+xml;base64,' + btoa(`
-              <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Pin shadow -->
-                <ellipse cx="20" cy="44" rx="6" ry="2" fill="#000" opacity="0.2"/>
-                <!-- Pin base -->
-                <path d="M20 0C12.268 0 6 6.268 6 14C6 24.5 20 48 20 48C20 48 34 24.5 34 14C34 6.268 27.732 0 20 0Z" fill="#22c55e"/>
-                <!-- Tree trunk -->
-                <rect x="18" y="28" width="4" height="8" fill="#8b4513"/>
-                <!-- Tree leaves/crown -->
-                <path d="M20 12C16 12 12 16 12 20C12 24 16 28 20 28C24 28 28 24 28 20C28 16 24 12 20 12Z" fill="#16a34a"/>
-                <path d="M20 8C18 8 16 10 16 12C16 14 18 16 20 16C22 16 24 14 24 12C24 10 22 8 20 8Z" fill="#15803d"/>
-                <!-- Small decorative leaves -->
-                <circle cx="16" cy="18" r="2" fill="#22c55e"/>
-                <circle cx="24" cy="18" r="2" fill="#22c55e"/>
-                <circle cx="20" cy="14" r="1.5" fill="#16a34a"/>
-              </svg>
-            `),
-            scaledSize: new maps.Size(40, 48),
-            anchor: new maps.Point(20, 48)
-          }
-        } as never);
+      // Generate user initials for fallback
+      const getUserInitials = (name?: string) => {
+        if (!name) return 'U';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        return name[0].toUpperCase();
+      };
 
-        // Add info window
-        const infoWindow = new maps.InfoWindow({
-          content: `
-            <div style="padding: 8px;">
-              <strong style="color: #22c55e;">${treeName || 'Tree Planting Location'}</strong>
-              <p style="margin: 4px 0; font-size: 12px; color: #666;">
-                Planted at: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}
-              </p>
+      // Escape HTML to prevent XSS
+      const escapeHtml = (text?: string) => {
+        if (!text) return '';
+        const map: Record<string, string> = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, (m) => map[m]);
+      };
+
+      // Build info window content with user profile and tree name
+      const userDisplayName = userName || 'User';
+      const userInitials = getUserInitials(userName);
+      const hasUserImage = userImage && userImage.trim() !== '';
+      const escapedUserName = escapeHtml(userDisplayName);
+      const escapedTreeName = escapeHtml(treeName || 'Tree Planting Location');
+      const escapedUserImage = hasUserImage ? escapeHtml(userImage.trim()) : '';
+      
+      const infoWindowContent = `
+        <style>
+          .gm-ui-hover-effect,
+          button[aria-label*="Close"],
+          button[title*="Close"],
+          .gm-style-iw-d button {
+            display: none !important;
+          }
+        </style>
+        <div style="padding: 7px 11px; min-width: fit-content; max-width: 280px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+            ${hasUserImage 
+              ? `<img 
+                  src="${escapedUserImage}" 
+                  alt="${escapedUserName}" 
+                  style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1.5px solid #e5e7eb; flex-shrink: 0; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />`
+              : ''
+            }
+            <div style="
+              ${hasUserImage ? 'display: none;' : 'display: flex;'}
+              width: 20px; 
+              height: 20px; 
+              border-radius: 50%; 
+              background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
+              align-items: center; 
+              justify-content: center; 
+              color: white; 
+              font-weight: 600; 
+              font-size: 10px; 
+              flex-shrink: 0;
+              border: 1.5px solid #e5e7eb;
+            ">
+              ${userInitials}
             </div>
-          `
+            <div style="flex: 1; min-width: 0; max-width: 100%;">
+              <div style="font-weight: 600; font-size: 12px; color: #111827; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word;">
+                ${escapedUserName}
+              </div>
+            </div>
+          </div>
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 6px; margin-top: 0;">
+            <div style="font-weight: 600; font-size: 13px; color: #22c55e; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word;">
+              ${escapedTreeName}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Create or update info window
+      if (!infoWindowRef.current) {
+        infoWindowRef.current = new maps.InfoWindow({
+          content: infoWindowContent
         } as never);
+      } else {
+        // Update content if info window already exists
+        infoWindowRef.current.setContent(infoWindowContent);
+      }
+      const infoWindow = infoWindowRef.current;
+
+      // Always recreate marker to ensure it's visible
+      // Remove existing marker if it exists
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+        markerRef.current = null;
+      }
+
+      // Create new marker
+      markerRef.current = new maps.Marker({
+        position: location,
+        map: mapInstanceRef.current,
+        title: treeName || 'Tree Planting Location',
+        animation: maps.Animation.DROP,
+        icon: {
+          url: 'data:image/svg+xml;base64,' + btoa(`
+            <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Pin shadow -->
+              <ellipse cx="20" cy="44" rx="6" ry="2" fill="#000" opacity="0.2"/>
+              <!-- Pin base -->
+              <path d="M20 0C12.268 0 6 6.268 6 14C6 24.5 20 48 20 48C20 48 34 24.5 34 14C34 6.268 27.732 0 20 0Z" fill="#22c55e"/>
+              <!-- Tree trunk -->
+              <rect x="18" y="28" width="4" height="8" fill="#8b4513"/>
+              <!-- Tree leaves/crown -->
+              <path d="M20 12C16 12 12 16 12 20C12 24 16 28 20 28C24 28 28 24 28 20C28 16 24 12 20 12Z" fill="#16a34a"/>
+              <path d="M20 8C18 8 16 10 16 12C16 14 18 16 20 16C22 16 24 14 24 12C24 10 22 8 20 8Z" fill="#15803d"/>
+              <!-- Small decorative leaves -->
+              <circle cx="16" cy="18" r="2" fill="#22c55e"/>
+              <circle cx="24" cy="18" r="2" fill="#22c55e"/>
+              <circle cx="20" cy="14" r="1.5" fill="#16a34a"/>
+            </svg>
+          `),
+          scaledSize: new maps.Size(40, 48),
+          anchor: new maps.Point(20, 48)
+        }
+      } as never);
+
+        // Hide close button after InfoWindow opens
+        const hideCloseButton = () => {
+          // Try multiple times with increasing delays to catch the button
+          [50, 100, 200, 300].forEach((delay) => {
+            setTimeout(() => {
+              // Find and hide the close button in the InfoWindow
+              const closeButtons = document.querySelectorAll(
+                '.gm-style-iw-d button[aria-label*="Close"], ' +
+                '.gm-style-iw-d button[title*="Close"], ' +
+                '.gm-style-iw-d .gm-ui-hover-effect, ' +
+                'button[aria-label*="Close"][title*="Info"], ' +
+                '.gm-style-iw button'
+              );
+              closeButtons.forEach((button) => {
+                (button as HTMLElement).style.display = 'none';
+                (button as HTMLElement).style.visibility = 'hidden';
+              });
+            }, delay);
+          });
+        };
 
         markerRef.current.addListener('click', () => {
           if (mapInstanceRef.current && markerRef.current) {
             infoWindow.open(mapInstanceRef.current, markerRef.current);
+            hideCloseButton();
           }
         });
-      } else {
-        markerRef.current.setPosition(location);
-      }
+
+        // Use MutationObserver to catch when InfoWindow DOM is added
+        const observer = new MutationObserver(() => {
+          hideCloseButton();
+        });
+        
+        // Observe the document body for changes
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+
+        // Cleanup observer after a delay
+        setTimeout(() => {
+          observer.disconnect();
+        }, 2000);
     }
 
     // Load Google Maps script if not already loaded
@@ -191,7 +318,7 @@ export default function PlantingLocationMap({
         markerRef.current.setMap(null);
       }
     };
-  }, [latitude, longitude, treeName]);
+  }, [latitude, longitude, treeName, userName, userImage]);
 
   return (
     <div className={className}>

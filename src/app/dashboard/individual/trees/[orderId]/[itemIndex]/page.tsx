@@ -464,6 +464,7 @@ export default function TreeDetailPage() {
                         latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
                         longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
                         treeName={item.treeName}
+                        userName={order.userName}
                         className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
                         showOpenInMaps={true}
                       />

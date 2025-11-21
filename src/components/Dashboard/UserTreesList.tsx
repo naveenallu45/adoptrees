@@ -22,13 +22,15 @@ import PlantingLocationMap from './PlantingLocationMap';
 function LocationToggle({ 
   latitude, 
   longitude, 
-  treeName, 
+  treeName,
+  userName,
   isVisible,
   onToggle
 }: { 
   latitude: number; 
   longitude: number; 
-  treeName: string; 
+  treeName: string;
+  userName?: string;
   isVisible: boolean;
   onToggle: () => void;
 }) {
@@ -48,6 +50,7 @@ function LocationToggle({
             latitude={latitude}
             longitude={longitude}
             treeName={treeName}
+            userName={userName}
             className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
             showOpenInMaps={true}
           />
@@ -568,6 +571,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                                   latitude={coords[1]}
                                   longitude={coords[0]}
                                   treeName={item.treeName}
+                                  userName={primaryOrder.userName}
                                   isVisible={isVisible}
                                   onToggle={() => {
                                     setLocationVisibility(prev => ({
