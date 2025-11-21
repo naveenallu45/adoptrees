@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   publisher: "Adoptrees",
   icons: {
     icon: '/favicon.ico',
-    apple: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763652126/WhatsApp_Image_2025-11-20_at_8.13.58_PM_jzpbwb.jpg',
+    apple: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/w_180,h_180,c_fill,r_max/v1763716774/WhatsApp_Image_2025-11-21_at_10.35.39_AM_wvwvdy_e_background_removal_f_png.jpg_szp33f.png',
     shortcut: '/favicon.ico',
   },
   formatDetection: {

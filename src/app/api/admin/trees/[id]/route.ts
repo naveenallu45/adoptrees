@@ -206,7 +206,7 @@ export async function PUT(
     } = validationResult.data;
 
     // Use the price exactly as admin entered - no manipulation
-    const finalPrice = price;
+    const finalPrice = validatedPrice;
 
     // Handle image update if provided
     // Use parsed values directly for additional fields to ensure they're saved
