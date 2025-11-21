@@ -5,52 +5,55 @@ import { UserIcon, BuildingOfficeIcon, CurrencyRupeeIcon, HeartIcon } from '@her
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { useAdminStats } from '@/hooks/useAdminData';
+import { useAdminStats, type AdminStats } from '@/hooks/useAdminData';
 
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
   const { data: stats, isLoading: loading } = useAdminStats();
+  
+  // Type assertion to help TypeScript understand the type
+  const typedStats = stats as AdminStats | undefined;
 
   const statCards = [
     {
       title: 'Total Trees',
-      value: stats?.totalTrees || 0,
+      value: typedStats?.totalTrees ?? 0,
       icon: TreeIcon,
       color: 'bg-green-500',
       link: '/admin/trees',
     },
     {
       title: 'Individual Users',
-      value: stats?.totalIndividuals || 0,
+      value: typedStats?.totalIndividuals ?? 0,
       icon: UserIcon,
       color: 'bg-blue-500',
       link: '/admin/users/individuals',
     },
     {
       title: 'Company Users',
-      value: stats?.totalCompanies || 0,
+      value: typedStats?.totalCompanies ?? 0,
       icon: BuildingOfficeIcon,
       color: 'bg-purple-500',
       link: '/admin/users/companies',
     },
     {
       title: 'Well-Wishers',
-      value: stats?.totalWellWishers || 0,
+      value: typedStats?.totalWellWishers ?? 0,
       icon: HeartIcon,
       color: 'bg-pink-500',
       link: '/admin/wellwishers',
     },
     {
       title: 'Total Revenue',
-      value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`,
+      value: `₹${(typedStats?.totalRevenue ?? 0).toLocaleString()}`,
       icon: CurrencyRupeeIcon,
       color: 'bg-yellow-500',
       link: '#',
     },
   ];
 
-  if (loading && !stats) {
+  if (loading && !typedStats) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent"></div>

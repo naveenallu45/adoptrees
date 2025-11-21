@@ -9,25 +9,13 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { AdminDataTable } from '@/components/Admin/AdminDataTable';
-import { useWellWishers } from '@/hooks/useAdminData';
+import { useWellWishers, type WellWisher } from '@/hooks/useAdminData';
 import { useQueryClient } from '@tanstack/react-query';
-
-interface WellWisher {
-  _id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  createdAt: string;
-  upcomingTasks: number;
-  ongoingTasks: number;
-  completedTasks: number;
-  updatingTasks: number;
-  hasPassword?: boolean;
-}
 
 export default function AdminWellWishersPage() {
   const queryClient = useQueryClient();
-  const { data: wellWishers = [], isLoading: loading } = useWellWishers();
+  const { data: wellWishersData, isLoading: loading } = useWellWishers();
+  const wellWishers = (wellWishersData || []) as WellWisher[];
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWellWisher, setEditingWellWisher] = useState<WellWisher | null>(null);

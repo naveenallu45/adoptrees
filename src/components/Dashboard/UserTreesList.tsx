@@ -478,7 +478,9 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                               <button
                                 onClick={() => {
                                   const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
-                                  router.push(`${basePath}/${primaryOrder.orderId || primaryOrder._id}/${firstItemIndex}`);
+                                  const detailPath = `${basePath}/${primaryOrder.orderId || primaryOrder._id}/${firstItemIndex}`;
+                                  const url = publicId ? `${detailPath}?publicId=${publicId}` : detailPath;
+                                  router.push(url);
                                 }}
                                 className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
                                 type="button"

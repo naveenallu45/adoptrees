@@ -6,22 +6,13 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useIndividualUsers } from '@/hooks/useAdminData';
+import { useIndividualUsers, type IndividualUser } from '@/hooks/useAdminData';
 import { useQueryClient } from '@tanstack/react-query';
-
-interface IndividualUser {
-  _id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  createdAt: string;
-  role: string;
-  userType: string;
-}
 
 export default function IndividualUsersPage() {
   const queryClient = useQueryClient();
-  const { data: users = [], isLoading: loading } = useIndividualUsers();
+  const { data: usersData, isLoading: loading } = useIndividualUsers();
+  const users = (usersData || []) as IndividualUser[];
 
   const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({

@@ -8,35 +8,14 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useTrees } from '@/hooks/useAdminData';
+import { useTrees, type Tree } from '@/hooks/useAdminData';
 import { useQueryClient } from '@tanstack/react-query';
 import { VALID_LOCAL_USES } from '@/lib/validations/tree';
 
-interface Tree {
-  _id: string;
-  name: string;
-  price: number;
-  info: string;
-  oxygenKgs: number;
-  imageUrl: string;
-  treeType?: string;
-  packageQuantity?: number;
-  packagePrice?: number;
-  scientificSpecies?: string;
-  speciesInfoAvailable?: boolean;
-  co2?: number;
-  foodSecurity?: number;
-  economicDevelopment?: number;
-  co2Absorption?: number;
-  environmentalProtection?: number;
-  localUses?: string[];
-  smallImageUrls?: string[];
-  createdAt: string;
-}
-
 export default function TreesManagement() {
   const queryClient = useQueryClient();
-  const { data: trees = [], isLoading: loading, error, isError } = useTrees();
+  const { data: treesData, isLoading: loading, error, isError } = useTrees();
+  const trees = (treesData || []) as Tree[];
   const [showForm, setShowForm] = useState(false);
   const [editingTree, setEditingTree] = useState<Tree | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -195,10 +174,10 @@ export default function TreesManagement() {
       if (formData.treeType === 'company') {
         const packagePrice = parseFloat(formData.packagePrice || '0');
         const packageQuantity = parseInt(formData.packageQuantity || '1');
-        calculatedPrice = packageQuantity > 0 ? Math.round(packagePrice / packageQuantity) : tree.price;
+        calculatedPrice = packageQuantity > 0 ? Math.round(packagePrice / packageQuantity) : (editingTree?.price || 0);
       } else {
         const priceValue = parseFloat(formData.price);
-        calculatedPrice = !isNaN(priceValue) ? priceValue : tree.price;
+        calculatedPrice = !isNaN(priceValue) ? priceValue : (editingTree?.price || 0);
       }
 
       // Optimistic update for UPDATE operation - update immediately in UI

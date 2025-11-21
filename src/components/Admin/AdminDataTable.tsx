@@ -13,18 +13,7 @@ import {
   CheckCircleIcon,
   PencilSquareIcon
 } from '@heroicons/react/24/outline';
-
-interface WellWisher {
-  _id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  createdAt: string;
-  upcomingTasks: number;
-  ongoingTasks: number;
-  completedTasks: number;
-  updatingTasks: number;
-}
+import { type WellWisher } from '@/hooks/useAdminData';
 
 interface AdminDataTableProps {
   data: WellWisher[];

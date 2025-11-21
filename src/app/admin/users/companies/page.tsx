@@ -6,23 +6,13 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useCompanyUsers } from '@/hooks/useAdminData';
+import { useCompanyUsers, type CompanyUser } from '@/hooks/useAdminData';
 import { useQueryClient } from '@tanstack/react-query';
-
-interface CompanyUser {
-  _id: string;
-  companyName: string;
-  email: string;
-  phone?: string;
-  gstNumber?: string;
-  createdAt: string;
-  role: string;
-  userType: string;
-}
 
 export default function CompanyUsersPage() {
   const queryClient = useQueryClient();
-  const { data: users = [], isLoading: loading } = useCompanyUsers();
+  const { data: usersData, isLoading: loading } = useCompanyUsers();
+  const users = (usersData || []) as CompanyUser[];
   
 
   const handleDelete = useCallback(async (id: string) => {

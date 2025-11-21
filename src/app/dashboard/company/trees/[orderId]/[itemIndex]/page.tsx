@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
@@ -97,8 +97,10 @@ const scientificNames: Record<string, string> = {
 export default function TreeDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const orderId = params.orderId as string;
   const itemIndex = parseInt(params.itemIndex as string, 10);
+  const publicId = searchParams.get('publicId');
   
   const [order, setOrder] = useState<Order | null>(null);
   const [treeData, setTreeData] = useState<{
@@ -152,54 +154,78 @@ export default function TreeDetailPage() {
   const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/orders');
-      const result = await response.json();
       
-      if (result.success) {
-        const foundOrder = result.data.find((o: Order) => 
-          (o.orderId === orderId || o._id === orderId) && 
-          o.items[itemIndex] &&
-          o.paymentStatus === 'paid' // Only show paid orders
-        );
+      let foundOrder: Order | null = null;
+      
+      if (publicId) {
+        // Public access - use public API endpoint
+        const response = await fetch(`/api/public/users/${publicId}/orders/${orderId}`);
+        const result = await response.json();
         
-        if (foundOrder && foundOrder.items[itemIndex] && foundOrder.paymentStatus === 'paid') {
-          setOrder(foundOrder);
-          
-          // Fetch tree data using treeId
-          const treeId = foundOrder.items[itemIndex].treeId;
-          if (treeId) {
-            try {
-              const treeResponse = await fetch(`/api/trees/${treeId}`);
-              const treeResult = await treeResponse.json();
-              if (treeResult.success && treeResult.data) {
-                setTreeData({
-                  oxygenKgs: treeResult.data.oxygenKgs,
-                  scientificSpecies: treeResult.data.scientificSpecies,
-                  co2: treeResult.data.co2,
-                  foodSecurity: treeResult.data.foodSecurity,
-                  economicDevelopment: treeResult.data.economicDevelopment,
-                  co2Absorption: treeResult.data.co2Absorption,
-                  environmentalProtection: treeResult.data.environmentalProtection,
-                });
-              }
-            } catch (_err) {
-              // If fetching tree fails, continue without tree data
-              console.error('Failed to fetch tree data:', _err);
-            }
+        if (result.success && result.data) {
+          const order = result.data;
+          if (order.items[itemIndex] && order.paymentStatus === 'paid') {
+            foundOrder = order;
           }
-          
         } else {
-          setError('Tree not found');
+          setError(result.error || 'Tree not found');
+          return;
         }
       } else {
-        setError(result.error);
+        // Authenticated access - use regular API endpoint
+        const response = await fetch('/api/orders');
+        const result = await response.json();
+        
+        if (result.success) {
+          const order = result.data.find((o: Order) => 
+            (o.orderId === orderId || o._id === orderId) && 
+            o.items[itemIndex] &&
+            o.paymentStatus === 'paid'
+          );
+          
+          if (order && order.items[itemIndex] && order.paymentStatus === 'paid') {
+            foundOrder = order;
+          }
+        } else {
+          setError(result.error);
+          return;
+        }
+      }
+      
+      if (foundOrder && foundOrder.items[itemIndex] && foundOrder.paymentStatus === 'paid') {
+        setOrder(foundOrder);
+        
+        // Fetch tree data using treeId
+        const treeId = foundOrder.items[itemIndex].treeId;
+        if (treeId) {
+          try {
+            const treeResponse = await fetch(`/api/trees/${treeId}`);
+            const treeResult = await treeResponse.json();
+            if (treeResult.success && treeResult.data) {
+              setTreeData({
+                oxygenKgs: treeResult.data.oxygenKgs,
+                scientificSpecies: treeResult.data.scientificSpecies,
+                co2: treeResult.data.co2,
+                foodSecurity: treeResult.data.foodSecurity,
+                economicDevelopment: treeResult.data.economicDevelopment,
+                co2Absorption: treeResult.data.co2Absorption,
+                environmentalProtection: treeResult.data.environmentalProtection,
+              });
+            }
+          } catch (_err) {
+            // If fetching tree fails, continue without tree data
+            console.error('Failed to fetch tree data:', _err);
+          }
+        }
+      } else {
+        setError('Tree not found');
       }
     } catch (_error) {
       setError('Failed to fetch tree details');
     } finally {
       setLoading(false);
     }
-  }, [orderId, itemIndex]);
+  }, [orderId, itemIndex, publicId]);
 
   useEffect(() => {
     fetchOrder();
@@ -327,7 +353,13 @@ export default function TreeDetailPage() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Back Button */}
         <button
-          onClick={() => router.back()}
+          onClick={() => {
+            if (publicId) {
+              router.push(`/dashboard/company/trees?publicId=${publicId}`);
+            } else {
+              router.back();
+            }
+          }}
           className="mb-6 inline-flex items-center bg-green-700 hover:bg-green-600 text-white border-2 border-green-600 px-5 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md font-medium"
           type="button"
         >
