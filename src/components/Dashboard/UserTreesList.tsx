@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { 
@@ -109,6 +110,8 @@ interface WellwisherTask {
 interface Order {
   _id: string;
   orderId?: string;
+  userId?: string;
+  userEmail?: string;
   items: OrderItem[];
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
@@ -130,6 +133,7 @@ interface UserTreesListProps {
 }
 
 export default function UserTreesList({ userType, publicId }: UserTreesListProps) {
+  const { data: session } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -221,7 +225,38 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
       const result = await response.json();
       
       if (result.success) {
-        const ordersData = publicId ? result.data.orders : result.data;
+        let ordersData = publicId ? result.data.orders : result.data;
+        
+        // Safety filter: If not viewing public profile, ensure we only show current user's orders
+        if (!publicId && session?.user?.id) {
+          const currentUserId = String(session.user.id).trim();
+          const currentUserEmail = session.user.email?.toLowerCase().trim();
+          
+          // Filter orders to only include those belonging to the current user
+          ordersData = ordersData.filter((order: Order) => {
+            const orderUserId = String(order.userId || '').trim();
+            const orderUserEmail = (order.userEmail || '').toLowerCase().trim();
+            
+            // Primary match: userId must match exactly
+            // Secondary check: if userId doesn't exist on order, fall back to email match
+            const userIdMatches = orderUserId && orderUserId === currentUserId;
+            const emailMatches = !orderUserId && currentUserEmail && orderUserEmail && orderUserEmail === currentUserEmail;
+            const matches = userIdMatches || emailMatches;
+            
+            if (!matches) {
+              console.warn('[UserTreesList] Filtered out order not belonging to current user:', {
+                orderUserId,
+                currentUserId,
+                orderUserEmail,
+                currentUserEmail,
+                userIdMatches,
+                emailMatches
+              });
+            }
+            
+            return matches;
+          });
+        }
         
         // Debug: Log what we received
         console.log('[UserTreesList] Received orders:', ordersData.length, 'for publicId:', publicId || 'current user');

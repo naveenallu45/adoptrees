@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 type UserType = 'individual' | 'company' | '';
@@ -80,8 +81,30 @@ export default function RegisterForm() {
         return;
       }
       
-      // Success - redirect to login
-      router.push('/login?registered=true');
+      // Success - automatically sign in the user
+      try {
+        const signInResult = await signIn('credentials', {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (signInResult?.error) {
+          // If auto-login fails, redirect to login page
+          router.push('/login?registered=true');
+        } else {
+          // Successfully logged in - redirect to dashboard based on user type
+          if (userType === 'company') {
+            router.push('/dashboard/company');
+          } else {
+            router.push('/dashboard/individual');
+          }
+        }
+      } catch (signInError) {
+        // If sign in fails, redirect to login page
+        console.error('Auto-login after registration failed:', signInError);
+        router.push('/login?registered=true');
+      }
     } catch {
       setError('Sign up failed. Please try again.');
     } finally {
