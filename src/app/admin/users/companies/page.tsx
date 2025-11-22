@@ -54,7 +54,7 @@ export default function CompanyUsersPage() {
       }
       
       toast.success('Company deleted successfully!');
-      // Refetch fresh data from server
+      // Immediately refetch to show instant updates
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'users', 'companies'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })

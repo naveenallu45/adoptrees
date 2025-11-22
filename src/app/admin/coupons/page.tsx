@@ -112,8 +112,9 @@ export default function CouponsManagement() {
       if (result.success) {
         toast.success(editingCoupon ? 'Coupon updated successfully' : 'Coupon created successfully');
         handleCancel();
-        fetchCoupons();
-        queryClient.invalidateQueries({ queryKey: ['coupons'] });
+        // Immediately refetch to show instant updates
+        await fetchCoupons();
+        await queryClient.refetchQueries({ queryKey: ['coupons'] });
       } else {
         toast.error(result.error || 'Failed to save coupon');
       }
@@ -175,8 +176,9 @@ export default function CouponsManagement() {
 
         if (deleteResult.success) {
           toast.success('Coupon deleted successfully');
-          fetchCoupons();
-          queryClient.invalidateQueries({ queryKey: ['coupons'] });
+          // Immediately refetch to show instant updates
+          await fetchCoupons();
+          await queryClient.refetchQueries({ queryKey: ['coupons'] });
         } else {
           toast.error(deleteResult.error || 'Failed to delete coupon');
         }

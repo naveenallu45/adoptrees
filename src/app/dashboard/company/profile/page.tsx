@@ -1,12 +1,14 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 
 export default function CompanyProfilePage() {
   const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
   const sessionUpdateRef = useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -134,6 +136,8 @@ export default function CompanyProfilePage() {
             });
           }, 0);
         }
+        // Refresh the page to update any server-rendered data
+        router.refresh();
       } else {
         setSaveError(result.message || 'Failed to update profile');
       }

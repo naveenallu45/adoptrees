@@ -53,7 +53,7 @@ export default function IndividualUsersPage() {
       }
       
       toast.success('User deleted successfully!');
-      // Refetch fresh data from server
+      // Immediately refetch to show instant updates
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })

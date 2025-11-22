@@ -143,11 +143,11 @@ export default function TreesManagement() {
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
         
-        // Invalidate and refetch to get fresh data from server
-        await queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-        await queryClient.refetchQueries({ queryKey: ['admin', 'trees'] });
-        await queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-        await queryClient.refetchQueries({ queryKey: ['admin', 'stats'] });
+        // Immediately refetch to show instant updates
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        ]);
 
         setShowForm(false);
         setEditingTree(null);
@@ -250,7 +250,7 @@ export default function TreesManagement() {
       }
       
       toast.success('Tree deleted successfully!');
-      // Refetch fresh data from server
+      // Immediately refetch to show instant updates
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
         queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })

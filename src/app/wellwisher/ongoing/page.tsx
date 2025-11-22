@@ -232,11 +232,15 @@ export default function OngoingPage() {
             icon: '✅',
             duration: 2000,
           });
+          // Refresh tasks to ensure UI is up to date
+          fetchTasks();
         } else {
           toast.success(statusMessages[newStatus], {
             icon: '✅',
             duration: 2000,
           });
+          // Refresh tasks to ensure UI is up to date
+          fetchTasks();
         }
       }
     } catch (error) {
@@ -577,6 +581,9 @@ export default function OngoingPage() {
         
         // Optimistically remove task from UI
         setTasks(prev => prev.filter(t => t.id !== task.id));
+        
+        // Refresh tasks to ensure UI is up to date
+        fetchTasks();
         
         // Clean up preview URLs for this task
         Object.keys(previewUrlsRef.current).forEach(key => {

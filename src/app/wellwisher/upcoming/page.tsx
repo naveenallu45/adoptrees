@@ -133,6 +133,9 @@ export default function UpcomingPage() {
           icon: '✅',
           duration: 2000,
         });
+        // Remove task from upcoming list and refresh to ensure UI is up to date
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        fetchTasks();
       } else {
         // Rollback on error - add task back to list
         setTasks(prev => [...prev, taskToUpdate].sort((a, b) => 

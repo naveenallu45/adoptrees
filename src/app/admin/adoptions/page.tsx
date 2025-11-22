@@ -128,11 +128,11 @@ export default function AdminAdoptionsPage() {
       }
       return response.json();
     },
-    staleTime: 0, // Always refetch to ensure UI matches database
-    refetchOnMount: true, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    staleTime: 30 * 1000, // 30 seconds - data is fresh for 30s
+    gcTime: 5 * 60 * 1000, // 5 minutes - keep cache for 5 minutes
+    refetchInterval: false, // Disable automatic polling - only refetch on mutations
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Use cached data if available
   });
 
 
@@ -308,10 +308,8 @@ export default function AdminAdoptionsPage() {
       }
       
       toast.success('Adoption deleted successfully!');
-      // Force immediate refetch to sync with server (replaces optimistic update)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] })
-      ]);
+      // Immediately refetch to show instant updates
+      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] });
     } catch (error) {
       // Rollback optimistic update on error
       if (previousData) {

@@ -389,6 +389,8 @@ export default function CartContent() {
               clearCart();
               setPaymentStatus('success');
               setShowPaymentDialog(true);
+              // Refresh the page to update any server-rendered data
+              router.refresh();
             } else {
               setPaymentStatus('failed');
               setPaymentMessage('Payment verification failed: ' + (verifyResult.error || 'Unknown error'));
