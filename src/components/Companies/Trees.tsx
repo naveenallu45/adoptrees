@@ -198,8 +198,13 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
           {trees.map((tree) => (
             <div 
               key={tree._id} 
-              onClick={() => router.push(`/trees/${tree._id}`)}
-              className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400 cursor-pointer"
+              onClick={() => {
+                // Only navigate on desktop/laptop, not on mobile
+                if (window.innerWidth >= 768) {
+                  router.push(`/trees/${tree._id}`);
+                }
+              }}
+              className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400 md:cursor-pointer"
             >
               {/* Tree Image */}
               <div className="relative aspect-[4/3.2] sm:aspect-[4/4] overflow-hidden bg-white">
@@ -257,7 +262,13 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                   <Link
                     href={`/trees/${tree._id}`}
                     className="flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 transition-all duration-200 flex items-center justify-center gap-1 sm:gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 font-semibold"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // On mobile, navigate immediately
+                      if (window.innerWidth < 768) {
+                        router.push(`/trees/${tree._id}`);
+                      }
+                    }}
                   >
                     <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
