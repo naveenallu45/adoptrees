@@ -4,6 +4,7 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import User from '@/models/User';
+import Coupon from '@/models/Coupon';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { generateCertificate } from '@/lib/certificate';
@@ -180,25 +181,38 @@ export async function POST(request: NextRequest) {
     order.paymentId = razorpay_payment_id;
     order.status = 'confirmed';
 
+    // Increment coupon usage count if coupon was used
+    if (order.couponCode) {
+      try {
+        await Coupon.findOneAndUpdate(
+          { code: order.couponCode },
+          { $inc: { usedCount: 1 } }
+        );
+      } catch (couponError) {
+        logError('Error incrementing coupon usage count', couponError as Error);
+        // Don't fail the payment if coupon update fails
+      }
+    }
+
     // Create wellwisher tasks for all orders - assign using equal distribution
     // Only assign if not already assigned
     if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
       const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
       const wellwisherId = await assignWellWisherEqually();
-      
+    
       if (wellwisherId) {
-        const wellwisherTasks = order.items.map((item, index) => ({
-          taskId: `${order.orderId}-${index}`,
-          task: `Plant and care for ${item.treeName}`,
-          description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-          scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-          priority: 'medium' as const,
-          status: 'pending' as const,
-          location: 'To be determined'
-        }));
+      const wellwisherTasks = order.items.map((item, index) => ({
+        taskId: `${order.orderId}-${index}`,
+        task: `Plant and care for ${item.treeName}`,
+        description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+        scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
+        priority: 'medium' as const,
+        status: 'pending' as const,
+        location: 'To be determined'
+      }));
 
         order.assignedWellwisher = wellwisherId;
-        order.wellwisherTasks = wellwisherTasks;
+      order.wellwisherTasks = wellwisherTasks;
       }
     }
 

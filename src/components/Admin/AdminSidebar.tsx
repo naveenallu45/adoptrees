@@ -9,6 +9,7 @@ import {
   ArrowRightOnRectangleIcon,
   HeartIcon,
   ClipboardDocumentListIcon,
+  TicketIcon,
 } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -26,6 +27,7 @@ const navItems: NavItem[] = [
   { name: 'Individual Users', href: '/admin/users/individuals', icon: UserIcon },
   { name: 'Company Users', href: '/admin/users/companies', icon: BuildingOfficeIcon },
   { name: 'Well-Wishers', href: '/admin/wellwishers', icon: HeartIcon },
+  { name: 'Coupons', href: '/admin/coupons', icon: TicketIcon },
 ];
 
 export default function AdminSidebar() {

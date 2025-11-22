@@ -405,27 +405,27 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
             {/* Profile Image - Mobile: Circular */}
             <div className="relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
               <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-green-300">
-                {getProfileImage() ? (
-                  <Image
-                    key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
-                    src={getProfileImage() || ''}
-                    alt={getUserDisplayName()}
-                    fill
+              {getProfileImage() ? (
+                <Image
+                  key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
+                  src={getProfileImage() || ''}
+                  alt={getUserDisplayName()}
+                  fill
                     className="object-cover rounded-full"
                     sizes="(max-width: 640px) 48px, 56px"
-                    unoptimized
-                    priority
-                  />
-                ) : (
-                  <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
-                    {getUserDisplayName()
-                      .split(' ')
-                      .map(n => n[0])
-                      .join('')
-                      .toUpperCase()
-                      .slice(0, 2)}
-                  </span>
-                )}
+                  unoptimized
+                  priority
+                />
+              ) : (
+                <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
+                  {getUserDisplayName()
+                    .split(' ')
+                    .map(n => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </span>
+              )}
               </div>
             </div>
             <div>
@@ -470,16 +470,16 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
             <div className="hidden md:block mb-4">
               <h2 className="text-xl md:text-2xl font-bold mb-1 text-white drop-shadow-sm">{getForestName()}</h2>
               <p className="text-green-200 text-sm font-medium">{getLastPlantingText()}</p>
-            </div>
+        </div>
 
-            {/* Description */}
-            <div className="mb-4 sm:mb-6 text-green-100 text-xs sm:text-sm leading-relaxed">
+        {/* Description */}
+        <div className="mb-4 sm:mb-6 text-green-100 text-xs sm:text-sm leading-relaxed">
               <p className="opacity-90">
                 Every adoption contributes to sustainability and helps restore our planet. Together we are planting trees and making a positive impact.
-              </p>
-            </div>
+          </p>
+        </div>
 
-            {/* Stats Grid */}
+        {/* Stats Grid */}
             <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4">
           {/* Trees Planted */}
           <motion.div 

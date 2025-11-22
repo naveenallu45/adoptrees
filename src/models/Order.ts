@@ -19,6 +19,9 @@ export interface IOrder extends Document {
     giftMessage?: string;
   }[];
   totalAmount: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  finalAmount?: number; // Amount after coupon discount
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: string;

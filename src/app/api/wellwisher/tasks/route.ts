@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
           $or: [
             { 'wellwisherTasks.status': 'updating' },
             {
-              'wellwisherTasks.status': 'completed',
-              'wellwisherTasks.nextGrowthUpdateDue': { $lte: new Date(new Date().setHours(0, 0, 0, 0)) }
+          'wellwisherTasks.status': 'completed',
+          'wellwisherTasks.nextGrowthUpdateDue': { $lte: new Date(new Date().setHours(0, 0, 0, 0)) }
             }
           ]
         } : {

@@ -115,20 +115,20 @@ async function handlePaymentCaptured(payment: { id: string; [key: string]: unkno
     if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
       const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
       const wellwisherId = await assignWellWisherEqually();
-      
+    
       if (wellwisherId) {
-        const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
-          taskId: `${order.orderId}-${index}`,
-          task: `Plant and care for ${item.treeName}`,
-          description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-          scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-          priority: 'medium' as const,
-          status: 'pending' as const,
-          location: 'To be determined'
-        }));
+      const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
+        taskId: `${order.orderId}-${index}`,
+        task: `Plant and care for ${item.treeName}`,
+        description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+        scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
+        priority: 'medium' as const,
+        status: 'pending' as const,
+        location: 'To be determined'
+      }));
 
         order.assignedWellwisher = wellwisherId;
-        order.wellwisherTasks = wellwisherTasks;
+      order.wellwisherTasks = wellwisherTasks;
       }
     }
 

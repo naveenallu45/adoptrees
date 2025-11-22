@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { items, isGift, giftRecipientName, giftRecipientEmail, giftMessage } = body;
+    const { items, isGift, giftRecipientName, giftRecipientEmail, giftMessage, couponCode, couponDiscount, finalAmount } = body;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -68,8 +68,11 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Calculate total amount
+    // Calculate total amount (subtotal before coupon)
     const totalAmount = orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    
+    // Use finalAmount if provided (with coupon discount), otherwise use totalAmount
+    const orderTotalAmount = finalAmount !== undefined ? finalAmount : totalAmount;
 
     // Check for duplicate pending orders with same items before creating
     // Get all pending orders for this user
@@ -158,6 +161,9 @@ export async function POST(request: NextRequest) {
       userType: session.user.userType,
       items: orderItems,
       totalAmount,
+      couponCode: couponCode || undefined,
+      couponDiscount: couponDiscount || undefined,
+      finalAmount: orderTotalAmount,
       isGift,
       giftRecipientName,
       giftRecipientEmail,

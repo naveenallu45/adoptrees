@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { items, isGift, giftRecipientName, giftRecipientEmail, giftMessage } = body;
+    const { items, isGift, giftRecipientName, giftRecipientEmail, giftMessage, couponCode, couponDiscount, finalAmount } = body;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -152,7 +152,9 @@ export async function POST(request: NextRequest) {
 
     // Calculate total amount in paise (Razorpay requires amount in smallest currency unit)
     const totalAmount = orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    const amountInPaise = Math.round(totalAmount * 100); // Convert to paise
+    // Use finalAmount if provided (with coupon discount), otherwise use totalAmount
+    const orderTotalAmount = finalAmount !== undefined ? finalAmount : totalAmount;
+    const amountInPaise = Math.round(orderTotalAmount * 100); // Convert to paise
 
     // Check for duplicate pending orders (within last 5 minutes) with same items
     // This prevents multiple orders from being created if user clicks payment button multiple times
@@ -241,6 +243,9 @@ export async function POST(request: NextRequest) {
       userType: session.user.userType,
       items: orderItems,
       totalAmount,
+      couponCode: couponCode || undefined,
+      couponDiscount: couponDiscount || undefined,
+      finalAmount: orderTotalAmount,
       isGift,
       giftRecipientName,
       giftRecipientEmail,

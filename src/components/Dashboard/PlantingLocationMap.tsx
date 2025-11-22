@@ -162,15 +162,15 @@ export default function PlantingLocationMap({
               ? `<img 
                   src="${escapedUserImage}" 
                   alt="${escapedUserName}" 
-                  style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1.5px solid #e5e7eb; flex-shrink: 0; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
+                  style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1.5px solid #e5e7eb; flex-shrink: 0; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 />`
               : ''
             }
             <div style="
               ${hasUserImage ? 'display: none;' : 'display: flex;'}
-              width: 20px; 
-              height: 20px; 
+              width: 22px; 
+              height: 22px; 
               border-radius: 50%; 
               background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
               align-items: center; 

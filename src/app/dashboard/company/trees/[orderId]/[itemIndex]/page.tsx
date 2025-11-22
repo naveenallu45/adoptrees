@@ -67,6 +67,7 @@ interface WellwisherTask {
 interface Order {
   _id: string;
   orderId?: string;
+  userId?: string;
   items: OrderItem[];
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
@@ -116,6 +117,7 @@ export default function TreeDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [userImage, setUserImage] = useState<string | null>(null);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -160,6 +162,21 @@ export default function TreeDetailPage() {
       
       if (foundOrder && foundOrder.items[itemIndex] && foundOrder.paymentStatus === 'paid') {
         setOrder(foundOrder);
+        
+        // Fetch user image if userId is available
+        if (foundOrder.userId) {
+          try {
+            const userResponse = await fetch(`/api/users/${foundOrder.userId}`);
+            if (userResponse.ok) {
+              const userResult = await userResponse.json();
+              if (userResult.success && userResult.data?.image) {
+                setUserImage(userResult.data.image);
+              }
+            }
+          } catch (_err) {
+            // Silently fail - will use initials
+          }
+        }
         
         // Fetch tree data using treeId
         const treeId = foundOrder.items[itemIndex].treeId;
@@ -465,6 +482,7 @@ export default function TreeDetailPage() {
                         longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
                         treeName={item.treeName}
                         userName={order.userName}
+                        userImage={userImage}
                         className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
                         showOpenInMaps={true}
                       />

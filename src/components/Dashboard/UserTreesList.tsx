@@ -24,6 +24,7 @@ function LocationToggle({
   longitude, 
   treeName,
   userName,
+  userImage,
   isVisible,
   onToggle
 }: { 
@@ -31,6 +32,7 @@ function LocationToggle({
   longitude: number; 
   treeName: string;
   userName?: string;
+  userImage?: string | null;
   isVisible: boolean;
   onToggle: () => void;
 }) {
@@ -54,6 +56,7 @@ function LocationToggle({
             longitude={longitude}
             treeName={treeName}
             userName={userName}
+            userImage={userImage}
             className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
             showOpenInMaps={true}
           />
@@ -145,6 +148,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
   const [error, setError] = useState<string | null>(null);
   const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
   const [locationVisibility, setLocationVisibility] = useState<Record<string, boolean>>({});
+  const [userImages, setUserImages] = useState<Record<string, string | null>>({});
   const pathname = usePathname();
   const router = useRouter();
   const isTransactionsPage = pathname.includes('/transactions');
@@ -272,6 +276,37 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
         
         // Server already handles deduplication, so we can use data directly
         setOrders(ordersData);
+        
+        // Fetch user images for all unique user IDs
+        const uniqueUserIds = new Set<string>();
+        ordersData.forEach((order: Order) => {
+          if (order.userId) {
+            uniqueUserIds.add(String(order.userId));
+          }
+        });
+        
+        // Fetch user images
+        const imagePromises = Array.from(uniqueUserIds).map(async (userId) => {
+          try {
+            const userResponse = await fetch(`/api/users/${userId}`);
+            if (userResponse.ok) {
+              const userResult = await userResponse.json();
+              if (userResult.success && userResult.data?.image) {
+                return { userId, image: userResult.data.image };
+              }
+            }
+          } catch (_err) {
+            // Silently fail - will use initials
+          }
+          return { userId, image: null };
+        });
+        
+        const imageResults = await Promise.all(imagePromises);
+        const imageMap: Record<string, string | null> = {};
+        imageResults.forEach(({ userId, image }) => {
+          imageMap[userId] = image;
+        });
+        setUserImages(imageMap);
       } else {
         setError(result.error);
       }
@@ -466,7 +501,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                     const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
                     const detailPath = `${basePath}/${primaryOrder.orderId || primaryOrder._id}/${firstItemIndex}`;
                     const detailUrl = publicId ? `${detailPath}?publicId=${publicId}` : detailPath;
-
+                    
                     return (
                       <motion.div
                         key={uniqueKey}
@@ -583,6 +618,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                                   longitude={coords[0]}
                                   treeName={item.treeName}
                                   userName={primaryOrder.userName}
+                                  userImage={primaryOrder.userId ? userImages[String(primaryOrder.userId)] : null}
                                   isVisible={isVisible}
                                   onToggle={() => {
                                     setLocationVisibility(prev => ({
