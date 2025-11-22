@@ -44,7 +44,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         ></div>
         
         {/* Sidebar */}
-        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-30">
+        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-30">
           <CompanySidebar />
         </div>
         
@@ -54,7 +54,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         
         {/* Main content */}
-        <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+        <div className="flex-1 lg:pr-64 flex flex-col min-h-screen">
           {/* Mobile header */}
           <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
             <Link 

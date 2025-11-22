@@ -116,9 +116,14 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: 'Calibri', 'Calibri Light', 'Candara', 'Segoe UI', 'Trebuchet MS', Arial, sans-serif;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 }
 

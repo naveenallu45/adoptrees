@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
-  TrophyIcon,
   ShoppingBagIcon,
   SparklesIcon,
   BuildingOfficeIcon
@@ -69,33 +68,6 @@ export default function AchieversPage() {
     }
   };
 
-  const getRankBadge = (rank: number) => {
-    if (rank === 1) {
-      return (
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg">
-          <TrophyIcon className="w-7 h-7 text-white" />
-        </div>
-      );
-    } else if (rank === 2) {
-      return (
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 shadow-lg">
-          <TrophyIcon className="w-7 h-7 text-white" />
-        </div>
-      );
-    } else if (rank === 3) {
-      return (
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg">
-          <TrophyIcon className="w-7 h-7 text-white" />
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 text-green-700 font-bold text-lg">
-          {rank}
-        </div>
-      );
-    }
-  };
 
   const getSortButtonClass = (currentSort: SortBy) => {
     return `px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
@@ -221,11 +193,6 @@ export default function AchieversPage() {
                     className="block bg-white/10 backdrop-blur-md rounded-2xl shadow-xl transition-all duration-300 p-5 sm:p-6 border border-white/30"
                   >
                     <div className="flex items-center gap-4 sm:gap-6">
-                      {/* Rank Badge */}
-                      <div className="flex-shrink-0">
-                        {getRankBadge(achiever.rank)}
-                      </div>
-
                       {/* User Avatar */}
                       <div className="flex-shrink-0">
                         {achiever.userImage && achiever.userImage.trim() !== '' ? (
