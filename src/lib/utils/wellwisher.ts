@@ -1,4 +1,6 @@
 // Well-wisher utility functions for production-level features
+// NOTE: This file is for CLIENT-SIDE utilities only
+// For server-side utilities, use wellwisher-assignment.ts
 
 import { validateImageFile } from '@/lib/validations/tree';
 

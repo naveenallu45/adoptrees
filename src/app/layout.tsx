@@ -11,24 +11,32 @@ const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
+  fallback: ["system-ui", "arial", "sans-serif"],
+  adjustFontFallback: true,
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
+  fallback: ["Courier New", "monospace"],
+  adjustFontFallback: true,
 });
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
   subsets: ["latin"],
   display: "swap",
+  fallback: ["system-ui", "arial", "sans-serif"],
+  adjustFontFallback: true,
 });
 
 const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
   subsets: ["latin"],
   display: "swap",
+  fallback: ["system-ui", "arial", "sans-serif"],
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {

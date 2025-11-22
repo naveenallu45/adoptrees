@@ -27,7 +27,7 @@ interface WellwisherTask {
   description: string;
   scheduledDate: string;
   priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'pending' | 'in_progress' | 'completed' | 'updating';
   location: string;
   nextGrowthUpdateDue?: string;
   growthUpdates?: Array<{

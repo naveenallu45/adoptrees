@@ -5,6 +5,7 @@ import AuthGuard from '@/components/Dashboard/AuthGuard';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -71,6 +72,11 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
+            <Link 
+              href="/"
+              className="flex items-center transition-transform duration-300 hover:scale-105 active:scale-95"
+              aria-label="Adoptrees Home"
+            >
             <div className="relative w-[90px] h-[90px] flex-shrink-0 -my-[17px]">
               <Image
                 src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
@@ -81,6 +87,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 priority
               />
             </div>
+            </Link>
           </div>
           
           {/* Page content */}

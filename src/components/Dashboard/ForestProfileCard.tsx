@@ -3,13 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { 
-  SparklesIcon as TreeIcon,
-  CloudArrowUpIcon as CloudIcon,
-  MapPinIcon as MapIcon,
-  GlobeAltIcon,
-  BoltIcon as ImpactIcon
-} from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
 interface OrderItem {
@@ -399,30 +392,67 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
 
   return (
     <motion.div
-      className="bg-gradient-to-br from-green-800 to-green-900 rounded-lg shadow-xl overflow-hidden w-full"
+      className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl shadow-xl hover:shadow-2xl overflow-hidden w-full transition-all duration-300 border border-green-700/30"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <div className="p-4 sm:p-5 md:p-6 text-white">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3 sm:gap-4">
-            {/* Profile Image - circular */}
-            <div className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-green-300">
+        {/* Layout: Mobile horizontal, Laptop vertical with full-height image */}
+        <div className="flex flex-col md:flex-row md:items-stretch gap-4 md:gap-6">
+          {/* Mobile: Small circular image with text */}
+          <div className="md:hidden flex items-center gap-3 sm:gap-4">
+            {/* Profile Image - Mobile: Circular */}
+            <div className="relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
+              <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-green-300">
+                {getProfileImage() ? (
+                  <Image
+                    key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
+                    src={getProfileImage() || ''}
+                    alt={getUserDisplayName()}
+                    fill
+                    className="object-cover rounded-full"
+                    sizes="(max-width: 640px) 48px, 56px"
+                    unoptimized
+                    priority
+                  />
+                ) : (
+                  <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
+                    {getUserDisplayName()
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold mb-1">{getForestName()}</h2>
+              <p className="text-green-200 text-xs sm:text-sm">{getLastPlantingText()}</p>
+            </div>
+          </div>
+
+          {/* Laptop: Full-height profile image on left */}
+          <div className="hidden md:flex md:flex-shrink-0 md:mt-4">
+            <div className="relative w-[108px] md:w-[130px] lg:w-[155px] h-[108px] md:h-[130px] lg:h-[155px] bg-white rounded-[15px] flex items-center justify-center overflow-hidden border-2 border-green-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
               {getProfileImage() ? (
-                <Image
-                  key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
-                  src={getProfileImage() || ''}
-                  alt={getUserDisplayName()}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 48px, (max-width: 768px) 56px, 64px"
-                  unoptimized
-                  priority
-                />
+                <>
+                  <Image
+                    key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
+                    src={getProfileImage() || ''}
+                    alt={getUserDisplayName()}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="108px"
+                    unoptimized
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </>
               ) : (
-                <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
+                <span className="text-green-800 font-bold text-lg text-center px-2">
                   {getUserDisplayName()
                     .split(' ')
                     .map(n => n[0])
@@ -432,68 +462,67 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
                 </span>
               )}
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-1">{getForestName()}</h2>
-              <p className="text-green-200 text-xs sm:text-sm">{getLastPlantingText()}</p>
-            </div>
           </div>
-        </div>
 
-        {/* Description */}
-        <div className="mb-4 sm:mb-6 text-green-100 text-xs sm:text-sm leading-relaxed">
-          <p>
-            Every adoption contributes to environmental sustainability and helps restore our planet. 
-            Together we are planting trees and making a positive impact on our environment.
-          </p>
-        </div>
+          {/* Content area: Text and Stats */}
+          <div className="flex-1 flex flex-col">
+            {/* Header - Laptop only */}
+            <div className="hidden md:block mb-4">
+              <h2 className="text-xl md:text-2xl font-bold mb-1 text-white drop-shadow-sm">{getForestName()}</h2>
+              <p className="text-green-200 text-sm font-medium">{getLastPlantingText()}</p>
+            </div>
 
-        {/* Stats Grid */}
-        <div className="flex flex-row overflow-x-auto gap-2 sm:gap-3 md:gap-4 sm:grid sm:grid-cols-3 md:grid-cols-5 mt-4 sm:mt-6 scrollbar-hide pb-2 sm:pb-0">
+            {/* Description */}
+            <div className="mb-4 sm:mb-6 text-green-100 text-xs sm:text-sm leading-relaxed">
+              <p className="opacity-90">
+                Every adoption contributes to sustainability and helps restore our planet. Together we are planting trees and making a positive impact.
+              </p>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4">
           {/* Trees Planted */}
-          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
-            <div className="flex justify-center mb-1 sm:mb-2">
-              <TreeIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
-            </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.treesPlanted}</div>
-            <div className="text-[10px] sm:text-xs text-green-200">Trees planted</div>
-          </div>
+          <motion.div 
+            className="text-center px-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-all duration-300 hover:scale-105 border border-white/10"
+            whileHover={{ y: -2 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="text-lg sm:text-xl md:text-2xl font-bold mb-0.5 text-white drop-shadow-md">{stats.treesPlanted}</div>
+            <div className="text-[9px] sm:text-[10px] text-green-200 font-medium">Trees planted</div>
+          </motion.div>
 
           {/* CO2 Absorbed */}
-          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
-            <div className="flex justify-center mb-1 sm:mb-2">
-              <CloudIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
-            </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">
+          <motion.div 
+            className="text-center px-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-all duration-300 hover:scale-105 border border-white/10"
+            whileHover={{ y: -2 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="text-lg sm:text-xl md:text-2xl font-bold mb-0.5 text-white drop-shadow-md">
               {stats.co2Absorbed.toFixed(2)} t*
             </div>
-            <div className="text-[10px] sm:text-xs text-green-200">CO₂ absorbed</div>
-          </div>
-
-          {/* Forests */}
-          <div className="hidden sm:block text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
-            <div className="flex justify-center mb-1 sm:mb-2">
-              <MapIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
-            </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.forests}</div>
-            <div className="text-[10px] sm:text-xs text-green-200">Forests</div>
-          </div>
+            <div className="text-[9px] sm:text-[10px] text-green-200 font-medium">CO₂ absorbed</div>
+          </motion.div>
 
           {/* Countries */}
-          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
-            <div className="flex justify-center mb-1 sm:mb-2">
-              <GlobeAltIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
-            </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.countries}</div>
-            <div className="text-[10px] sm:text-xs text-green-200">Countries</div>
-          </div>
+          <motion.div 
+            className="text-center px-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-all duration-300 hover:scale-105 border border-white/10"
+            whileHover={{ y: -2 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="text-lg sm:text-xl md:text-2xl font-bold mb-0.5 text-white drop-shadow-md">{stats.countries}</div>
+            <div className="text-[9px] sm:text-[10px] text-green-200 font-medium">Countries</div>
+          </motion.div>
 
           {/* Impacts */}
-          <div className="text-center flex-shrink-0 min-w-[70px] sm:min-w-0 px-1">
-            <div className="flex justify-center mb-1 sm:mb-2">
-              <ImpactIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-300" />
+          <motion.div 
+            className="text-center px-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-all duration-300 hover:scale-105 border border-white/10"
+            whileHover={{ y: -2 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="text-lg sm:text-xl md:text-2xl font-bold mb-0.5 text-white drop-shadow-md">{stats.impacts}</div>
+            <div className="text-[9px] sm:text-[10px] text-green-200 font-medium">Impacts</div>
+          </motion.div>
             </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">{stats.impacts}</div>
-            <div className="text-[10px] sm:text-xs text-green-200">Impacts</div>
           </div>
         </div>
       </div>

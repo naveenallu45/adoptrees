@@ -5,6 +5,7 @@ import AuthGuard from '@/components/Dashboard/AuthGuard';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -56,6 +57,11 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex-1 lg:pl-64 flex flex-col min-h-screen relative z-10">
           {/* Mobile header */}
           <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+            <Link 
+              href="/"
+              className="flex items-center transition-transform duration-300 hover:scale-105 active:scale-95"
+              aria-label="Adoptrees Home"
+            >
             <div className="relative w-[90px] h-[90px] flex-shrink-0 -my-[17px]">
               <Image
                 src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
@@ -66,6 +72,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 priority
               />
             </div>
+            </Link>
             <button
               onClick={() => {
                 const sidebar = document.getElementById('mobile-sidebar');

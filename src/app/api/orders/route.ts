@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order, { IOrder } from '@/models/Order';
 import Tree from '@/models/Tree';
-import User from '@/models/User';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(request: NextRequest) {
@@ -170,10 +169,11 @@ export async function POST(request: NextRequest) {
     await order.save();
 
     // Create wellwisher tasks for all orders (not just gifts)
-    // Find a wellwisher to assign (for now, assign to first available wellwisher)
-    const wellwisher = await User.findOne({ role: 'wellwisher' });
+    // Assign to well-wisher using equal distribution
+    const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
+    const wellwisherId = await assignWellWisherEqually();
     
-    if (wellwisher) {
+    if (wellwisherId) {
       const wellwisherTasks = orderItems.map((item, index) => ({
         taskId: `${orderId}-${index}`, // Use existing order ID (like WEL60136-0, WEL60136-1)
         task: `Plant and care for ${item.treeName}`,
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
         location: 'To be determined'
       }));
 
-      order.assignedWellwisher = wellwisher._id.toString();
+      order.assignedWellwisher = wellwisherId;
       order.wellwisherTasks = wellwisherTasks;
       await order.save();
     }

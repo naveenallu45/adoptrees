@@ -50,7 +50,6 @@ export default function CompanySidebar() {
           href="/" 
           className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
         >
-          <TreeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-300" />
           <h1 className="text-lg sm:text-xl lg:text-2xl font-bold">Adoptrees</h1>
         </Link>
         

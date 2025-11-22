@@ -180,22 +180,26 @@ export async function POST(request: NextRequest) {
     order.paymentId = razorpay_payment_id;
     order.status = 'confirmed';
 
-    // Create wellwisher tasks for all orders
-    const wellwisher = await User.findOne({ role: 'wellwisher' });
-    
-    if (wellwisher) {
-      const wellwisherTasks = order.items.map((item, index) => ({
-        taskId: `${order.orderId}-${index}`,
-        task: `Plant and care for ${item.treeName}`,
-        description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-        scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-        priority: 'medium' as const,
-        status: 'pending' as const,
-        location: 'To be determined'
-      }));
+    // Create wellwisher tasks for all orders - assign using equal distribution
+    // Only assign if not already assigned
+    if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
+      const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
+      const wellwisherId = await assignWellWisherEqually();
+      
+      if (wellwisherId) {
+        const wellwisherTasks = order.items.map((item, index) => ({
+          taskId: `${order.orderId}-${index}`,
+          task: `Plant and care for ${item.treeName}`,
+          description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+          scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
+          priority: 'medium' as const,
+          status: 'pending' as const,
+          location: 'To be determined'
+        }));
 
-      order.assignedWellwisher = wellwisher._id.toString();
-      order.wellwisherTasks = wellwisherTasks;
+        order.assignedWellwisher = wellwisherId;
+        order.wellwisherTasks = wellwisherTasks;
+      }
     }
 
     // Generate and store certificate

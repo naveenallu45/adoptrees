@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if task is completed
-    if (task.status !== 'completed') {
+    // Check if task is completed or updating (updating status means it needs growth update)
+    if (task.status !== 'completed' && task.status !== 'updating') {
       return NextResponse.json(
-        { success: false, error: 'Task must be completed to upload growth updates' },
+        { success: false, error: 'Task must be completed or in updating status to upload growth updates' },
         { status: 400 }
       );
     }
@@ -163,19 +163,20 @@ export async function POST(request: NextRequest) {
     const nextGrowthUpdateDue = new Date();
     nextGrowthUpdateDue.setDate(nextGrowthUpdateDue.getDate() + 30);
 
-    // Use atomic update to add growth update and update next due date
+    // Use atomic update to add growth update, update next due date, and move status back to completed
     const updateResult = await Order.findOneAndUpdate(
       {
         _id: orderId,
         assignedWellwisher: session.user.id,
         'wellwisherTasks.taskId': taskId,
-        'wellwisherTasks.status': 'completed'
+        'wellwisherTasks.status': { $in: ['completed', 'updating'] } // Accept both statuses
       },
       {
         $push: {
           'wellwisherTasks.$.growthUpdates': growthUpdate
         },
         $set: {
+          'wellwisherTasks.$.status': 'completed', // Move back to completed after growth update
           'wellwisherTasks.$.nextGrowthUpdateDue': nextGrowthUpdateDue
         }
       },

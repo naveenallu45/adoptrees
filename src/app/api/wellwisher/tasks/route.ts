@@ -40,10 +40,17 @@ export async function GET(request: NextRequest) {
 
     // If fetching tasks needing growth updates, filter differently
     if (needsGrowthUpdate) {
+      // Show tasks that are in 'updating' status (moved by cron job after 90 days)
+      // OR completed tasks with nextGrowthUpdateDue <= today (for backward compatibility)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      matchConditions['wellwisherTasks.status'] = 'completed';
-      matchConditions['wellwisherTasks.nextGrowthUpdateDue'] = { $lte: today };
+      matchConditions['$or'] = [
+        { 'wellwisherTasks.status': 'updating' },
+        {
+          'wellwisherTasks.status': 'completed',
+          'wellwisherTasks.nextGrowthUpdateDue': { $lte: today }
+        }
+      ];
     } else {
       matchConditions['wellwisherTasks.status'] = status;
     }
@@ -57,8 +64,13 @@ export async function GET(request: NextRequest) {
       },
       {
         $match: needsGrowthUpdate ? {
-          'wellwisherTasks.status': 'completed',
-          'wellwisherTasks.nextGrowthUpdateDue': { $lte: new Date(new Date().setHours(0, 0, 0, 0)) }
+          $or: [
+            { 'wellwisherTasks.status': 'updating' },
+            {
+              'wellwisherTasks.status': 'completed',
+              'wellwisherTasks.nextGrowthUpdateDue': { $lte: new Date(new Date().setHours(0, 0, 0, 0)) }
+            }
+          ]
         } : {
           'wellwisherTasks.status': status
         }

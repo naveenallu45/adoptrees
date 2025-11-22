@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import Order from '@/models/Order';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 
@@ -215,12 +216,74 @@ export async function DELETE(
       );
     }
 
-    // Delete well-wisher
+    const wellWisherId = id.toString();
+
+    // Find all orders assigned to this well-wisher
+    const assignedOrders = await Order.find({
+      assignedWellwisher: wellWisherId
+    });
+
+    // Get all available well-wishers (excluding the one being deleted)
+    const availableWellWishers = await User.find({
+      role: 'wellwisher',
+      _id: { $ne: id }
+    }).select('_id');
+
+    // If there are no available well-wishers, we can't reassign
+    // In this case, we'll still delete but warn about orphaned tasks
+    if (availableWellWishers.length === 0) {
+      // Delete well-wisher (tasks will be orphaned but orders remain)
+      await User.findByIdAndDelete(id);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Well-wisher deleted successfully. No other well-wishers available to reassign tasks.',
+        warning: 'Tasks from this well-wisher were not reassigned as no other well-wishers are available.',
+      });
+    }
+
+    // Redistribute tasks equally among available well-wishers
+    // Use round-robin approach for equal distribution
+    let wellWisherIndex = 0;
+    const reassignmentUpdates: Array<{ orderId: string; newWellWisherId: string; tasksCount: number }> = [];
+
+    for (const order of assignedOrders) {
+      // Select next well-wisher in round-robin fashion
+      const newWellWisher = availableWellWishers[wellWisherIndex % availableWellWishers.length];
+      const newWellWisherId = newWellWisher._id.toString();
+
+      // Update order with new well-wisher assignment
+      // This preserves all tasks (upcoming, ongoing, completed, updating) and just reassigns them
+      await Order.findByIdAndUpdate(
+        order._id,
+        {
+          $set: {
+            assignedWellwisher: newWellWisherId
+          }
+        }
+      );
+
+      reassignmentUpdates.push({
+        orderId: order.orderId || String(order._id),
+        newWellWisherId: newWellWisherId,
+        tasksCount: order.wellwisherTasks?.length || 0
+      });
+
+      // Move to next well-wisher for next order
+      wellWisherIndex++;
+    }
+
+    // Delete well-wisher after reassigning all tasks
     await User.findByIdAndDelete(id);
 
     return NextResponse.json({
       success: true,
-      message: 'Well-wisher deleted successfully',
+      message: 'Well-wisher deleted successfully. All tasks have been reassigned equally to available well-wishers.',
+      reassigned: {
+        ordersCount: assignedOrders.length,
+        totalTasks: reassignmentUpdates.reduce((sum, update) => sum + update.tasksCount, 0),
+        wellWishersUsed: availableWellWishers.length
+      }
     });
   } catch (_error) {
     return NextResponse.json(

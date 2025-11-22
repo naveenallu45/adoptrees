@@ -38,7 +38,10 @@ function LocationToggle({
     <div>
       <button
         type="button"
-        onClick={onToggle}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
       >
         <MapPinIcon className="h-4 w-4 flex-shrink-0" />
@@ -460,6 +463,10 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                     // Create unique key for each adoption
                     const uniqueKey = `${primaryOrder._id}-${firstItemIndex}-${treeIndex}`;
                     
+                    const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
+                    const detailPath = `${basePath}/${primaryOrder.orderId || primaryOrder._id}/${firstItemIndex}`;
+                    const detailUrl = publicId ? `${detailPath}?publicId=${publicId}` : detailPath;
+
                     return (
                       <motion.div
                         key={uniqueKey}
@@ -470,7 +477,10 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                       >
                         <div className="flex flex-row gap-3 sm:gap-4">
                           {/* Tree Image */}
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm">
+                          <div 
+                            onClick={() => router.push(detailUrl)}
+                            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 border border-green-200/50 shadow-sm cursor-pointer hover:shadow-md transition-all duration-300"
+                          >
                             {item.treeImageUrl ? (
                               <Image
                                 src={item.treeImageUrl}
@@ -514,11 +524,9 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                             {/* Right: Action Buttons */}
                             <div className="flex flex-col items-end justify-end gap-2 sm:gap-3 flex-shrink-0">
                               <button
-                                onClick={() => {
-                                  const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
-                                  const detailPath = `${basePath}/${primaryOrder.orderId || primaryOrder._id}/${firstItemIndex}`;
-                                  const url = publicId ? `${detailPath}?publicId=${publicId}` : detailPath;
-                                  router.push(url);
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(detailUrl);
                                 }}
                                 className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
                                 type="button"
@@ -528,7 +536,10 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                               </button>
                               {!isTransactionsPage && getStatusText(primaryOrder) === 'Certificate' && primaryOrder.orderId && (
                                 <button
-                                  onClick={() => handleDownloadCertificate(primaryOrder.orderId!)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownloadCertificate(primaryOrder.orderId!);
+                                  }}
                                   disabled={downloadingCertificate === primaryOrder.orderId}
                                   className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:from-green-100 hover:to-emerald-100 transition-all border border-green-200/50 shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                                   type="button"

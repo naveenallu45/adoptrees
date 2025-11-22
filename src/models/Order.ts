@@ -36,7 +36,7 @@ export interface IOrder extends Document {
     description: string;
     scheduledDate: Date;
     priority: 'low' | 'medium' | 'high';
-    status: 'pending' | 'in_progress' | 'completed';
+    status: 'pending' | 'in_progress' | 'completed' | 'updating';
     location?: string;
     plantingDetails?: {
       plantedAt?: Date;
@@ -220,7 +220,7 @@ const OrderSchema: Schema = new Schema({
     },
     status: {
       type: String,
-      enum: ['pending', 'in_progress', 'completed'],
+      enum: ['pending', 'in_progress', 'completed', 'updating'],
       default: 'pending'
     },
     location: {
