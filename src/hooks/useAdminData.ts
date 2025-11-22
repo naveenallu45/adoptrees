@@ -45,10 +45,10 @@ export function useAdminStats() {
       
       return result;
     },
-    staleTime: 30 * 1000, // 30 seconds - data is fresh for 30s
-    gcTime: 5 * 60 * 1000, // 5 minutes - keep cache for 5 minutes
-    refetchOnMount: false, // Use cached data if available
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 0, // No cache - always consider data stale
+    gcTime: 0, // No cache - remove immediately when unused
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnReconnect: true, // Refetch when network reconnects
     // No automatic refetch interval - only refetch on user actions
   });
@@ -103,10 +103,10 @@ export function useTrees() {
         throw error;
       }
     },
-    staleTime: 30 * 1000, // 30 seconds - data is fresh for 30s
-    gcTime: 5 * 60 * 1000, // 5 minutes - keep cache for 5 minutes
-    refetchOnMount: false, // Use cached data if available
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 0, // No cache - always consider data stale
+    gcTime: 0, // No cache - remove immediately when unused
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnReconnect: true, // Refetch when network reconnects
     // No automatic refetch interval - only refetch on user actions
     retry: 2, // Retry failed requests 2 times
@@ -138,10 +138,10 @@ export function useIndividualUsers() {
       const users: IndividualUser[] = data.data || [];
       return users;
     },
-    staleTime: 30 * 1000, // 30 seconds - data is fresh for 30s
-    gcTime: 5 * 60 * 1000, // 5 minutes - keep cache for 5 minutes
-    refetchOnMount: false, // Use cached data if available
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 0, // No cache - always consider data stale
+    gcTime: 0, // No cache - remove immediately when unused
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnReconnect: true, // Refetch when network reconnects
     // No automatic refetch interval - only refetch on user actions
   });
@@ -172,10 +172,10 @@ export function useCompanyUsers() {
       const users: CompanyUser[] = data.data || [];
       return users;
     },
-    staleTime: 30 * 1000, // 30 seconds - data is fresh for 30s
-    gcTime: 5 * 60 * 1000, // 5 minutes - keep cache for 5 minutes
-    refetchOnMount: false, // Use cached data if available
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 0, // No cache - always consider data stale
+    gcTime: 0, // No cache - remove immediately when unused
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnReconnect: true, // Refetch when network reconnects
     // No automatic refetch interval - only refetch on user actions
   });
@@ -208,10 +208,10 @@ export function useWellWishers() {
       const wellWishers: WellWisher[] = data.data || [];
       return wellWishers;
     },
-    staleTime: 30 * 1000, // 30 seconds - data is fresh for 30s
-    gcTime: 5 * 60 * 1000, // 5 minutes - keep cache for 5 minutes
-    refetchOnMount: false, // Use cached data if available
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 0, // No cache - always consider data stale
+    gcTime: 0, // No cache - remove immediately when unused
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnReconnect: true, // Refetch when network reconnects
     // No automatic refetch interval - only refetch on user actions
   });
