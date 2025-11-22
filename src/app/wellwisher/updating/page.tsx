@@ -374,7 +374,7 @@ export default function UpdatingPage() {
         className="mb-8"
       >
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Growth Update Tasks</h1>
-        <p className="text-gray-600">Upload growth images for completed tasks every 30 days</p>
+        <p className="text-gray-600">Upload growth images for completed tasks every 90 days</p>
       </motion.div>
 
       {tasks.length === 0 ? (
