@@ -2,9 +2,10 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, CheckIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 export default function CompanyProfilePage() {
   const { data: session, update: updateSession } = useSession();
@@ -19,10 +20,14 @@ export default function CompanyProfilePage() {
     gstNumber: '',
     website: '',
   });
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [initialFormData, setInitialFormData] = useState(formData);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   // Fetch user profile data on mount - only once
@@ -53,6 +58,7 @@ export default function CompanyProfilePage() {
             };
             setFormData(fetchedData);
             setInitialFormData(fetchedData);
+            setProfileImage(userData.image || session?.user?.image || null);
           }
         }
       } catch (error) {
@@ -72,12 +78,53 @@ export default function CompanyProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]); // Only depend on user ID to prevent re-fetch on session updates
 
+  // Sync profile image with session image (only on initial load, not on updates)
+  useEffect(() => {
+    // Only sync if we're not in the middle of an update and image is missing
+    if (!sessionUpdateRef.current && session?.user?.image && !profileImage) {
+      setProfileImage(session.user.image);
+    }
+  }, [session?.user?.image, profileImage]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setSaveError('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setSaveError('Image size must be less than 5MB');
+        return;
+      }
+
+      setProfileImageFile(file);
+      setSaveError(null);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageClick = () => {
+    if (isEditing && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const handleSave = async () => {
@@ -90,19 +137,42 @@ export default function CompanyProfilePage() {
     setSaveError(null);
 
     try {
-      const response = await fetch(`/api/users/${session.user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          companyName: formData.companyName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          gstNumber: formData.gstNumber,
-        }),
-      });
+      let response: Response;
+      
+      // If there's an image file, use FormData
+      if (profileImageFile) {
+        const formDataToSend = new FormData();
+        formDataToSend.append('companyName', formData.companyName);
+        formDataToSend.append('email', formData.email);
+        formDataToSend.append('phone', formData.phone);
+        formDataToSend.append('address', formData.address);
+        formDataToSend.append('gstNumber', formData.gstNumber);
+        if (formData.website) {
+          formDataToSend.append('website', formData.website);
+        }
+        formDataToSend.append('image', profileImageFile);
+
+        response = await fetch(`/api/users/${session.user.id}`, {
+          method: 'PUT',
+          body: formDataToSend,
+        });
+      } else {
+        // Otherwise, use JSON
+        response = await fetch(`/api/users/${session.user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            companyName: formData.companyName,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            gstNumber: formData.gstNumber,
+            website: formData.website,
+          }),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to update profile' }));
@@ -112,23 +182,32 @@ export default function CompanyProfilePage() {
       const result = await response.json();
 
       if (result.success) {
+        // Optimistic update - update UI immediately
+        const newImage = result.data?.image || null;
+        if (newImage) {
+          setProfileImage(newImage);
+          setImagePreview(null);
+        }
+        setProfileImageFile(null);
+        
         // Check if session values actually changed to avoid unnecessary updates
         const nameChanged = formData.companyName !== session?.user?.name;
         const emailChanged = formData.email !== session?.user?.email;
+        const imageChanged = newImage !== session?.user?.image;
         
-        // Optimistic update - update UI immediately
         setInitialFormData(formData);
         setSaveError(null);
         setIsEditing(false);
         
         // Only update session if values actually changed (prevents unnecessary re-renders)
-        if (nameChanged || emailChanged) {
+        if (nameChanged || emailChanged || imageChanged) {
           sessionUpdateRef.current = true;
           // Defer session update to prevent immediate re-render cascade
           setTimeout(() => {
             updateSession({
               name: formData.companyName,
               email: formData.email,
+              image: newImage || undefined,
             }).catch((error) => {
               console.error('Session update error:', error);
             }).finally(() => {
@@ -155,6 +234,11 @@ export default function CompanyProfilePage() {
     setFormData(initialFormData);
     setSaveError(null);
     setIsEditing(false);
+    setProfileImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
 
@@ -189,10 +273,49 @@ export default function CompanyProfilePage() {
           transition={{ delay: 0.1 }}
         >
           <div className="p-6 text-center">
+            {/* Profile Image */}
+            <div className="relative inline-block mb-4">
+              <div
+                className={`relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 ${
+                  isEditing ? 'cursor-pointer hover:border-blue-500 transition-colors' : ''
+                }`}
+                onClick={handleImageClick}
+              >
+                {imagePreview || profileImage ? (
+                  <Image
+                    src={imagePreview || profileImage || ''}
+                    alt={formData.companyName || 'Company'}
+                    fill
+                    className="object-cover"
+                    sizes="128px"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                    <span className="text-4xl font-bold text-white">
+                      {formData.companyName?.charAt(0).toUpperCase() || 'C'}
+                    </span>
+                  </div>
+                )}
+                {isEditing && (
+                  <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <CameraIcon className="w-8 h-8 text-white" />
+                  </div>
+                )}
+              </div>
+              {isEditing && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              )}
+            </div>
             <h2 className="text-xl font-semibold text-gray-900">
-              {session?.user?.name || 'Company Name'}
+              {formData.companyName || session?.user?.name || 'Company Name'}
             </h2>
-            <p className="text-gray-600 mb-4">{session?.user?.email}</p>
+            <p className="text-gray-600 mb-4">{formData.email || session?.user?.email}</p>
             <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
               Company Account
             </div>

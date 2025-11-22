@@ -37,21 +37,29 @@ async function connectDB() {
       bufferCommands: false,
       // Production optimizations
       maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+      serverSelectionTimeoutMS: 10000, // Increased to 10 seconds for better reliability
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
       family: 4, // Use IPv4, skip trying IPv6
       // Connection options
-      connectTimeoutMS: 10000,
+      connectTimeoutMS: 15000, // Increased to 15 seconds
       heartbeatFrequencyMS: 10000,
       // Retry options
       retryWrites: true,
       retryReads: true,
       // Compression
       compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],
+      // DNS options - help with SRV record resolution
+      directConnection: false, // Allow SRV records
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
       return mongoose;
+    }).catch((error) => {
+      // Clear promise on error so we can retry
+      if (cached) {
+        cached.promise = null;
+      }
+      throw error;
     });
   }
 

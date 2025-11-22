@@ -31,13 +31,13 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen overflow-hidden bg-gray-50">
         {/* Mobile sidebar overlay */}
         <div 
-          className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50 hidden" 
+          className="lg:hidden fixed inset-0 z-40 bg-gray-900/10 hidden" 
           id="sidebar-overlay"
           onClick={() => {
             const sidebar = document.getElementById('mobile-sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             if (sidebar && overlay) {
-              sidebar.classList.add('-translate-x-full');
+              sidebar.classList.add('translate-x-full');
               overlay.classList.add('hidden');
             }
           }}
@@ -49,7 +49,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         
         {/* Mobile sidebar */}
-        <div className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 transform -translate-x-full transition-transform duration-300 ease-in-out" id="mobile-sidebar">
+        <div className="lg:hidden fixed inset-y-0 right-0 z-50 w-64 transform translate-x-full transition-transform duration-300 ease-in-out" id="mobile-sidebar">
           <CompanySidebar />
         </div>
         
@@ -57,21 +57,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
           {/* Mobile header */}
           <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => {
-                const sidebar = document.getElementById('mobile-sidebar');
-                const overlay = document.getElementById('sidebar-overlay');
-                if (sidebar && overlay) {
-                  sidebar.classList.remove('-translate-x-full');
-                  overlay.classList.remove('hidden');
-                }
-              }}
-              className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
             <Link 
               href="/"
               className="flex items-center transition-transform duration-300 hover:scale-105 active:scale-95"
@@ -88,6 +73,21 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               />
             </div>
             </Link>
+            <button
+              onClick={() => {
+                const sidebar = document.getElementById('mobile-sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar && overlay) {
+                  sidebar.classList.remove('translate-x-full');
+                  overlay.classList.remove('hidden');
+                }
+              }}
+              className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
           
           {/* Page content */}

@@ -17,7 +17,7 @@ export default function Navbar() {
   const { getTotalItems } = useCart();
 
   // Pages that should always have white navbar background
-  const fixedWhitePages = ['/individuals', '/companies', '/about', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies'];
+  const fixedWhitePages = ['/individuals', '/companies', '/about', '/achievers', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies'];
   
   // Check if current path starts with /trees (for tree info pages)
   const isTreeInfoPage = pathname?.startsWith('/trees/');
@@ -53,6 +53,8 @@ export default function Navbar() {
   const navItems = [
     { name: 'For Individuals', href: '/individuals' },
     { name: 'For Companies', href: '/companies' },
+    { name: 'Create Forest', href: '/create-forest' },
+    { name: 'Achievers', href: '/achievers' },
     { name: 'About Us', href: '/about' }
   ];
 
@@ -65,7 +67,7 @@ export default function Navbar() {
       <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-0 sm:py-[1px]">
         <div className="flex items-center justify-between h-[56px] sm:h-[56px] md:h-[67px] lg:h-[78px] xl:h-[88px] 2xl:h-[99px] overflow-visible">
           {/* Logo and Navigation Items */}
-          <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-8">
+          <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 xl:space-x-5">
             {/* Logo */}
             <div className="flex items-center h-full">
               <Link 
@@ -91,12 +93,12 @@ export default function Navbar() {
             </div>
 
             {/* Desktop Navigation Items */}
-            <div className="hidden lg:flex items-center space-x-8 xl:space-x-10">
+            <div className="hidden lg:flex items-center space-x-[1.848rem] xl:space-x-[2.31rem] 2xl:space-x-[2.772rem]">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`transition-all duration-300 font-bold text-xl xl:text-2xl tracking-tight relative group ${
+                  className={`transition-all duration-300 font-bold text-[17.6px] xl:text-[19.8px] 2xl:text-[22px] tracking-tight relative group whitespace-nowrap ${
                     shouldUseWhiteBg 
                       ? 'text-gray-900 hover:text-green-600' 
                       : 'text-white hover:text-green-200 drop-shadow-lg'
@@ -113,12 +115,12 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Action Buttons */}
-          <div className="hidden md:flex items-center gap-3 lg:gap-6 xl:gap-8">
+          <div className="hidden md:flex items-center gap-2 lg:gap-3 xl:gap-4">
             {/* Auth Buttons */}
             {session ? (
               <Link 
                 href={session.user.userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees'} 
-                className={`flex items-center gap-2 text-white border border-white px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg font-black text-[16.2px] lg:text-[18.5px] transition-all duration-200 ${
+                className={`flex items-center gap-1.5 text-white border border-white px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-lg font-black text-sm lg:text-base transition-all duration-200 ${
                   shouldUseGreenBg 
                     ? 'bg-green-500 hover:bg-green-600' 
                     : 'bg-transparent hover:text-green-200'
@@ -130,7 +132,7 @@ export default function Navbar() {
                 <span className="hidden lg:inline">Profile</span>
               </Link>
             ) : (
-              <Link href="/login" className={`flex items-center gap-2 text-white border border-white px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg font-black text-[16.2px] lg:text-[18.5px] transition-all duration-200 ${
+              <Link href="/login" className={`flex items-center gap-1.5 text-white border border-white px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-lg font-black text-sm lg:text-base transition-all duration-200 ${
                 shouldUseGreenBg 
                   ? 'bg-green-500 hover:bg-green-600' 
                   : 'bg-transparent hover:text-green-200'
@@ -143,7 +145,7 @@ export default function Navbar() {
             )}
 
             {/* Desktop Cart Button */}
-            <Link href="/cart" className={`relative flex items-center gap-2 text-white border border-white px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg font-black text-[16.2px] lg:text-[18.5px] transition-all duration-200 ${
+            <Link href="/cart" className={`relative flex items-center gap-1.5 text-white border border-white px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-lg font-black text-sm lg:text-base transition-all duration-200 ${
               shouldUseGreenBg 
                 ? 'bg-green-500 hover:bg-green-600' 
                 : 'bg-transparent hover:text-green-200'
