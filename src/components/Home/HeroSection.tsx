@@ -3,10 +3,10 @@ import Link from 'next/link';
 
 export default function HeroSection() {
   return (
-    <section id="home" className="min-h-screen relative overflow-hidden">
+    <section id="home" className="min-h-screen relative overflow-hidden pt-33">
       {/* Background Image */}
       <Image
-        src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1760799467/pexels-leiliane-dutra-1841922-11130997_eqyprh.jpg"
+        src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763884180/ChatGPT_Image_Nov_23_2025_at_01_13_52_PM_h3ylqf.png"
         alt="Tree planting background"
         fill
         className="object-cover"
@@ -34,13 +34,8 @@ export default function HeroSection() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white max-w-2xl sm:max-w-3xl mx-auto mb-4 sm:mb-6 drop-shadow-lg font-medium px-4">
+          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white max-w-2xl sm:max-w-3xl mx-auto mb-6 sm:mb-8 drop-shadow-lg font-medium px-4">
             Adopt a tree or gift one to someone you care for. Every tree you plant brings India one step closer to a greener future.
-          </p>
-          
-          {/* Tagline */}
-          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl sm:max-w-3xl mx-auto mb-6 sm:mb-8 drop-shadow-lg font-medium px-4">
-            Together, let&apos;s grow a healthier planet—one tree at a time.
           </p>
 
           {/* CTA Buttons */}
