@@ -43,15 +43,15 @@ export default function TreesManagement() {
     e.preventDefault();
     setSubmitting(true);
     
-    // Validate package fields for company trees
-    if (formData.treeType === 'company') {
+    // Validate package fields for company and forest trees
+    if (formData.treeType === 'company' || formData.treeType === 'forest') {
       if (!formData.packageQuantity || formData.packageQuantity === '') {
-        toast.error('Package quantity is required for company trees');
+        toast.error(`Package quantity is required for ${formData.treeType === 'company' ? 'company' : 'forest'} trees`);
         setSubmitting(false);
         return;
       }
       if (!formData.packagePrice || formData.packagePrice === '') {
-        toast.error('Package price is required for company trees');
+        toast.error(`Package price is required for ${formData.treeType === 'company' ? 'company' : 'forest'} trees`);
         setSubmitting(false);
         return;
       }
@@ -67,18 +67,30 @@ export default function TreesManagement() {
       }
     }
     
-    // Validate price before sending
-    const priceValue = parseFloat(formData.price);
-    if (isNaN(priceValue) || priceValue <= 0) {
-      toast.error('Price must be a valid positive number');
-      setSubmitting(false);
-      return;
+    // Validate price only for individual trees
+    if (formData.treeType === 'individual') {
+      const priceValue = parseFloat(formData.price);
+      if (isNaN(priceValue) || priceValue <= 0) {
+        toast.error('Price must be a valid positive number');
+        setSubmitting(false);
+        return;
+      }
     }
     
     const formDataToSend = new FormData();
     formDataToSend.append('name', formData.name);
-    // Send price exactly as admin entered - no manipulation
-    formDataToSend.append('price', formData.price);
+    // For company/forest trees, calculate price from packagePrice/packageQuantity
+    // For individual trees, use the entered price directly
+    let priceToSend = formData.price;
+    if (formData.treeType === 'company' || formData.treeType === 'forest') {
+      const packagePrice = parseFloat(formData.packagePrice);
+      const packageQuantity = parseInt(formData.packageQuantity);
+      if (!isNaN(packagePrice) && !isNaN(packageQuantity) && packageQuantity > 0) {
+        // Calculate price per tree from package
+        priceToSend = (packagePrice / packageQuantity).toFixed(2);
+      }
+    }
+    formDataToSend.append('price', priceToSend);
     
     formDataToSend.append('info', formData.info);
     formDataToSend.append('oxygenKgs', formData.oxygenKgs);
@@ -485,19 +497,22 @@ export default function TreesManagement() {
                       // Reset package fields when switching to individual
                       packageQuantity: newTreeType === 'individual' ? '' : formData.packageQuantity,
                       packagePrice: newTreeType === 'individual' ? '' : formData.packagePrice,
-                      // Reset price field when switching to company (will be calculated from package)
-                      price: newTreeType === 'company' ? '' : formData.price
+                      // Reset price field when switching to company or forest (will use package price)
+                      price: (newTreeType === 'company' || newTreeType === 'forest') ? '' : formData.price
                     });
                   }}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="individual">Individual Tree</option>
                   <option value="company">Company Package</option>
+                  <option value="forest">Forest Tree</option>
                 </select>
                 <p className="mt-1 text-xs text-gray-500">
                   {formData.treeType === 'individual' 
                     ? 'Single tree for individual adoption' 
-                    : 'Package of multiple trees for corporate adoption'
+                    : formData.treeType === 'company'
+                    ? 'Package of multiple trees for corporate adoption'
+                    : 'Package of trees for forest creation - users can set forest name at checkout'
                   }
                 </p>
               </div>
@@ -676,8 +691,8 @@ export default function TreesManagement() {
                 </div>
               </div>
               
-              {/* Package fields - only show for company trees */}
-              {formData.treeType === 'company' && (
+              {/* Package fields - show for company and forest trees */}
+              {(formData.treeType === 'company' || formData.treeType === 'forest') && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Package Details</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -713,7 +728,9 @@ export default function TreesManagement() {
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-gray-500">
-                    Package pricing will be calculated automatically (Package Price ÷ Package Quantity = Price per tree)
+                    {formData.treeType === 'company' 
+                      ? 'Package pricing will be calculated automatically (Package Price ÷ Package Quantity = Price per tree)'
+                      : 'Package pricing for forest trees. Users can set their forest name at checkout.'}
                   </p>
                 </div>
               )}

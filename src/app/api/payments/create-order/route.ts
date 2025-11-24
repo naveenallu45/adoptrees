@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order items with tree details
-    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; giftMessage?: string }) => {
+    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; giftMessage?: string; forestName?: string; occasion?: string }) => {
       const tree = trees.find(t => String(t._id) === item.treeId);
       if (!tree) {
         throw new Error(`Tree not found: ${item.treeId}`);
@@ -146,7 +146,9 @@ export async function POST(request: NextRequest) {
         adoptionType: item.adoptionType || 'self',
         recipientName: item.recipientName,
         recipientEmail: item.recipientEmail,
-        giftMessage: item.giftMessage
+        giftMessage: item.giftMessage,
+        forestName: item.forestName,
+        occasion: item.occasion
       };
     });
 

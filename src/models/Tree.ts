@@ -11,7 +11,7 @@ export interface ITree extends Document {
   smallImageUrls?: string[];
   smallImagePublicIds?: string[];
   isActive: boolean;
-  treeType: 'individual' | 'company';
+  treeType: 'individual' | 'company' | 'forest';
   // Package fields for corporate trees
   packageQuantity?: number;
   packagePrice?: number;
@@ -76,7 +76,7 @@ const TreeSchema: Schema = new Schema({
   },
   treeType: {
     type: String,
-    enum: ['individual', 'company'],
+    enum: ['individual', 'company', 'forest'],
     required: [true, 'Tree type is required'],
     default: 'individual'
   },
@@ -153,5 +153,11 @@ const TreeSchema: Schema = new Schema({
 TreeSchema.index({ name: 1 });
 TreeSchema.index({ isActive: 1 });
 TreeSchema.index({ createdAt: -1 });
+
+// Clear cached model in development to ensure schema updates are applied
+// This ensures 'forest' enum value is recognized
+if (process.env.NODE_ENV === 'development' && mongoose.models?.Tree) {
+  delete mongoose.models.Tree;
+}
 
 export default (mongoose.models?.Tree || mongoose.model<ITree>('Tree', TreeSchema)) as mongoose.Model<ITree>;

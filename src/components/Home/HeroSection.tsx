@@ -4,18 +4,35 @@ import Link from 'next/link';
 export default function HeroSection() {
   return (
     <section id="home" className="min-h-screen relative overflow-hidden pt-33">
-      {/* Background Image */}
-      <Image
-        src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763884180/ChatGPT_Image_Nov_23_2025_at_01_13_52_PM_h3ylqf.png"
-        alt="Tree planting background"
-        fill
-        className="object-cover"
-        priority
-        quality={85}
-        sizes="100vw"
-        placeholder="blur"
-        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-      />
+      {/* Background Image - Mobile */}
+      <div className="block md:hidden absolute inset-0">
+        <Image
+          src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
+          alt="Tree planting background"
+          fill
+          className="object-cover"
+          priority
+          quality={85}
+          sizes="100vw"
+          placeholder="blur"
+          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+        />
+      </div>
+      
+      {/* Background Image - Desktop/Laptop */}
+      <div className="hidden md:block absolute inset-0">
+        <Image
+          src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763884180/ChatGPT_Image_Nov_23_2025_at_01_13_52_PM_h3ylqf.png"
+          alt="Tree planting background"
+          fill
+          className="object-cover"
+          priority
+          quality={85}
+          sizes="100vw"
+          placeholder="blur"
+          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+        />
+      </div>
       
       {/* Dark Overlay for better text readability */}
       <div className="absolute inset-0 bg-black/40 z-10" />

@@ -64,7 +64,10 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     const missingFields: string[] = [];
     if (!name || name.trim() === '') missingFields.push('name');
-    if (!priceStr || priceStr.trim() === '') missingFields.push('price');
+    // Price is only required for individual trees, company/forest use packagePrice
+    if (treeType !== 'company' && treeType !== 'forest' && (!priceStr || priceStr.trim() === '')) {
+      missingFields.push('price');
+    }
     if (!info || info.trim() === '') missingFields.push('info');
     if (!oxygenKgsStr || oxygenKgsStr.trim() === '') missingFields.push('oxygenKgs');
     if (!image || image.size === 0) missingFields.push('image');
@@ -81,11 +84,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert string to number (required: FormData sends strings, MongoDB needs numbers)
-    // Using Number() for direct conversion - no manipulation, exact value preserved
-    const price = Number(priceStr);
     const oxygenKgs = parseFloat(oxygenKgsStr);
     const packageQuantity = packageQuantityStr ? parseInt(packageQuantityStr) : 1;
     const packagePrice = packagePriceStr ? parseFloat(packagePriceStr) : undefined;
+    
+    // For company/forest trees, calculate price from package if not provided
+    let price: number;
+    if ((treeType === 'company' || treeType === 'forest') && (!priceStr || priceStr.trim() === '')) {
+      // Calculate from package
+      if (packageQuantity > 0 && packagePrice && packagePrice > 0) {
+        price = packagePrice / packageQuantity;
+      } else {
+        price = 0; // Will be caught by validation
+      }
+    } else {
+      // Use provided price for individual trees or if price is explicitly provided
+      price = Number(priceStr);
+    }
     const speciesInfoAvailable = speciesInfoAvailableStr === 'true';
     // Parse numeric fields - handle empty strings properly
     // Parse and validate - include if it's a valid number (including 0 and negative)
@@ -100,23 +115,23 @@ export async function POST(request: NextRequest) {
     const environmentalProtectionParsed = (environmentalProtectionStr && environmentalProtectionStr.trim() !== '') ? parseInt(environmentalProtectionStr) : NaN;
     const environmentalProtection = !isNaN(environmentalProtectionParsed) ? environmentalProtectionParsed : undefined;
 
-    // Validate package fields for company trees
-    if (treeType === 'company') {
+    // Validate package fields for company and forest trees
+    if (treeType === 'company' || treeType === 'forest') {
       if (!packageQuantityStr || packageQuantity <= 0) {
-      return NextResponse.json(
-          { success: false, error: 'Package quantity is required and must be greater than 0 for company trees' },
-        { status: 400 }
-      );
-    }
+        return NextResponse.json(
+          { success: false, error: `Package quantity is required and must be greater than 0 for ${treeType} trees` },
+          { status: 400 }
+        );
+      }
       if (!packagePriceStr || !packagePrice || packagePrice <= 0) {
-      return NextResponse.json(
-          { success: false, error: 'Package price is required and must be greater than 0 for company trees' },
-        { status: 400 }
-      );
+        return NextResponse.json(
+          { success: false, error: `Package price is required and must be greater than 0 for ${treeType} trees` },
+          { status: 400 }
+        );
       }
     }
 
-    // Validate numeric fields
+    // Validate price - ensure it's valid for all tree types
     if (isNaN(price) || price <= 0) {
       return NextResponse.json(
         { success: false, error: 'Price must be a valid positive number' },

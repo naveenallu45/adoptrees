@@ -22,8 +22,7 @@ export const treeSchema = z.object({
     .trim(),
   price: z
     .number()
-    .int('Price must be a whole number')
-    .positive('Price must be positive')
+    .positive('Price must be positive (greater than 0)')
     .max(1000000, 'Price seems unreasonably high'),
   info: z
     .string()
@@ -35,9 +34,9 @@ export const treeSchema = z.object({
     .nonnegative('Oxygen production cannot be negative')
     .max(10000, 'Oxygen production value seems unreasonably high'),
   treeType: z
-    .enum(['individual', 'company'])
-    .refine((val) => ['individual', 'company'].includes(val), {
-      message: 'Tree type must be either individual or company'
+    .enum(['individual', 'company', 'forest'])
+    .refine((val) => ['individual', 'company', 'forest'].includes(val), {
+      message: 'Tree type must be either individual, company, or forest'
     }),
   packageQuantity: z
     .number()

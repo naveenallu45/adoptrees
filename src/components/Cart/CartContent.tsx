@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useCart } from '@/contexts/CartContext';
 import AdoptionDetails from './AdoptionDetails';
 import PaymentDialog, { PaymentStatus } from './SuccessDialog';
@@ -252,6 +253,39 @@ export default function CartContent() {
       return;
     }
 
+    // Validate forest name and occasion for forest type items
+    const forestItems = cartItems.filter(item => item.type === 'forest');
+    for (const item of forestItems) {
+      // Validate occasion - must be provided and not empty
+      if (!item.occasion || item.occasion.trim() === '' || item.occasion === 'Create your occasion') {
+        toast.error(`Please enter an occasion name for "${item.name}"`);
+        // Scroll to the item
+        const itemElement = document.getElementById(`cart-item-${item.id}`);
+        if (itemElement) {
+          itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+      if (item.occasion.trim().length > 100) {
+        toast.error(`Occasion name for "${item.name}" cannot exceed 100 characters`);
+        return;
+      }
+      // Validate forest name
+      if (!item.forestName || item.forestName.trim() === '') {
+        toast.error(`Please enter a forest name for "${item.name}"`);
+        // Scroll to the item
+        const itemElement = document.getElementById(`cart-item-${item.id}`);
+        if (itemElement) {
+          itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+      if (item.forestName.trim().length > 100) {
+        toast.error(`Forest name for "${item.name}" cannot exceed 100 characters`);
+        return;
+      }
+    }
+
     if (!razorpayLoaded) {
       retryRazorpayLoad();
       // Wait a moment and try again
@@ -278,7 +312,9 @@ export default function CartContent() {
           adoptionType: item.adoptionType || 'self',
           recipientName: item.recipientName,
           recipientEmail: item.recipientEmail,
-          giftMessage: item.giftMessage
+          giftMessage: item.giftMessage,
+          forestName: item.forestName,
+          occasion: item.occasion
         })),
         isGift: cartItems.some(item => item.adoptionType === 'gift'),
         giftRecipientName: cartItems.find(item => item.adoptionType === 'gift')?.recipientName,
@@ -494,7 +530,7 @@ export default function CartContent() {
               </div>
               <div className="space-y-3 sm:space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-3 sm:p-4 md:p-6 border border-green-100">
+                  <div key={item.id} id={`cart-item-${item.id}`} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-3 sm:p-4 md:p-6 border border-green-100">
                     <div className="flex flex-row items-center gap-3 sm:gap-4">
                       <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg overflow-hidden flex-shrink-0 shadow-sm border border-green-200">
                         <Image
@@ -560,6 +596,59 @@ export default function CartContent() {
                           item={item} 
                           onUpdate={(updates) => updateCartItem(item.id, updates)} 
                         />
+                      </div>
+                    )}
+
+                    {/* Forest Name Input for Forest Items */}
+                    {item.type === 'forest' && (
+                      <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Occasion {item.occasion === 'Create your occasion' && <span className="text-red-500">*</span>}
+                          </label>
+                          {item.occasion === 'Create your occasion' || !item.occasion ? (
+                            <>
+                              <input
+                                type="text"
+                                required
+                                value={item.occasion === 'Create your occasion' ? '' : (item.occasion || '')}
+                                onChange={(e) => updateCartItem(item.id, { occasion: e.target.value })}
+                                placeholder="Enter your occasion name (e.g., Team Green Initiative)"
+                                maxLength={100}
+                                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                              />
+                              <p className="mt-1 text-xs text-gray-500">
+                                Enter a name for your special occasion or initiative
+                              </p>
+                            </>
+                          ) : item.occasion ? (
+                            <>
+                              <div className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-gray-50 text-gray-700">
+                                {item.occasion}
+                              </div>
+                              <p className="mt-1 text-xs text-gray-500">
+                                This occasion was selected when you created your forest
+                              </p>
+                            </>
+                          ) : null}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Forest Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={item.forestName || ''}
+                            onChange={(e) => updateCartItem(item.id, { forestName: e.target.value })}
+                            placeholder="Enter your forest name (e.g., Julie's Birthday Forest)"
+                            maxLength={100}
+                            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Give your forest a meaningful name that represents your special moment
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -17,6 +17,8 @@ export interface IOrder extends Document {
     recipientName?: string;
     recipientEmail?: string;
     giftMessage?: string;
+    forestName?: string;
+    occasion?: string;
   }[];
   totalAmount: number;
   couponCode?: string;
@@ -157,6 +159,14 @@ const OrderSchema: Schema = new Schema({
     giftMessage: {
       type: String,
       maxlength: [500, 'Gift message cannot exceed 500 characters']
+    },
+    forestName: {
+      type: String,
+      maxlength: [100, 'Forest name cannot exceed 100 characters']
+    },
+    occasion: {
+      type: String,
+      maxlength: [100, 'Occasion cannot exceed 100 characters']
     }
   }],
   totalAmount: {

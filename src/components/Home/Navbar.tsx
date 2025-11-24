@@ -17,7 +17,7 @@ export default function Navbar() {
   const { getTotalItems } = useCart();
 
   // Pages that should always have white navbar background
-  const fixedWhitePages = ['/individuals', '/companies', '/about', '/achievers', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies'];
+  const fixedWhitePages = ['/individuals', '/companies', '/about', '/achievers', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies', '/create-forest'];
   
   // Check if current path starts with /trees (for tree info pages)
   const isTreeInfoPage = pathname?.startsWith('/trees/');

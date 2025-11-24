@@ -12,13 +12,21 @@ export async function GET(request: NextRequest) {
     
     // Build query filter
     const filter: { isActive: boolean; treeType?: string } = { isActive: true };
-    if (type === 'individual' || type === 'company') {
+    if (type === 'individual' || type === 'company' || type === 'forest') {
       filter.treeType = type;
     }
     
-    const trees = await Tree.find(filter).sort({ createdAt: -1 });
+    const trees = await Tree.find(filter).sort({ createdAt: -1 }).lean();
+    
+    // Log for debugging (remove in production if needed)
+    if (type === 'forest') {
+      console.log('Forest trees query filter:', filter);
+      console.log('Forest trees found:', trees.length);
+    }
+    
     return NextResponse.json({ success: true, data: trees });
-  } catch (_error) {
+  } catch (error) {
+    console.error('Error fetching trees:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch trees' },
       { status: 500 }

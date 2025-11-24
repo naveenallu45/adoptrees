@@ -10,7 +10,7 @@ export interface CartItem {
   imageUrl: string;
   info: string;
   oxygenKgs: number;
-  type: 'individual' | 'company';
+  type: 'individual' | 'company' | 'forest';
   adoptionType?: 'self' | 'gift';
   recipientName?: string;
   recipientEmail?: string;
@@ -18,6 +18,10 @@ export interface CartItem {
   // Package fields for corporate trees
   packageQuantity?: number;
   packagePrice?: number;
+  // Forest name for forest type trees
+  forestName?: string;
+  // Occasion for forest type trees
+  occasion?: string;
 }
 
 interface CartContextType {

@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
-  ShoppingBagIcon,
   SparklesIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  CloudArrowDownIcon
 } from '@heroicons/react/24/solid';
 import {
   TrophyIcon as TrophyIconOutline,
@@ -28,7 +28,9 @@ interface Achiever {
   rank: number;
 }
 
-type SortBy = 'trees' | 'oxygen' | 'orders';
+type SortBy = 'trees' | 'oxygen' | 'co2';
+
+const CO2_PER_TREE_KG = 21; // Approximate kg of CO₂ captured per tree per year
 
 export default function AchieversPage() {
   const [achievers, setAchievers] = useState<Achiever[]>([]);
@@ -44,7 +46,8 @@ export default function AchieversPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/achievers?sortBy=${sortBy}&limit=100`, {
+      const sortParam = sortBy === 'co2' ? 'oxygen' : sortBy;
+      const response = await fetch(`/api/achievers?sortBy=${sortParam}&limit=100`, {
         cache: 'no-store'
       });
       const result = await response.json();
@@ -96,6 +99,10 @@ export default function AchieversPage() {
       .slice(0, 2);
   };
 
+  const getCO2Reduced = (totalTrees: number) => {
+    return Math.round(totalTrees * CO2_PER_TREE_KG);
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 pt-24 sm:pt-28 pb-16 relative">
@@ -144,11 +151,11 @@ export default function AchieversPage() {
             Most Oxygen
           </button>
           <button
-            onClick={() => setSortBy('orders')}
-            className={getSortButtonClass('orders')}
+            onClick={() => setSortBy('co2')}
+            className={getSortButtonClass('co2')}
           >
-            <ShoppingBagIcon className="w-5 h-5 inline-block mr-2" />
-            Most Orders
+            <CloudArrowDownIcon className="w-5 h-5 inline-block mr-2" />
+            CO₂ Reduced
           </button>
         </motion.div>
 
@@ -257,12 +264,15 @@ export default function AchieversPage() {
                           </div>
                           <div className="bg-white/15 backdrop-blur-sm rounded-md p-1.5 sm:p-2 border border-white/30 shadow-sm flex flex-col items-center justify-center text-center">
                             <div className="flex items-center justify-center gap-1 mb-1">
-                              <ShoppingBagIcon className="w-3 h-3 text-purple-300" />
-                              <span className="text-[9px] sm:text-[10px] font-semibold text-green-100 uppercase tracking-wide">Orders</span>
+                              <CloudArrowDownIcon className="w-3 h-3 text-purple-300" />
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-green-100 uppercase tracking-wide">
+                                CO₂
+                              </span>
                             </div>
                             <p className="text-base sm:text-lg font-bold text-white">
-                              {achiever.totalOrders}
+                              {getCO2Reduced(achiever.totalTrees).toLocaleString()}
                             </p>
+                            <p className="text-[9px] text-green-200 mt-0.5">kg/year offset</p>
                           </div>
                         </div>
                       </div>
