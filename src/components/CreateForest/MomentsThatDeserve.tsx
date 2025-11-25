@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import TreeInfoButton from '@/components/TreeInfoButton';
 
 const occasions = [
   {
@@ -60,7 +61,11 @@ export default function MomentsThatDeserve() {
   const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const router = useRouter();
   const { addToCart } = useCart();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const isEligibleForestUser = useMemo(() => {
+    const userType = session?.user?.userType;
+    return userType === 'individual' || userType === 'company';
+  }, [session]);
 
   useEffect(() => {
     if (showTrees) {
@@ -158,8 +163,18 @@ export default function MomentsThatDeserve() {
   }, []);
 
   const handleAddToCart = useCallback((tree: Tree, event: React.MouseEvent<HTMLButtonElement>) => {
+    if (status === 'loading') {
+      toast.error('Hold on while we verify your account. Please try again in a moment.');
+      return;
+    }
+
     if (!session) {
       router.push('/login?redirect=/create-forest');
+      return;
+    }
+
+    if (!isEligibleForestUser) {
+      toast.error('Only individual or company accounts can create a forest.');
       return;
     }
 
@@ -203,7 +218,7 @@ export default function MomentsThatDeserve() {
         toast.success(`${tree.name} added to cart! You can set your forest name during checkout.`);
       }, 800);
     }, 50);
-  }, [addToCart, getCartIconPosition, session, router, selectedOccasion]);
+  }, [addToCart, getCartIconPosition, session, router, selectedOccasion, status, isEligibleForestUser]);
 
   return (
     <>
@@ -265,6 +280,12 @@ export default function MomentsThatDeserve() {
                 Select trees to add to your forest. You&apos;ll be able to name your forest during checkout.
               </p>
             </div>
+
+            {session && !isEligibleForestUser && status === 'authenticated' && (
+              <div className="bg-yellow-100 border border-yellow-300 text-yellow-900 rounded-2xl px-6 py-4 mb-8 text-sm sm:text-base max-w-3xl mx-auto">
+                Forest creation is available for individual and company accounts. Switch to an eligible account to keep growing greener moments.
+              </div>
+            )}
 
             {loading ? (
               <div className="text-center py-12">
@@ -330,12 +351,17 @@ export default function MomentsThatDeserve() {
                         </div>
                       </div>
 
-                      {/* Add to Cart Button */}
+                      <div className="flex gap-2">
+                        <TreeInfoButton
+                          treeId={tree._id}
+                          className="px-3 py-2.5"
+                          labelClassName="text-xs font-semibold"
+                        />
                       <button
                         ref={(el) => { buttonRefs.current[tree._id] = el; }}
                         onClick={(e) => handleAddToCart(tree, e)}
-                        disabled={addingTreeId === tree._id}
-                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+                          disabled={addingTreeId === tree._id || (session && !isEligibleForestUser) || status === 'loading'}
+                          className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
                       >
                         {addingTreeId === tree._id ? (
                           <span className="flex items-center gap-1.5">
@@ -350,10 +376,11 @@ export default function MomentsThatDeserve() {
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
                             </svg>
-                            <span>Add to Forest</span>
+                              <span>{session && !isEligibleForestUser ? 'Unavailable' : 'Add to Forest'}</span>
                           </>
                         )}
                       </button>
+                      </div>
                     </div>
                   </div>
                 ))}

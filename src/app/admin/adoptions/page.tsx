@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
 import {
   createColumnHelper,
   flexRender,
@@ -47,10 +48,13 @@ interface Adoption {
     quantity: number;
     price: number;
     oxygenKgs: number;
+    treeType?: 'individual' | 'company' | 'forest';
     adoptionType: 'self' | 'gift';
     recipientName?: string;
     recipientEmail?: string;
     giftMessage?: string;
+    forestName?: string;
+    occasion?: string;
   }[];
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
@@ -99,6 +103,9 @@ const paymentStatusColors = {
 };
 
 export default function AdminAdoptionsPage() {
+  const pathname = usePathname();
+  const isForestPage = pathname?.includes('/admin/forest-adoptions');
+
   const [filters, setFilters] = useState<AdoptionFilters>({
     search: '',
     status: '',
@@ -152,6 +159,12 @@ export default function AdminAdoptionsPage() {
         adoption.items.some((item) => item.treeName.toLowerCase().includes(searchLower))
       );
     }
+
+    if (isForestPage) {
+      filtered = filtered.filter((adoption: Adoption) =>
+        adoption.items.some((item) => (item.treeType || (item.forestName ? 'forest' : 'individual')) === 'forest')
+      );
+    }
     
     // Status filter
     if (filters.status) {
@@ -200,7 +213,7 @@ export default function AdminAdoptionsPage() {
     }
     
     return filtered;
-  }, [allData, filters, sorting]);
+  }, [allData, filters, sorting, isForestPage]);
 
   // Pagination for filtered results
   const paginatedAdoptions = useMemo(() => {
@@ -554,13 +567,16 @@ export default function AdminAdoptionsPage() {
     );
   }
 
+  const pageTitle = isForestPage ? 'Forest Adoption Management' : 'Adoption Management';
+  const pageSubtitle = isForestPage ? 'Manage and track all forest adoptions' : 'Manage and track all tree adoptions';
+
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Adoption Management</h1>
-          <p className="text-gray-600">Manage and track all tree adoptions</p>
+          <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
+          <p className="text-gray-600">{pageSubtitle}</p>
         </div>
         <div className="flex items-center space-x-3">
           <button

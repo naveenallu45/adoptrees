@@ -14,6 +14,7 @@ export interface IOrder extends Document {
     price: number;
     oxygenKgs: number;
     co2Kgs?: number;
+    treeType?: 'individual' | 'company' | 'forest';
     adoptionType: 'self' | 'gift';
     recipientName?: string;
     recipientEmail?: string;
@@ -144,6 +145,11 @@ const OrderSchema: Schema = new Schema({
       type: Number,
       required: [true, 'Oxygen production is required'],
       min: [0, 'Oxygen production cannot be negative']
+    },
+    treeType: {
+      type: String,
+      enum: ['individual', 'company', 'forest'],
+      default: 'individual'
     },
     co2Kgs: {
       type: Number,

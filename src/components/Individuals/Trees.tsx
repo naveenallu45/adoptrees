@@ -1,7 +1,6 @@
 "use client";
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
 import { useSession } from 'next-auth/react';
@@ -9,6 +8,7 @@ import toast from 'react-hot-toast';
 
 import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import TreeInfoButton from '@/components/TreeInfoButton';
 
 
 interface Tree {
@@ -224,22 +224,11 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
                 {/* Action Buttons */}
                 <div className="flex gap-2">
                   {/* Info Button */}
-                  <Link
-                    href={`/trees/${tree._id}`}
-                    className="flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 font-semibold"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // On mobile, navigate immediately
-                      if (window.innerWidth < 768) {
-                        router.push(`/trees/${tree._id}`);
-                      }
-                    }}
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-xs font-semibold">Info</span>
-                  </Link>
+                  <TreeInfoButton
+                    treeId={tree._id}
+                    className="px-3 py-2.5"
+                    labelClassName="text-xs font-semibold"
+                  />
 
                   {/* Add to Cart Button */}
                   {session && session.user.userType !== 'individual' ? (
