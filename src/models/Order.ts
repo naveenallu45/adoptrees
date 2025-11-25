@@ -13,6 +13,7 @@ export interface IOrder extends Document {
     quantity: number;
     price: number;
     oxygenKgs: number;
+    co2Kgs?: number;
     adoptionType: 'self' | 'gift';
     recipientName?: string;
     recipientEmail?: string;
@@ -143,6 +144,12 @@ const OrderSchema: Schema = new Schema({
       type: Number,
       required: [true, 'Oxygen production is required'],
       min: [0, 'Oxygen production cannot be negative']
+    },
+    co2Kgs: {
+      type: Number,
+      required: false,
+      default: undefined
+      // CO₂ reduction in kg per year (can be negative)
     },
     adoptionType: {
       type: String,

@@ -227,7 +227,7 @@ export default function HowItWorksForest() {
               {index === 1 && (
                 <div className="mt-6 md:self-center">
                   <a
-                    href="/individuals"
+                    href="#moments"
                     className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg text-base font-semibold hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     Start now

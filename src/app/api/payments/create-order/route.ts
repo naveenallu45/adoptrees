@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
         quantity: item.quantity,
         price: tree.price,
         oxygenKgs: tree.oxygenKgs,
+        co2Kgs: (tree.co2 !== undefined && tree.co2 !== null) ? tree.co2 : undefined,
         adoptionType: item.adoptionType || 'self',
         recipientName: item.recipientName,
         recipientEmail: item.recipientEmail,

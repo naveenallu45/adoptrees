@@ -22,6 +22,7 @@ interface Achiever {
   publicId?: string;
   totalTrees: number;
   totalOxygen: number;
+  totalCO2: number;
   totalOrders: number;
   totalAmount: number;
   lastAdoptionDate?: string;
@@ -29,8 +30,6 @@ interface Achiever {
 }
 
 type SortBy = 'trees' | 'oxygen' | 'co2';
-
-const CO2_PER_TREE_KG = 21; // Approximate kg of CO₂ captured per tree per year
 
 export default function AchieversPage() {
   const [achievers, setAchievers] = useState<Achiever[]>([]);
@@ -46,13 +45,17 @@ export default function AchieversPage() {
     try {
       setLoading(true);
       setError(null);
-      const sortParam = sortBy === 'co2' ? 'oxygen' : sortBy;
-      const response = await fetch(`/api/achievers?sortBy=${sortParam}&limit=100`, {
+      const response = await fetch(`/api/achievers?sortBy=${sortBy}&limit=100`, {
         cache: 'no-store'
       });
       const result = await response.json();
 
       if (result.success) {
+        // Debug: Log first achiever to check CO2 value
+        if (result.data && result.data.length > 0 && process.env.NODE_ENV === 'development') {
+          console.log('First achiever from API:', result.data[0]);
+          console.log('CO2 value:', result.data[0].totalCO2);
+        }
         setAchievers(result.data);
       } else {
         const errorMessage = result.error || 'Failed to load achievers';
@@ -97,10 +100,6 @@ export default function AchieversPage() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const getCO2Reduced = (totalTrees: number) => {
-    return Math.round(totalTrees * CO2_PER_TREE_KG);
   };
 
 
@@ -270,9 +269,9 @@ export default function AchieversPage() {
                               </span>
                             </div>
                             <p className="text-base sm:text-lg font-bold text-white">
-                              {getCO2Reduced(achiever.totalTrees).toLocaleString()}
+                              {achiever.totalCO2 ? achiever.totalCO2.toLocaleString() : '0'}
                             </p>
-                            <p className="text-[9px] text-green-200 mt-0.5">kg/year offset</p>
+                            <p className="text-[9px] text-green-200 mt-0.5">kg CO₂/year</p>
                           </div>
                         </div>
                       </div>

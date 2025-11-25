@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import Tree from '@/models/Tree';
 import type { PipelineStage } from 'mongoose';
 
 export interface Achiever {
@@ -12,6 +13,7 @@ export interface Achiever {
   publicId?: string;
   totalTrees: number;
   totalOxygen: number;
+  totalCO2: number;
   totalOrders: number;
   totalAmount: number;
   lastAdoptionDate?: Date;
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100', 10);
-    const sortBy = searchParams.get('sortBy') || 'trees'; // 'trees', 'oxygen', 'orders'
+    const sortBy = searchParams.get('sortBy') || 'trees'; // 'trees', 'oxygen', 'co2', 'orders'
 
     // Aggregate users with their order statistics
     const achieversPipeline: PipelineStage[] = [
@@ -50,36 +52,93 @@ export async function GET(request: NextRequest) {
           status: { $ne: 'cancelled' }
         }
       },
-      // Add computed fields before unwinding
+      // Unwind items to process each item individually
+      {
+        $unwind: '$items'
+      },
+      // Convert treeId to ObjectId for lookup
       {
         $addFields: {
-          orderTrees: { $sum: '$items.quantity' },
-          orderOxygen: { $sum: { $map: { input: '$items', as: 'item', in: { $multiply: ['$$item.quantity', '$$item.oxygenKgs'] } } } },
-          orderAmount: { $ifNull: ['$finalAmount', '$totalAmount'] }
+          treeIdObjectId: {
+            $cond: {
+              if: { $eq: [{ $type: '$items.treeId' }, 'string'] },
+              then: {
+                $convert: {
+                  input: '$items.treeId',
+                  to: 'objectId',
+                  onError: null,
+                  onNull: null
+                }
+              },
+              else: '$items.treeId'
+            }
+          }
         }
       },
-      // Group by user and order to get order-level totals
+      // Lookup tree to get current CO2 value
+      {
+        $lookup: {
+          from: 'trees',
+          localField: 'treeIdObjectId',
+          foreignField: '_id',
+          as: 'treeData'
+        }
+      },
+      // Add computed fields for each item, using tree CO2 if order item doesn't have it
+      // Priority: 1. Use co2Kgs from order if it exists (including 0), 2. Use tree.co2 if available, 3. Default to 0
+      {
+        $addFields: {
+          itemCO2: {
+            $cond: {
+              if: { 
+                $and: [
+                  { $ne: ['$items.co2Kgs', null] }, 
+                  { $ne: ['$items.co2Kgs', undefined] },
+                  { $ne: [{ $type: '$items.co2Kgs' }, 'missing'] }
+                ] 
+              },
+              then: '$items.co2Kgs',
+              else: {
+                $cond: {
+                  if: {
+                    $and: [
+                      { $ne: [{ $arrayElemAt: ['$treeData.co2', 0] }, null] },
+                      { $ne: [{ $arrayElemAt: ['$treeData.co2', 0] }, undefined] }
+                    ]
+                  },
+                  then: { $arrayElemAt: ['$treeData.co2', 0] },
+                  else: 0
+                }
+              }
+            }
+          }
+        }
+      },
+      // Group back by order to calculate order totals
       {
         $group: {
-          _id: { userId: '$userId', orderId: '$_id' },
+          _id: '$_id',
+          userId: { $first: '$userId' },
           userName: { $first: '$userName' },
           userEmail: { $first: '$userEmail' },
           userType: { $first: '$userType' },
-          orderTrees: { $first: '$orderTrees' },
-          orderOxygen: { $first: '$orderOxygen' },
-          orderAmount: { $first: '$orderAmount' },
+          orderTrees: { $sum: '$items.quantity' },
+          orderOxygen: { $sum: { $multiply: ['$items.quantity', '$items.oxygenKgs'] } },
+          orderCO2: { $sum: { $multiply: ['$items.quantity', '$itemCO2'] } },
+          orderAmount: { $first: { $ifNull: ['$finalAmount', '$totalAmount'] } },
           createdAt: { $first: '$createdAt' }
         }
       },
       // Now group by user to aggregate all orders
       {
         $group: {
-          _id: '$_id.userId',
+          _id: '$userId',
           userName: { $first: '$userName' },
           userEmail: { $first: '$userEmail' },
           userType: { $first: '$userType' },
           totalTrees: { $sum: '$orderTrees' },
           totalOxygen: { $sum: '$orderOxygen' },
+          totalCO2: { $sum: '$orderCO2' },
           totalOrders: { $sum: 1 },
           totalAmount: { $sum: '$orderAmount' },
           lastAdoptionDate: { $max: '$createdAt' }
@@ -89,6 +148,8 @@ export async function GET(request: NextRequest) {
       {
         $sort: sortBy === 'oxygen' 
           ? { totalOxygen: -1 }
+          : sortBy === 'co2'
+          ? { totalCO2: -1 }
           : sortBy === 'orders'
           ? { totalOrders: -1 }
           : { totalTrees: -1 }
@@ -143,6 +204,7 @@ export async function GET(request: NextRequest) {
           publicId: { $ifNull: ['$userProfile.publicId', null] },
           totalTrees: 1,
           totalOxygen: { $round: ['$totalOxygen', 2] },
+          totalCO2: { $ifNull: [{ $round: ['$totalCO2', 0] }, 0] },
           totalOrders: 1,
           totalAmount: 1,
           lastAdoptionDate: 1
@@ -152,26 +214,52 @@ export async function GET(request: NextRequest) {
 
     const achieversData = await Order.aggregate(achieversPipeline);
 
-    // Debug: Log first achiever to check userImage
+    // Debug: Log first achiever to check data including CO2
     if (achieversData.length > 0 && process.env.NODE_ENV === 'development') {
       console.log('First achiever data:', JSON.stringify(achieversData[0], null, 2));
+      console.log('CO2 value:', achieversData[0].totalCO2, 'Trees:', achieversData[0].totalTrees);
+      
+      // Also check a sample order to see CO2 values
+      const sampleOrder = await Order.findOne({ 
+        paymentStatus: 'paid', 
+        status: { $ne: 'cancelled' },
+        'items.0': { $exists: true }
+      }).lean();
+      if (sampleOrder && sampleOrder.items && sampleOrder.items.length > 0) {
+        const firstItem = sampleOrder.items[0];
+        const tree = await Tree.findById(firstItem.treeId).select('co2 name').lean();
+        console.log('Sample order item:', {
+          treeId: firstItem.treeId,
+          co2Kgs: firstItem.co2Kgs,
+          treeName: tree?.name,
+          treeCO2: tree?.co2
+        });
+      }
     }
 
     // Format achievers with rank
-    const achievers: Achiever[] = achieversData.map((achiever, index) => ({
-      userId: achiever.userId,
-      userName: achiever.userName,
-      userEmail: achiever.userEmail,
-      userType: achiever.userType,
-      userImage: achiever.userImage && achiever.userImage.trim() !== '' ? achiever.userImage : undefined,
-      publicId: achiever.publicId || undefined,
-      totalTrees: achiever.totalTrees,
-      totalOxygen: achiever.totalOxygen,
-      totalOrders: achiever.totalOrders,
-      totalAmount: achiever.totalAmount,
-      lastAdoptionDate: achiever.lastAdoptionDate,
-      rank: index + 1
-    }));
+    const achievers: Achiever[] = achieversData.map((achiever, index) => {
+      // Ensure CO2 is calculated - use the value from aggregation (stored in orders)
+      const co2Value = achiever.totalCO2 != null && achiever.totalCO2 !== undefined 
+        ? Math.round(achiever.totalCO2) 
+        : 0;
+      
+      return {
+        userId: achiever.userId,
+        userName: achiever.userName,
+        userEmail: achiever.userEmail,
+        userType: achiever.userType,
+        userImage: achiever.userImage && achiever.userImage.trim() !== '' ? achiever.userImage : undefined,
+        publicId: achiever.publicId || undefined,
+        totalTrees: achiever.totalTrees,
+        totalOxygen: achiever.totalOxygen || 0,
+        totalCO2: co2Value,
+        totalOrders: achiever.totalOrders,
+        totalAmount: achiever.totalAmount,
+        lastAdoptionDate: achiever.lastAdoptionDate,
+        rank: index + 1
+      };
+    });
 
     return NextResponse.json({
       success: true,

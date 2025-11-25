@@ -262,9 +262,14 @@ export async function PUT(
     }
     
     // CO2 - include if it's a valid number (can be 0 or negative)
-    if (co2 !== undefined && typeof co2 === 'number' && !isNaN(co2)) {
-      updateData.co2 = co2;
+    // Always include CO2 if it's provided (even if 0), to ensure it's saved
+    if (co2Str !== undefined && co2Str !== null && co2Str.trim() !== '') {
+      // User provided a value - parse and save it
+      if (co2 !== undefined && typeof co2 === 'number' && !isNaN(co2)) {
+        updateData.co2 = co2;
+      }
     }
+    // If co2Str is empty/undefined, don't include it in updateData (keeps existing value)
     
     // Food Security - include if it's a valid number (0-10)
     if (foodSecurity !== undefined && typeof foodSecurity === 'number' && !isNaN(foodSecurity)) {
