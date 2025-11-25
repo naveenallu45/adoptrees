@@ -11,7 +11,7 @@ export default function IndividualTreesPage() {
     <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Forest Profile Card */}
       <div className="w-full">
-        <ForestProfileCard userType="individual" publicId={publicId} />
+        <ForestProfileCard userType="individual" publicId={publicId} focus="trees" />
       </div>
 
       {/* User Trees List Component */}

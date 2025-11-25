@@ -17,6 +17,7 @@ interface PaymentDialogProps {
   } | null;
   errorMessage?: string;
   onRetry?: () => void;
+  isForestOrder?: boolean;
 }
 
 export default function PaymentDialog({ 
@@ -25,7 +26,8 @@ export default function PaymentDialog({
   status, 
   orderDetails, 
   errorMessage,
-  onRetry 
+  onRetry,
+  isForestOrder = false
 }: PaymentDialogProps) {
   const getStatusConfig = () => {
     switch (status) {
@@ -34,10 +36,12 @@ export default function PaymentDialog({
           icon: CheckCircleIcon,
           iconBg: 'bg-white',
           iconColor: 'text-green-600',
-          title: 'Payment Successful!',
-          message: 'Thank you for your contribution to the environment!',
-          primaryButton: 'View Your Trees',
-          secondaryButton: 'Continue Adopting',
+          title: isForestOrder ? 'Forest Created!' : 'Payment Successful!',
+          message: isForestOrder 
+            ? 'Your forest story has begun. View your forest to see it grow!'
+            : 'Thank you for your contribution to the environment!',
+          primaryButton: isForestOrder ? 'View Your Forests' : 'View Your Trees',
+          secondaryButton: isForestOrder ? 'Add More Forest Trees' : 'Continue Adopting',
           primaryButtonClass: 'bg-white text-green-600 hover:bg-green-50 focus:ring-green-500 shadow-lg',
           secondaryButtonClass: 'border-2 border-green-600 bg-transparent text-green-600 hover:bg-green-50 focus:ring-green-500 shadow-md',
           showRetry: false,

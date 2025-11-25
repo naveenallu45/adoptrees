@@ -6,16 +6,18 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 interface OrderItem {
-  treeId: string;
+  treeId: string | { $oid: string };
   treeName: string;
   treeImageUrl?: string;
   quantity: number;
   price: number;
   oxygenKgs: number;
+  treeType?: 'individual' | 'company' | 'forest' | string;
   adoptionType: 'self' | 'gift';
   recipientName?: string;
   recipientEmail?: string;
   giftMessage?: string;
+  forestName?: string;
 }
 
 interface Order {
@@ -53,9 +55,10 @@ interface ForestStats {
 interface ForestProfileCardProps {
   userType: 'individual' | 'company';
   publicId?: string;
+  focus?: 'all' | 'forest' | 'trees';
 }
 
-export default function ForestProfileCard({ userType, publicId }: ForestProfileCardProps) {
+export default function ForestProfileCard({ userType, publicId, focus = 'all' }: ForestProfileCardProps) {
   const { data: session } = useSession();
   const [stats, setStats] = useState<ForestStats>({
     treesPlanted: 0,
@@ -71,8 +74,45 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
   const [userImage, setUserImage] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date()); // For real-time updates
   const [ordersData, setOrdersData] = useState<Order[]>([]); // Store orders to check planting status
+  const [forestTreeIds, setForestTreeIds] = useState<Set<string>>(new Set());
+
+  const normalizeTreeId = (treeId: OrderItem['treeId']) => {
+    if (!treeId) return '';
+    if (typeof treeId === 'string') {
+      const match = treeId.match(/ObjectId\("(.+)"\)/i);
+      if (match?.[1]) {
+        return match[1];
+      }
+      return treeId;
+    }
+    if (typeof treeId === 'object' && '$oid' in treeId && typeof treeId.$oid === 'string') {
+      return treeId.$oid;
+    }
+    return String(treeId);
+  };
 
   const calculateStats = useCallback((ordersData: Order[]) => {
+    const isForestItem = (item: OrderItem) => {
+      if (typeof item.treeType === 'string' && item.treeType.toLowerCase() === 'forest') {
+        return true;
+      }
+      return Boolean(item.forestName && item.forestName.trim() !== '');
+    };
+
+    const isItemInScope = (item: OrderItem) => {
+      const treeKey = normalizeTreeId(item.treeId);
+      const isForestTree = treeKey ? forestTreeIds.has(treeKey) : false;
+      const forestMatch = isForestItem(item) || isForestTree;
+
+      if (focus === 'forest') {
+        return forestMatch;
+      }
+      if (focus === 'trees') {
+        return !forestMatch;
+      }
+      return true;
+    };
+
     // Reset stats
     let totalTrees = 0;
     let totalOxygen = 0; // in kg
@@ -100,79 +140,86 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
         order.status === 'completed' || 
         hasCompletedPlanting;
 
-      if (isAdoptedOrPlanted) {
-        // Only count as "completed" for impacts if actually planted
-        const isActuallyPlanted = order.status === 'planted' || 
-                                  order.status === 'completed' || 
-                                  hasCompletedPlanting;
+      if (!isAdoptedOrPlanted) {
+        return;
+      }
+
+      const scopedItems = order.items.filter(isItemInScope);
+      if (scopedItems.length === 0) {
+        return;
+      }
+
+      // Only count as "completed" for impacts if actually planted
+      const isActuallyPlanted = order.status === 'planted' || 
+        order.status === 'completed' || 
+        hasCompletedPlanting;
+      
+      if (isActuallyPlanted) {
+        completedOrdersCount++;
+      }
+      
+      scopedItems.forEach((item) => {
+        totalTrees += item.quantity;
+        // Count oxygen/CO2 for all adopted trees (not just planted ones)
+        // This shows the potential CO2 absorption even before planting
+        const itemOxygen = (item.oxygenKgs || 0) * item.quantity;
+        totalOxygen += itemOxygen;
         
-        if (isActuallyPlanted) {
-          completedOrdersCount++;
-        }
-        
-        order.items.forEach((item) => {
-          totalTrees += item.quantity;
-          // Count oxygen/CO2 for all adopted trees (not just planted ones)
-          // This shows the potential CO2 absorption even before planting
-          const itemOxygen = (item.oxygenKgs || 0) * item.quantity;
-          totalOxygen += itemOxygen;
-          
-          // Debug: Log oxygen calculation
-          if (itemOxygen > 0) {
-            console.log('[ForestProfileCard] Item oxygen:', {
-              treeName: item.treeName,
-              quantity: item.quantity,
-              oxygenKgs: item.oxygenKgs,
-              totalOxygen: itemOxygen
-            });
-          }
-        });
-
-        // Find the latest date - use planting date if available, otherwise use order creation date
-        // This shows "Last adoption" for newly adopted trees that haven't been planted yet
-        const orderDate = new Date(order.createdAt);
-        if (!lastPlantingDate || orderDate > lastPlantingDate) {
-          lastPlantingDate = orderDate;
-        }
-
-        // Find the latest planting date and collect location data
-        if (order.wellwisherTasks) {
-          order.wellwisherTasks.forEach((task) => {
-            if (task.plantingDetails?.plantedAt) {
-              const plantingDate = new Date(task.plantingDetails.plantedAt);
-              if (!lastPlantingDate || plantingDate > lastPlantingDate) {
-                lastPlantingDate = plantingDate;
-              }
-
-              // Collect unique locations
-              if (task.location) {
-                uniqueLocations.add(task.location);
-              } else if (task.plantingDetails?.plantingLocation?.coordinates) {
-                // Use coordinates as location identifier (rounded to ~1km precision)
-                const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
-                const locationKey = `${Math.round(lat * 10) / 10},${Math.round(lng * 10) / 10}`;
-                uniqueLocations.add(locationKey);
-              }
-
-              // For countries, we'll use a simple heuristic based on coordinates
-              // India is roughly between 6.5°N to 35.5°N and 68°E to 97°E
-              if (task.plantingDetails?.plantingLocation?.coordinates) {
-                const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
-                // Simple country detection based on coordinates
-                if (lat >= 6.5 && lat <= 35.5 && lng >= 68 && lng <= 97) {
-                  uniqueCountries.add('India');
-                } else if (lat >= 24 && lat <= 36 && lng >= -125 && lng <= -66) {
-                  uniqueCountries.add('USA');
-                } else if (lat >= 35 && lat <= 72 && lng >= -10 && lng <= 40) {
-                  uniqueCountries.add('Europe');
-                } else {
-                  // Default to a generic country identifier
-                  uniqueCountries.add('Other');
-                }
-              }
-            }
+        // Debug: Log oxygen calculation
+        if (itemOxygen > 0) {
+          console.log('[ForestProfileCard] Item oxygen:', {
+            treeName: item.treeName,
+            quantity: item.quantity,
+            oxygenKgs: item.oxygenKgs,
+            totalOxygen: itemOxygen
           });
         }
+      });
+
+      // Find the latest date - use planting date if available, otherwise use order creation date
+      // This shows "Last adoption" for newly adopted trees that haven't been planted yet
+      const orderDate = new Date(order.createdAt);
+      if (!lastPlantingDate || orderDate > lastPlantingDate) {
+        lastPlantingDate = orderDate;
+      }
+
+      // Find the latest planting date and collect location data
+      if (order.wellwisherTasks) {
+        order.wellwisherTasks.forEach((task) => {
+          if (task.plantingDetails?.plantedAt) {
+            const plantingDate = new Date(task.plantingDetails.plantedAt);
+            if (!lastPlantingDate || plantingDate > lastPlantingDate) {
+              lastPlantingDate = plantingDate;
+            }
+
+            // Collect unique locations
+            if (task.location) {
+              uniqueLocations.add(task.location);
+            } else if (task.plantingDetails?.plantingLocation?.coordinates) {
+              // Use coordinates as location identifier (rounded to ~1km precision)
+              const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
+              const locationKey = `${Math.round(lat * 10) / 10},${Math.round(lng * 10) / 10}`;
+              uniqueLocations.add(locationKey);
+            }
+
+            // For countries, we'll use a simple heuristic based on coordinates
+            // India is roughly between 6.5°N to 35.5°N and 68°E to 97°E
+            if (task.plantingDetails?.plantingLocation?.coordinates) {
+              const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
+              // Simple country detection based on coordinates
+              if (lat >= 6.5 && lat <= 35.5 && lng >= 68 && lng <= 97) {
+                uniqueCountries.add('India');
+              } else if (lat >= 24 && lat <= 36 && lng >= -125 && lng <= -66) {
+                uniqueCountries.add('USA');
+              } else if (lat >= 35 && lat <= 72 && lng >= -10 && lng <= 40) {
+                uniqueCountries.add('Europe');
+              } else {
+                // Default to a generic country identifier
+                uniqueCountries.add('Other');
+              }
+            }
+          }
+        });
       }
     });
 
@@ -215,6 +262,34 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
       countries: countriesCount,
       impacts: impactsCount,
     });
+  }, [focus, forestTreeIds]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchForestTreeIds = async () => {
+      try {
+        const response = await fetch('/api/trees?type=forest', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        if (isMounted && data.success && Array.isArray(data.data)) {
+          setForestTreeIds(new Set(data.data.map((tree: { _id: string }) => String(tree._id))));
+        }
+      } catch (error) {
+        console.error('[ForestProfileCard] Failed to fetch forest tree ids', error);
+      }
+    };
+
+    fetchForestTreeIds();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -390,6 +465,8 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
     );
   }
 
+  const primaryMetricLabel = focus === 'forest' ? 'Forests planted' : 'Trees planted';
+
   return (
     <motion.div
       className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl shadow-xl hover:shadow-2xl overflow-hidden w-full transition-all duration-300 border border-green-700/30"
@@ -488,7 +565,7 @@ export default function ForestProfileCard({ userType, publicId }: ForestProfileC
             transition={{ type: "spring", stiffness: 300 }}
           >
             <div className="text-lg sm:text-xl md:text-2xl font-bold mb-0.5 text-white drop-shadow-md">{stats.treesPlanted}</div>
-            <div className="text-[9px] sm:text-[10px] text-green-200 font-medium">Trees planted</div>
+            <div className="text-[9px] sm:text-[10px] text-green-200 font-medium">{primaryMetricLabel}</div>
           </motion.div>
 
           {/* CO2 Absorbed */}

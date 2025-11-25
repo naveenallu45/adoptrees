@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order items with tree details
-    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; giftMessage?: string; forestName?: string; occasion?: string }) => {
+    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; giftMessage?: string; forestName?: string; occasion?: string; treeTypeOverride?: 'individual' | 'company' | 'forest'; }) => {
       const tree = trees.find(t => String(t._id) === item.treeId);
       if (!tree) {
         throw new Error(`Tree not found: ${item.treeId}`);
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
         price: tree.price,
         oxygenKgs: tree.oxygenKgs,
         co2Kgs: (tree.co2 !== undefined && tree.co2 !== null) ? tree.co2 : undefined,
+        treeType: item.treeTypeOverride || tree.treeType || 'individual',
         adoptionType: item.adoptionType || 'self',
         recipientName: item.recipientName,
         recipientEmail: item.recipientEmail,

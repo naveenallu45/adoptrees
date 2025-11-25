@@ -23,6 +23,7 @@ export default function CartContent() {
     totalAmount: number;
     itemsCount: number;
   } | null>(null);
+  const [checkoutContext, setCheckoutContext] = useState<{ containsForestItems: boolean } | null>(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [scriptLoadError, setScriptLoadError] = useState(false);
   const [couponCode, setCouponCode] = useState('');
@@ -304,6 +305,9 @@ export default function CartContent() {
     setIsPlacingOrder(true);
     
     try {
+      const containsForestItems = cartItems.some(item => item.type === 'forest');
+      setCheckoutContext({ containsForestItems });
+
       // Prepare order data
       const orderData = {
         items: cartItems.map(item => ({
@@ -314,7 +318,8 @@ export default function CartContent() {
           recipientEmail: item.recipientEmail,
           giftMessage: item.giftMessage,
           forestName: item.forestName,
-          occasion: item.occasion
+          occasion: item.occasion,
+          treeTypeOverride: item.type
         })),
         isGift: cartItems.some(item => item.adoptionType === 'gift'),
         giftRecipientName: cartItems.find(item => item.adoptionType === 'gift')?.recipientName,
@@ -476,14 +481,16 @@ export default function CartContent() {
     setShowPaymentDialog(false);
     setOrderDetails(null);
     setPaymentMessage('');
+    const containsForestItems = checkoutContext?.containsForestItems ?? false;
     // Redirect to appropriate dashboard only on success
     if (paymentStatus === 'success') {
       if (session?.user?.userType === 'individual') {
-        router.push('/dashboard/individual/trees');
+        router.push(containsForestItems ? '/dashboard/individual/forest' : '/dashboard/individual/trees');
       } else if (session?.user?.userType === 'company') {
-        router.push('/dashboard/company/trees');
+        router.push(containsForestItems ? '/dashboard/company/forest' : '/dashboard/company/trees');
       }
     }
+    setCheckoutContext(null);
   };
 
   const handleRetryPayment = () => {
@@ -881,6 +888,7 @@ export default function CartContent() {
         orderDetails={orderDetails}
         errorMessage={paymentMessage}
         onRetry={handleRetryPayment}
+        isForestOrder={checkoutContext?.containsForestItems}
       />
     </div>
   );

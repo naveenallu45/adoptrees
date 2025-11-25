@@ -15,7 +15,9 @@ import {
   DocumentArrowDownIcon,
   ArrowRightIcon,
   PlusCircleIcon,
-  SparklesIcon
+  SparklesIcon,
+  GlobeAltIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
@@ -67,16 +69,19 @@ function LocationToggle({
 }
 
 interface OrderItem {
-  treeId: string;
+  treeId: string | { $oid: string };
   treeName: string;
   treeImageUrl?: string;
   quantity: number;
   price: number;
   oxygenKgs: number;
+  treeType?: 'individual' | 'company' | 'forest';
   adoptionType: 'self' | 'gift';
   recipientName?: string;
   recipientEmail?: string;
   giftMessage?: string;
+  forestName?: string;
+  occasion?: string;
 }
 
 interface WellwisherTask {
@@ -139,9 +144,10 @@ interface Order {
 interface UserTreesListProps {
   userType: 'individual' | 'company';
   publicId?: string;
+  showForestOnly?: boolean;
 }
 
-export default function UserTreesList({ userType, publicId }: UserTreesListProps) {
+export default function UserTreesList({ userType, publicId, showForestOnly = false }: UserTreesListProps) {
   const { data: session } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +158,7 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
   const pathname = usePathname();
   const router = useRouter();
   const isTransactionsPage = pathname.includes('/transactions');
+const [forestTreeIds, setForestTreeIds] = useState<Set<string>>(new Set());
 
   const formatAdoptedDate = (isoDateString: string) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -165,6 +172,34 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
   useEffect(() => {
     fetchUserOrders();
   }, [publicId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+useEffect(() => {
+  let isMounted = true;
+  const fetchForestTreeIds = async () => {
+    try {
+      const response = await fetch('/api/trees?type=forest', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data) && isMounted) {
+        const ids = new Set<string>(data.data.map((tree: { _id: string }) => String(tree._id)));
+        setForestTreeIds(ids);
+      }
+    } catch (error) {
+      console.error('[UserTreesList] Failed to fetch forest tree ids', error);
+    }
+  };
+  fetchForestTreeIds();
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   // Filter orders based on page type
   const displayedOrders = useMemo(() => {
@@ -218,6 +253,43 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     // Sort by date (newest first)
     return treeList.sort((a, b) => b.earliestDate.getTime() - a.earliestDate.getTime());
   }, [orders, isTransactionsPage]);
+
+  const filteredTreeEntries = useMemo(() => {
+    if (isTransactionsPage) return [];
+    const normalizeTreeId = (treeId: OrderItem['treeId']) => {
+      if (!treeId) return '';
+      if (typeof treeId === 'string') {
+        const match = treeId.match(/ObjectId\("(.+)"\)/i);
+        if (match && match[1]) {
+          return match[1];
+        }
+        return treeId;
+      }
+      if (typeof treeId === 'object' && '$oid' in treeId && typeof treeId.$oid === 'string') {
+        return treeId.$oid;
+      }
+      return String(treeId);
+    };
+
+    const getItemType = (item: OrderItem) => {
+      const normalizedTreeType = typeof item.treeType === 'string' ? item.treeType.toLowerCase() : undefined;
+      if (normalizedTreeType === 'forest') {
+        return 'forest';
+      }
+      if (item.forestName && item.forestName.trim() !== '') {
+        return 'forest';
+      }
+      const treeKey = normalizeTreeId(item.treeId);
+      if (treeKey && forestTreeIds.has(treeKey)) {
+        return 'forest';
+      }
+      return 'individual';
+    };
+    if (showForestOnly) {
+      return groupedTrees.filter(entry => getItemType(entry.item) === 'forest');
+    }
+    return groupedTrees.filter(entry => getItemType(entry.item) !== 'forest');
+  }, [groupedTrees, showForestOnly, isTransactionsPage, forestTreeIds]);
 
   const fetchUserOrders = async () => {
     try {
@@ -434,6 +506,21 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
     );
   }
 
+  const isForestView = showForestOnly;
+
+  const headerTitle = isForestView
+    ? (userType === 'individual' ? 'Your Forest Collections' : 'Company Forest Programs')
+    : (userType === 'individual' ? 'Your Adopted Trees' : 'Company Adopted Trees');
+
+  const ctaText = isForestView ? 'Create New Forest' : 'Adopt New Tree';
+  const ctaHref = isForestView ? '/create-forest' : (userType === 'individual' ? '/individuals' : '/companies');
+  const emptyTitle = isForestView ? 'No forests created yet' : 'No trees adopted yet';
+  const emptySubtitle = isForestView
+    ? 'Start a forest for a special moment and watch it grow over time.'
+    : (userType === 'individual'
+      ? 'Get started by adopting your first tree to make a positive impact on the environment.'
+      : 'Start your company\'s environmental journey by adopting trees for your team.');
+
   return (
     <div className="space-y-6">
 
@@ -449,49 +536,46 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent text-center sm:text-left">
-                  {userType === 'individual' ? 'Your Adopted Trees' : 'Company Adopted Trees'}
+                  {headerTitle}
                 </h2>
               </div>
-              {!publicId && orders.length > 0 && (
+              {!publicId && filteredTreeEntries.length > 0 && (
                 <motion.button
-                  onClick={() => router.push(userType === 'individual' ? '/individuals' : '/companies')}
+                  onClick={() => router.push(ctaHref)}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium text-sm sm:text-base w-full sm:w-auto"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <PlusCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>Adopt New Tree</span>
+                  <span>{ctaText}</span>
                 </motion.button>
               )}
             </div>
           
-            {orders.length === 0 ? (
+            {filteredTreeEntries.length === 0 ? (
               <div className="text-center py-12">
                 <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mb-4">
                   <HeartIcon className="h-10 w-10 text-green-500" />
                 </div>
-                <h3 className="mt-2 text-base font-semibold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">No trees adopted yet</h3>
+                <h3 className="mt-2 text-base font-semibold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">{emptyTitle}</h3>
                 <p className="mt-1 text-sm text-gray-600 mb-6">
-                  {userType === 'individual' 
-                    ? 'Get started by adopting your first tree to make a positive impact on the environment.'
-                    : 'Start your company\'s environmental journey by adopting trees for your team.'
-                  }
+                  {emptySubtitle}
                 </p>
                 {!publicId && (
                   <motion.button
-                    onClick={() => router.push(userType === 'individual' ? '/individuals' : '/companies')}
+                    onClick={() => router.push(ctaHref)}
                     className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl font-medium"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
                     <PlusCircleIcon className="h-5 w-5" />
-                    <span>Adopt Your First Tree</span>
+                    <span>{isForestView ? 'Create Your First Forest' : 'Adopt Your First Tree'}</span>
                   </motion.button>
                 )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {groupedTrees.map((treeData, treeIndex) => {
+                {filteredTreeEntries.map((treeData, treeIndex) => {
                     const { item, orders: treeOrders, earliestDate, firstOrderIndex: _firstOrderIndex, firstItemIndex } = treeData;
                     const primaryOrder = treeOrders[0]; // Use first order for navigation
                     
@@ -542,6 +626,12 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                                   <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                                   {item.oxygenKgs} kg/year O₂
                                 </span>
+                                {item.forestName && (
+                                  <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-emerald-50 text-emerald-700 font-medium rounded-full border border-emerald-200 text-xs whitespace-nowrap">
+                                    <GlobeAltIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                    {item.forestName}
+                                  </span>
+                                )}
                                 {item.adoptionType === 'gift' && (
                                   <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
                                     <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
@@ -550,9 +640,17 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                                 )}
                               </div>
                               {/* Adoption Date */}
-                              <div className="flex items-center justify-start gap-1.5 text-xs text-gray-500">
-                                <ClockIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                <span>Adopted on {formatAdoptedDate(earliestDate.toISOString())}</span>
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-start gap-1.5 text-xs text-gray-500">
+                                  <ClockIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                  <span>Adopted on {formatAdoptedDate(earliestDate.toISOString())}</span>
+                                </div>
+                                {item.occasion && (
+                                  <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
+                                    <CalendarDaysIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                    <span>{item.occasion}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             
@@ -758,6 +856,18 @@ export default function UserTreesList({ userType, publicId }: UserTreesListProps
                             <p className="text-xs text-green-600">
                               {item.oxygenKgs} kg/year O₂
                             </p>
+                            {item.forestName && (
+                              <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
+                                <GlobeAltIcon className="h-3 w-3 flex-shrink-0" />
+                                <span>{item.forestName}</span>
+                              </p>
+                            )}
+                            {item.occasion && (
+                              <p className="text-xs text-emerald-600 flex items-center gap-1">
+                                <CalendarDaysIcon className="h-3 w-3 flex-shrink-0" />
+                                <span>{item.occasion}</span>
+                              </p>
+                            )}
                             {item.adoptionType === 'gift' && (
                               <p className="text-xs text-purple-600 truncate">
                                 Gift for: {item.recipientName}

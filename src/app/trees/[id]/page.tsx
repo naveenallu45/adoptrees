@@ -17,7 +17,7 @@ interface Tree {
   oxygenKgs: number;
   imageUrl: string;
   isActive: boolean;
-  treeType: 'individual' | 'company';
+  treeType: 'individual' | 'company' | 'forest';
   packageQuantity?: number;
   packagePrice?: number;
   scientificSpecies?: string;
@@ -170,6 +170,18 @@ export default function TreeInfoPage() {
     }
   }, []);
 
+  const userType = session?.user?.userType;
+  const isForestTree = tree?.treeType === 'forest';
+  const isCompanyTree = tree?.treeType === 'company';
+  const isIndividualTree = tree?.treeType === 'individual';
+  const isForestEligibleUser = userType === 'individual' || userType === 'company';
+
+  const canCurrentUserAdopt = !session || !tree ? true : (
+    (isIndividualTree && userType === 'individual') ||
+    (isCompanyTree && userType === 'company') ||
+    (isForestTree && isForestEligibleUser)
+  );
+
   const handleAddToCart = (event?: React.MouseEvent<HTMLButtonElement>) => {
     if (!tree) return;
 
@@ -182,6 +194,11 @@ export default function TreeInfoPage() {
 
       if (tree.treeType === 'company' && session.user.userType !== 'company') {
         toast.error('This tree is only available for companies');
+        return;
+      }
+
+      if (tree.treeType === 'forest' && !isForestEligibleUser) {
+        toast.error('Forest trees can be created from individual or company accounts');
         return;
       }
     }
@@ -409,12 +426,16 @@ export default function TreeInfoPage() {
 
             {/* Add to Cart Button */}
             <div className="mb-6">
-              {session && session.user.userType !== tree.treeType ? (
+              {session && !canCurrentUserAdopt ? (
                 <button
                   disabled
                   className="w-full bg-gray-300 text-gray-500 px-6 py-4 rounded-xl text-lg font-semibold cursor-not-allowed"
                 >
-                  {tree.treeType === 'individual' ? 'Individual Only' : 'Company Only'}
+                  {tree.treeType === 'forest'
+                    ? 'Individual or Company Only'
+                    : tree.treeType === 'individual'
+                      ? 'Individual Only'
+                      : 'Company Only'}
                 </button>
               ) : (
                 <button
