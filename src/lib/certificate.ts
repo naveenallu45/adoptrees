@@ -403,7 +403,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     
     // Column 1: Tree name (first field)
     if (data.treeNames && data.treeNames.length > 0) {
-      const col1X = statsCenterX - gapBetweenStats * 1.5;
+      const col1X = statsCenterX - gapBetweenStats * 1.5 + (pageWidth * 0.01); // Shift 1% to the right
       const treeNameY = statsStartY;
       const treeNameText = data.treeNames[0]; // Show first tree name
       const treeNameFontSize = 20;
@@ -435,7 +435,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     });
     
     // Column 3: O2 total value
-    const col3X = statsCenterX + gapBetweenStats * 0.5;
+    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.01); // Shift 1% to the left
     const o2ValueY = statsStartY;
     const o2ValueText = `${data.oxygenKgs.toFixed(1)} /year`;
     
@@ -449,7 +449,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     });
     
     // Column 4: CO2 total value
-    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.01); // Shift 1% to the left
+    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.02); // Shift 2% to the left (1% more than before)
     const co2ValueY = statsStartY;
     const co2ValueText = `${co2Value.toFixed(1)} /year`;
     
