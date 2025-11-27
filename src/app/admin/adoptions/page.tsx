@@ -423,13 +423,13 @@ export default function AdminAdoptionsPage() {
                   individual: 'Individual',
                 };
                 return (
-                  <div key={index} className="text-sm">
+                <div key={index} className="text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{item.treeName}</span>
+                  <span className="font-medium">{item.treeName}</span>
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${typeColors[treeType as keyof typeof typeColors] || typeColors.individual}`}>
                         {typeLabel[treeType as keyof typeof typeLabel] || 'Individual'}
                       </span>
-                    </div>
+                </div>
                     <span className="text-gray-500">(x{item.quantity})</span>
                   </div>
                 );

@@ -473,57 +473,57 @@ export default function TreeDetailPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
+          className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-6 mb-8 sm:mb-12"
         >
           {/* Oxygen Production */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-6 md:p-8 border border-gray-200 relative">
             {/* Icon - Top Right */}
-            <div className="absolute top-6 right-6">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                <SparklesIcon className="h-8 w-8 text-emerald-600" />
+            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-6 md:right-6">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <SparklesIcon className="h-4 w-4 sm:h-6 sm:w-6 md:h-8 md:w-8 text-emerald-600" />
               </div>
             </div>
-            <div className="pr-24">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Oxygen Production</h3>
+            <div className="pr-8 sm:pr-16 md:pr-24">
+              <h3 className="text-xs sm:text-base md:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2 md:mb-4">Oxygen Production</h3>
               
-              <div className="mb-6">
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-4xl font-bold text-gray-900">{currentOxygen.toFixed(2)}</span>
-                  <span className="text-lg text-gray-600 font-medium">kg/year</span>
+              <div className="mb-2 sm:mb-4 md:mb-6">
+                <div className="flex items-baseline gap-1 sm:gap-2 mb-1 sm:mb-2">
+                  <span className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">{currentOxygen.toFixed(2)}</span>
+                  <span className="text-xs sm:text-sm md:text-lg text-gray-600 font-medium">kg/year</span>
                 </div>
-                <p className="text-sm text-gray-500">Annual production rate</p>
+                <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Annual production rate</p>
               </div>
             </div>
             
-            <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-100">
-              <p className="text-sm text-gray-700 leading-relaxed">
+            <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-5 border border-emerald-100">
+              <p className="text-[9px] sm:text-xs md:text-sm text-gray-700 leading-relaxed">
                 This tree produces <span className="font-semibold text-emerald-700">{currentOxygen.toFixed(2)} kg</span> of oxygen annually, equivalent to <span className="font-semibold text-emerald-700">{Math.round(currentOxygen * 2.2)}</span> people&apos;s annual oxygen needs, contributing to cleaner air and healthier environment.
               </p>
             </div>
           </div>
 
           {/* CO2 Absorption */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200 relative">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-6 md:p-8 border border-gray-200 relative">
             {/* Icon - Top Right */}
-            <div className="absolute top-6 right-6">
-              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center">
-                <CloudIcon className="h-8 w-8 text-cyan-600" />
+            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-6 md:right-6">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-cyan-100 rounded-full flex items-center justify-center">
+                <CloudIcon className="h-4 w-4 sm:h-6 sm:w-6 md:h-8 md:w-8 text-cyan-600" />
               </div>
             </div>
-            <div className="pr-24">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">CO₂ Absorption</h3>
+            <div className="pr-8 sm:pr-16 md:pr-24">
+              <h3 className="text-xs sm:text-base md:text-xl lg:text-2xl font-bold text-gray-900 mb-1 sm:mb-2 md:mb-4">CO₂ Absorption</h3>
               
-              <div className="mb-6">
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-4xl font-bold text-gray-900">-{currentCO2Absorption.toFixed(2)}</span>
-                  <span className="text-lg text-gray-600 font-medium">kg/year</span>
+              <div className="mb-2 sm:mb-4 md:mb-6">
+                <div className="flex items-baseline gap-1 sm:gap-2 mb-1 sm:mb-2">
+                  <span className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">-{currentCO2Absorption.toFixed(2)}</span>
+                  <span className="text-xs sm:text-sm md:text-lg text-gray-600 font-medium">kg/year</span>
                 </div>
-                <p className="text-sm text-gray-500">Annual absorption rate</p>
+                <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Annual absorption rate</p>
               </div>
             </div>
             
-            <div className="bg-cyan-50 rounded-xl p-5 border border-cyan-100">
-              <p className="text-sm text-gray-700 leading-relaxed">
+            <div className="bg-cyan-50 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-5 border border-cyan-100">
+              <p className="text-[9px] sm:text-xs md:text-sm text-gray-700 leading-relaxed">
                 This tree absorbs <span className="font-semibold text-cyan-700">{currentCO2Absorption.toFixed(2)} kg</span> of CO₂ annually, offsetting emissions from <span className="font-semibold text-cyan-700">{Math.round(currentCO2Absorption / 4.6)}</span> cars per year, helping combat climate change and reduce carbon footprint.
               </p>
             </div>
@@ -599,21 +599,21 @@ export default function TreeDetailPage() {
           transition={{ delay: 0.4 }}
           className="mb-12"
         >
-          <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-gray-100">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8">My Benefits</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="bg-white rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 lg:p-10 border border-gray-100">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6 md:mb-8">My Benefits</h2>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:gap-5">
             {/* Food Security */}
             {treeData?.foodSecurity !== undefined && (
-              <div className="bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl p-6 shadow-lg">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="relative w-24 h-24">
-                    <svg className="transform -rotate-90 w-24 h-24">
+              <div className="bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-2 sm:mb-3">
+                  <div className="relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24">
+                    <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid meet">
                       <circle
                         cx="48"
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         className="text-amber-300"
                       />
@@ -622,7 +622,7 @@ export default function TreeDetailPage() {
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         strokeDasharray={`${(treeData.foodSecurity / 10) * 251.2} 251.2`}
                         className="text-amber-800"
@@ -630,12 +630,12 @@ export default function TreeDetailPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-amber-900">{treeData.foodSecurity * 10}%</span>
+                      <span className="text-[10px] sm:text-xs md:text-base lg:text-xl font-bold text-amber-900">{treeData.foodSecurity * 10}%</span>
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-amber-900 mb-1.5">Food Security</h3>
-                <p className="text-amber-800 text-sm">
+                <h3 className="text-xs sm:text-sm md:text-base lg:text-xl font-bold text-amber-900 mb-1 sm:mb-1.5">Food Security</h3>
+                <p className="text-amber-800 text-[9px] sm:text-xs md:text-sm">
                   The trees will bear fruits, some that will be edible immediately and others that can become edible through processing, ensuring food resources over time.
                 </p>
               </div>
@@ -643,16 +643,16 @@ export default function TreeDetailPage() {
 
             {/* Economic Development */}
             {treeData?.economicDevelopment !== undefined && (
-              <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl p-6 shadow-lg">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="relative w-24 h-24">
-                    <svg className="transform -rotate-90 w-24 h-24">
+              <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-2 sm:mb-3">
+                  <div className="relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24">
+                    <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid meet">
                       <circle
                         cx="48"
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         className="text-orange-300"
                       />
@@ -661,7 +661,7 @@ export default function TreeDetailPage() {
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         strokeDasharray={`${(treeData.economicDevelopment / 10) * 251.2} 251.2`}
                         className="text-orange-800"
@@ -669,12 +669,12 @@ export default function TreeDetailPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-orange-900">{treeData.economicDevelopment * 10}%</span>
+                      <span className="text-[10px] sm:text-xs md:text-base lg:text-xl font-bold text-orange-900">{treeData.economicDevelopment * 10}%</span>
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-orange-900 mb-1.5">Economic Development</h3>
-                <p className="text-orange-800 text-sm">
+                <h3 className="text-xs sm:text-sm md:text-base lg:text-xl font-bold text-orange-900 mb-1 sm:mb-1.5">Economic Development</h3>
+                <p className="text-orange-800 text-[9px] sm:text-xs md:text-sm">
                   The trees&apos; fruits and the products derived from their transformation can be traded in local networks, offering income opportunities.
                 </p>
               </div>
@@ -682,16 +682,16 @@ export default function TreeDetailPage() {
 
             {/* CO₂ Absorption */}
             {treeData?.co2Absorption !== undefined && (
-              <div className="bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl p-6 shadow-lg">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="relative w-24 h-24">
-                    <svg className="transform -rotate-90 w-24 h-24">
+              <div className="bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-2 sm:mb-3">
+                  <div className="relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24">
+                    <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid meet">
                       <circle
                         cx="48"
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         className="text-yellow-300"
                       />
@@ -700,7 +700,7 @@ export default function TreeDetailPage() {
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         strokeDasharray={`${(treeData.co2Absorption / 10) * 251.2} 251.2`}
                         className="text-yellow-800"
@@ -708,12 +708,12 @@ export default function TreeDetailPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-yellow-900">{treeData.co2Absorption * 10}%</span>
+                      <span className="text-[10px] sm:text-xs md:text-base lg:text-xl font-bold text-yellow-900">{treeData.co2Absorption * 10}%</span>
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-yellow-900 mb-1.5">CO₂ Absorption</h3>
-                <p className="text-yellow-800 text-sm">
+                <h3 className="text-xs sm:text-sm md:text-base lg:text-xl font-bold text-yellow-900 mb-1 sm:mb-1.5">CO₂ Absorption</h3>
+                <p className="text-yellow-800 text-[9px] sm:text-xs md:text-sm">
                   During its life cycle, each tree will absorb CO₂. The trees you plant can offset your emissions.
                 </p>
               </div>
@@ -721,16 +721,16 @@ export default function TreeDetailPage() {
 
             {/* Environmental Protection */}
             {treeData?.environmentalProtection !== undefined && (
-              <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-2xl p-6 shadow-lg">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="relative w-24 h-24">
-                    <svg className="transform -rotate-90 w-24 h-24">
+              <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 shadow-lg">
+                <div className="flex items-center justify-center mb-2 sm:mb-3">
+                  <div className="relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24">
+                    <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid meet">
                       <circle
                         cx="48"
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         className="text-green-300"
                       />
@@ -739,7 +739,7 @@ export default function TreeDetailPage() {
                         cy="48"
                         r="40"
                         stroke="currentColor"
-                        strokeWidth="6"
+                        strokeWidth="4"
                         fill="none"
                         strokeDasharray={`${(treeData.environmentalProtection / 10) * 251.2} 251.2`}
                         className="text-green-800"
@@ -747,12 +747,12 @@ export default function TreeDetailPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-green-900">{treeData.environmentalProtection * 10}%</span>
+                      <span className="text-[10px] sm:text-xs md:text-base lg:text-xl font-bold text-green-900">{treeData.environmentalProtection * 10}%</span>
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-green-900 mb-1.5">Environmental Protection</h3>
-                <p className="text-green-800 text-sm">
+                <h3 className="text-xs sm:text-sm md:text-base lg:text-xl font-bold text-green-900 mb-1 sm:mb-1.5">Environmental Protection</h3>
+                <p className="text-green-800 text-[9px] sm:text-xs md:text-sm">
                   The trees are planted in agroforestry systems that favor the virtuous interaction between the different species and their positive impact on the environment and on the land.
                 </p>
               </div>
