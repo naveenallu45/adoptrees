@@ -2,7 +2,81 @@ import { PDFDocument, PDFImage, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { createCanvas, loadImage } from 'canvas';
 
-const CERTIFICATE_TEMPLATE_URL = 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762341062/certificato-treedom-2023.pdf_2_hmxpsy.png';
+const CERTIFICATE_TEMPLATE_URL = 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1764149541/certificato-treedom-2023.pdf_14_-2_qziwpo.png';
+
+// Roboto font URLs - using Google Fonts CDN (TTF format)
+const ROBOTO_REGULAR_TTF = 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf';
+const ROBOTO_BOLD_TTF = 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.ttf';
+
+// Cache fonts in memory
+let cachedRobotoRegularBytes: ArrayBuffer | null = null;
+let cachedRobotoBoldBytes: ArrayBuffer | null = null;
+let robotoRegularPromise: Promise<ArrayBuffer | null> | null = null;
+let robotoBoldPromise: Promise<ArrayBuffer | null> | null = null;
+
+async function getRobotoRegular(): Promise<ArrayBuffer | null> {
+  if (cachedRobotoRegularBytes) {
+    return cachedRobotoRegularBytes;
+  }
+  if (robotoRegularPromise) {
+    return robotoRegularPromise;
+  }
+  
+  robotoRegularPromise = fetch(ROBOTO_REGULAR_TTF)
+    .then(response => {
+      if (!response.ok) {
+        console.warn(`Failed to fetch Roboto regular font: ${response.status}, will use fallback`);
+        return null;
+      }
+      return response.arrayBuffer();
+    })
+    .then(bytes => {
+      if (bytes) {
+        cachedRobotoRegularBytes = bytes;
+      }
+      robotoRegularPromise = null;
+      return bytes;
+    })
+    .catch(error => {
+      console.warn('Error fetching Roboto regular font:', error);
+      robotoRegularPromise = null;
+      return null;
+    });
+  
+  return robotoRegularPromise;
+}
+
+async function getRobotoBold(): Promise<ArrayBuffer | null> {
+  if (cachedRobotoBoldBytes) {
+    return cachedRobotoBoldBytes;
+  }
+  if (robotoBoldPromise) {
+    return robotoBoldPromise;
+  }
+  
+  robotoBoldPromise = fetch(ROBOTO_BOLD_TTF)
+    .then(response => {
+      if (!response.ok) {
+        console.warn(`Failed to fetch Roboto bold font: ${response.status}, will use fallback`);
+        return null;
+      }
+      return response.arrayBuffer();
+    })
+    .then(bytes => {
+      if (bytes) {
+        cachedRobotoBoldBytes = bytes;
+      }
+      robotoBoldPromise = null;
+      return bytes;
+    })
+    .catch(error => {
+      console.warn('Error fetching Roboto bold font:', error);
+      robotoBoldPromise = null;
+      return null;
+    });
+  
+  return robotoBoldPromise;
+}
 
 // Cache template image in memory to avoid fetching every time
 let cachedTemplateImageBytes: ArrayBuffer | null = null;
@@ -45,6 +119,8 @@ interface CertificateData {
   profilePicUrl?: string;
   treesCount: number;
   oxygenKgs: number;
+  co2Kgs?: number; // CO2 in kg
+  treeNames?: string[]; // Array of tree names
   publicId: string;
   orderId: string;
   qrCode?: string; // Existing QR code as data URL (e.g., 'data:image/png;base64,...')
@@ -55,6 +131,16 @@ interface CertificateData {
  */
 export async function generateCertificate(data: CertificateData): Promise<Buffer> {
   try {
+    // Debug logging
+    console.log('[CERTIFICATE] Generating certificate with data:', {
+      userName: data.userName,
+      treesCount: data.treesCount,
+      oxygenKgs: data.oxygenKgs,
+      co2Kgs: data.co2Kgs,
+      treeNamesCount: data.treeNames?.length || 0,
+      treeNames: data.treeNames?.slice(0, 3)
+    });
+    
     // Use cached template image (much faster)
     const templateImageBytes = await getTemplateImage();
 
@@ -114,7 +200,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Embed profile picture if available and create circular version
     // Optimize by resizing to target size before processing
     // Process profile image in parallel with PDF setup
-    const targetProfileSize = 240; // Target size for PDF
+    const targetProfileSize = 252; // Target size for PDF (increased by 5% from 240)
     
     const profilePicPromise = data.profilePicUrl ? (async () => {
       try {
@@ -165,10 +251,56 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Wait for profile pic processing
     const circularProfilePic = await profilePicPromise;
 
-    // Draw profile picture (circular, top left area)
-    const profileSize = circularProfilePic ? 240 : 200;
-    const profileX = 540;
-    const profileY = pageHeight - 600;
+    // Use built-in PDF fonts - these are guaranteed to work and look professional
+    // Times-Roman is an elegant serif font that looks great on certificates
+    // Other options: 'Helvetica-Bold'/'Helvetica' (sans-serif), 'Courier-Bold'/'Courier' (monospace)
+    // Embed Roboto fonts with fallback to Helvetica
+    let robotoBoldFont;
+    let robotoRegularFont;
+    
+    try {
+      const robotoBoldBytes = await getRobotoBold();
+      const robotoRegularBytes = await getRobotoRegular();
+      
+      if (robotoBoldBytes) {
+        try {
+          robotoBoldFont = await pdfDoc.embedFont(robotoBoldBytes);
+        } catch (embedError) {
+          console.warn('Failed to embed Roboto bold font, using Helvetica fallback:', embedError);
+          robotoBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+        }
+      } else {
+        robotoBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+      }
+      
+      if (robotoRegularBytes) {
+        try {
+          robotoRegularFont = await pdfDoc.embedFont(robotoRegularBytes);
+        } catch (embedError) {
+          console.warn('Failed to embed Roboto regular font, using Helvetica fallback:', embedError);
+          robotoRegularFont = await pdfDoc.embedFont('Helvetica');
+        }
+      } else {
+        robotoRegularFont = await pdfDoc.embedFont('Helvetica');
+      }
+    } catch (error) {
+      console.warn('Error loading Roboto fonts, using Helvetica fallback:', error);
+      robotoBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+      robotoRegularFont = await pdfDoc.embedFont('Helvetica');
+    }
+
+    // Draw profile picture (circular, positioned at bottom with 3% padding)
+    const profileSize = circularProfilePic ? 252 : 210; // Increased by 5% (240->252, 200->210)
+    const profileX = 540 - (pageWidth * 0.065); // Shift 6.5% to the left
+    const nameFontSize = 50; // Font size for name (needed for calculation)
+    const nameSpacing = 180; // Space below profile picture
+    const bottomPadding = pageHeight * 0.36; // 36% padding from bottom
+    
+    // Calculate positions to ensure 36% bottom padding below name
+    // Text baseline is at nameY, text extends upward, so bottom of text ≈ nameY - (fontSize * 0.7)
+    const nameY = bottomPadding + (nameFontSize * 0.7); // Position name so bottom has 36% padding
+    const profileY = nameY + nameSpacing; // Profile is above the name
+    
     const profileRadius = profileSize / 2;
     const profileCenterX = profileX + profileRadius;
     const profileCenterY = profileY + profileRadius;
@@ -231,14 +363,13 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
         x: profileCenterX - 10,
         y: profileCenterY - 8,
         size: 60,
+        font: robotoBoldFont,
         color: rgb(1, 1, 1),
       });
     }
 
     // Draw user name (centered below profile picture)
-    const nameFont = await pdfDoc.embedFont('Helvetica-Bold');
-    const nameFontSize = 50; // Increased from 28
-    const nameSpacing = 180; // Space below profile picture
+    // nameFontSize, nameSpacing, and nameY already defined above
     
     // Capitalize first letter of user name
     const capitalizedUserName = data.userName.charAt(0).toUpperCase() + data.userName.slice(1).toLowerCase();
@@ -246,53 +377,91 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     const estimatedCharWidth = 20; // Approximate character width for font size 40
     const nameTextWidth = capitalizedUserName.length * estimatedCharWidth;
     const nameX = profileX + profileSize / 2 - nameTextWidth / 2; // Center relative to profile picture
-    const nameY = profileY - nameSpacing; // Position below profile picture
+    // nameY is already calculated above to ensure 36% bottom padding
     
     page.drawText(capitalizedUserName, {
       x: nameX,
       y: nameY,
       size: nameFontSize,
-      font: nameFont,
-      color: rgb(0.1, 0.3, 0.1),
+      font: robotoBoldFont,
+      color: rgb(0, 0, 0), // Black color
     });
 
-    // Draw trees count and oxygen amount (row-wise below user name)
-    const statsFont = await pdfDoc.embedFont('Helvetica-Bold');
-    const regularFont = await pdfDoc.embedFont('Helvetica');
+    // Draw trees count, oxygen, CO2, and tree names (4-column layout matching screenshot)
+    const statsFont = robotoBoldFont;
+    const regularFont = robotoRegularFont;
     
-    const treesText = `${data.treesCount}`;
-    const oxygenText = `${data.oxygenKgs.toFixed(1)} /year`;
+    // Calculate CO2 from oxygen if not provided (1 kg O2 ≈ 0.715 kg CO2)
+    const co2Value = data.co2Kgs || (data.oxygenKgs * 0.715);
     
-    // Position values below user name
-    const valuesY = nameY - 360; // Space below user name
-    const gapBetweenValues = 150; // Gap between trees and oxygen values
+    // Position stats below user name
+    const statsStartY = Math.max(nameY - 400, 280); // Space below user name (reduced padding)
+    const statValueSpacing = 45; // Space between stat label and value
+    const gapBetweenStats = pageWidth * 0.13; // 13% gap between stat columns (increased by 3%)
+    // Use original profileX (540) for stats center, not the shifted profileX
+    const originalProfileX = 540;
+    const centerX = originalProfileX + profileSize / 2;
+    const statsCenterX = centerX - (pageWidth * 0.05); // Shift 5% to the left
     
-    // Calculate positions to center them as a group relative to profile picture
-    const treesTextWidth = treesText.length * 24; // Approximate width for trees value (size 48)
-    const oxygenTextWidth = oxygenText.length * 24; // Approximate width for oxygen value (size 48, same as trees)
-    const totalWidth = treesTextWidth + gapBetweenValues + oxygenTextWidth;
-    const centerX = profileX + profileSize / 2;
+    // Column 1: Tree name (first field)
+    if (data.treeNames && data.treeNames.length > 0) {
+      const col1X = statsCenterX - gapBetweenStats * 1.5;
+      const treeNameY = statsStartY;
+      const treeNameText = data.treeNames[0]; // Show first tree name
+      const treeNameFontSize = 20;
+      const treeNameWidth = treeNameText.length * 11; // Approximate width
+      
+      page.drawText(treeNameText, {
+        x: col1X - treeNameWidth / 2,
+        y: treeNameY,
+        size: treeNameFontSize,
+        font: regularFont, // Same font as other values
+        color: rgb(0, 0, 0), // Black color
+      });
+    }
     
-    // Trees value (left side)
-    const treesX = centerX - totalWidth / 2;
-    page.drawText(treesText, {
-      x: treesX,
-      y: valuesY,
-      size: 35,
-      font: statsFont,
-      color: rgb(0.1, 0.5, 0.1),
+    // Column 2: Trees count only
+    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.01); // Shift 1% to the left
+    const treesLabelY = statsStartY;
+    
+    // Center trees count number
+    const treesCountText = `${data.treesCount}`;
+    const treesCountFontSize = 22; // Reduced by 20% from 28 (originally 40)
+    const treesCountWidth = treesCountText.length * (treesCountFontSize * 0.625); // Approximate width for new size
+    page.drawText(treesCountText, {
+      x: col2X - treesCountWidth / 2,
+      y: treesLabelY,
+      size: treesCountFontSize,
+      font: regularFont, // Same font as other values
+      color: rgb(0, 0, 0), // Black color
     });
     
-    // Oxygen value (right side) - same font and size as trees value
-    // Move 7% to the right (7% of page width)
-    const rightOffset = pageWidth * 0.07;
-    const oxygenX = centerX - totalWidth / 2 + treesTextWidth + gapBetweenValues + rightOffset;
-    page.drawText(oxygenText, {
-      x: oxygenX,
-      y: valuesY,
-      size: 30,
-      font: statsFont,
-      color: rgb(0.1, 0.5, 0.1),
+    // Column 3: O2 total value
+    const col3X = statsCenterX + gapBetweenStats * 0.5;
+    const o2ValueY = statsStartY;
+    const o2ValueText = `${data.oxygenKgs.toFixed(1)} /year`;
+    
+    const o2ValueWidth = o2ValueText.length * 10;
+    page.drawText(o2ValueText, {
+      x: col3X - o2ValueWidth / 2,
+      y: o2ValueY,
+      size: 22,
+      font: regularFont, // Same font as other values
+      color: rgb(0, 0, 0), // Black color
+    });
+    
+    // Column 4: CO2 total value
+    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.01); // Shift 1% to the left
+    const co2ValueY = statsStartY;
+    const co2ValueText = `${co2Value.toFixed(1)} /year`;
+    
+    const co2ValueWidth = co2ValueText.length * 10;
+    page.drawText(co2ValueText, {
+      x: col4X - co2ValueWidth / 2,
+      y: co2ValueY,
+      size: 22,
+      font: regularFont, // Same font as other values
+      color: rgb(0, 0, 0), // Black color
     });
 
     // Draw QR code (bottom right area)
