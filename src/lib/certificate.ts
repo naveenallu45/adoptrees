@@ -200,7 +200,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Embed profile picture if available and create circular version
     // Optimize by resizing to target size before processing
     // Process profile image in parallel with PDF setup
-    const targetProfileSize = 252; // Target size for PDF (increased by 5% from 240)
+    const targetProfileSize = 328; // Target size for PDF (increased by 30% from 252)
     
     const profilePicPromise = data.profilePicUrl ? (async () => {
       try {
@@ -290,8 +290,8 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     }
 
     // Draw profile picture (circular, positioned at bottom with 3% padding)
-    const profileSize = circularProfilePic ? 252 : 210; // Increased by 5% (240->252, 200->210)
-    const profileX = 540 - (pageWidth * 0.065); // Shift 6.5% to the left
+    const profileSize = circularProfilePic ? 328 : 273; // Increased by 30% (252->328, 210->273)
+    const profileX = 540 - (pageWidth * 0.10); // Shift 10% to the left (decreased by 2%)
     const nameFontSize = 50; // Font size for name (needed for calculation)
     const nameSpacing = 180; // Space below profile picture
     const bottomPadding = pageHeight * 0.36; // 36% padding from bottom
@@ -376,7 +376,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     
     const estimatedCharWidth = 20; // Approximate character width for font size 40
     const nameTextWidth = capitalizedUserName.length * estimatedCharWidth;
-    const nameX = profileX + profileSize / 2 - nameTextWidth / 2; // Center relative to profile picture
+    const nameX = profileX + profileSize / 2 - nameTextWidth / 2 - (pageWidth * 0.02); // Center relative to profile picture, shifted 2% to the left
     // nameY is already calculated above to ensure 36% bottom padding
     
     page.drawText(capitalizedUserName, {
@@ -399,11 +399,11 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Use original profileX (540) for stats center, not the shifted profileX
     const originalProfileX = 540;
     const centerX = originalProfileX + profileSize / 2;
-    const statsCenterX = centerX - (pageWidth * 0.05); // Shift 5% to the left
+    const statsCenterX = centerX - (pageWidth * 0.06); // Shift 6% to the left (additional 1% shift for all values)
     
     // Column 1: Tree name (first field)
     if (data.treeNames && data.treeNames.length > 0) {
-      const col1X = statsCenterX - gapBetweenStats * 1.5 + (pageWidth * 0.01); // Shift 1% to the right
+      const col1X = statsCenterX - gapBetweenStats * 1.5; // Aligned with stats center
       const treeNameY = statsStartY;
       const treeNameText = data.treeNames[0]; // Show first tree name
       const treeNameFontSize = 20;
@@ -413,7 +413,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
         x: col1X - treeNameWidth / 2,
         y: treeNameY,
         size: treeNameFontSize,
-        font: regularFont, // Same font as other values
+        font: robotoBoldFont, // Bold font for tree name
         color: rgb(0, 0, 0), // Black color
       });
     }
@@ -430,12 +430,12 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       x: col2X - treesCountWidth / 2,
       y: treesLabelY,
       size: treesCountFontSize,
-      font: regularFont, // Same font as other values
+      font: robotoBoldFont, // Bold font for trees count
       color: rgb(0, 0, 0), // Black color
     });
     
     // Column 3: O2 total value
-    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.01); // Shift 1% to the left
+    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.02); // Shift 2% to the left (additional 1%)
     const o2ValueY = statsStartY;
     const o2ValueText = `${data.oxygenKgs.toFixed(1)} /year`;
     
@@ -444,12 +444,12 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       x: col3X - o2ValueWidth / 2,
       y: o2ValueY,
       size: 22,
-      font: regularFont, // Same font as other values
+      font: robotoBoldFont, // Bold font for O2 value
       color: rgb(0, 0, 0), // Black color
     });
     
     // Column 4: CO2 total value
-    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.02); // Shift 2% to the left (1% more than before)
+    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.03); // Shift 3% to the left (additional 1%)
     const co2ValueY = statsStartY;
     const co2ValueText = `${co2Value.toFixed(1)} /year`;
     
@@ -458,7 +458,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       x: col4X - co2ValueWidth / 2,
       y: co2ValueY,
       size: 22,
-      font: regularFont, // Same font as other values
+      font: robotoBoldFont, // Bold font for CO2 value
       color: rgb(0, 0, 0), // Black color
     });
 
