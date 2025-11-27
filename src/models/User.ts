@@ -29,7 +29,6 @@ const UserSchema = new Schema<IUser>(
     email: { 
       type: String, 
       required: true, 
-      unique: true, 
       lowercase: true,
       trim: true,
       validate: {
@@ -66,6 +65,9 @@ const UserSchema = new Schema<IUser>(
   },
   { timestamps: true }
 );
+
+// Define email index explicitly to avoid duplicate index warning
+UserSchema.index({ email: 1 }, { unique: true });
 
 // Ensure email is lowercase and publicId exists before saving
 UserSchema.pre('save', async function(next) {

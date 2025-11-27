@@ -13,27 +13,27 @@ import TreeInfoButton from '@/components/TreeInfoButton';
 const occasions = [
   {
     title: 'Birthday',
-    description: 'An original, sustainable gift that grows over time. For a birthday to remember... even for the planet!',
+    description: 'A thoughtful, sustainable gift that grows with time. Make someone\'s birthday unforgettable with a gesture that brings life to the planet.',
     icon: '🎂'
   },
   {
     title: 'Wedding',
-    description: 'Turn your wedding favors into trees and share the beauty of your "yes" with a gesture that helps the planet.',
+    description: 'Transform your celebration into something beautiful for the Earth. Plant trees as wedding favors and let your "yes" bloom into a greener future.',
     icon: '💍'
   },
   {
     title: 'Birth',
-    description: 'A Forest to celebrate a new beginning. To welcome life while preparing a greener, fairer future!',
+    description: 'Welcome new life with a forest of hope. Celebrate this precious beginning by planting trees that nurture a fairer, greener tomorrow.',
     icon: '👶'
   },
   {
-    title: 'In memory',
-    description: 'Dedicating a Forest is a gentle way to let the memory of someone we loved bloom. And to do so with others, keeping that memory alive.',
+    title: 'In Memory',
+    description: 'Honor a loved one with a tribute that lives on. Planting a forest in their memory lets their story, love, and legacy continue to grow.',
     icon: '🌹'
   },
   {
-    title: 'Create your occasion',
-    description: 'Bring a collective initiative to life: a group commitment to do something concrete for the environment - together.',
+    title: 'Create Your Occasion',
+    description: 'Start a collective green gesture. Bring your group, family, or community together to create a forest and make a meaningful impact—together.',
     icon: '🌱'
   }
 ];
@@ -227,14 +227,19 @@ export default function MomentsThatDeserve() {
           {/* Header */}
           <div className="text-center mb-12 sm:mb-16 md:mb-20">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 sm:mb-8">
-              Moments that deserve to take root
+              Moments That Deserve to Take Root
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-white/95 max-w-3xl mx-auto mb-4 leading-relaxed">
-              Some moments deserve to be celebrated with a special gesture. From birthdays to weddings, from a birth to a milestone - each tree planted tells a story.
-            </p>
-            <p className="text-base sm:text-lg md:text-xl text-white/95 max-w-3xl mx-auto leading-relaxed">
-              But that&apos;s not all. A Forest can also grow from a shared idea, a collective project, a common commitment to building a greener future.
-            </p>
+            <div className="text-base sm:text-lg md:text-xl text-white/95 max-w-3xl mx-auto leading-relaxed space-y-4">
+              <p>
+                Some memories deserve more than a celebration — they deserve to grow.
+              </p>
+              <p>
+                From birthdays to weddings, from new beginnings to milestones,
+              </p>
+              <p>
+                Every tree planted becomes a story rooted in love.
+              </p>
+            </div>
           </div>
 
           {/* Cards Grid */}

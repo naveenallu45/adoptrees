@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
@@ -156,7 +156,8 @@ export default function UserTreesList({ userType, publicId, showForestOnly = fal
   const pathname = usePathname();
   const router = useRouter();
   const isTransactionsPage = pathname.includes('/transactions');
-const [forestTreeIds, setForestTreeIds] = useState<Set<string>>(new Set());
+  const [forestTreeIds, setForestTreeIds] = useState<Set<string>>(new Set());
+  const hasInitializedMaps = useRef(false);
 
   const formatAdoptedDate = (isoDateString: string) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -293,6 +294,37 @@ useEffect(() => {
     }
     return groupedTrees.filter(entry => getItemType(entry.item) !== 'forest');
   }, [groupedTrees, showForestOnly, isTransactionsPage, forestTreeIds]);
+
+  // Initialize all maps to be visible on initial page load
+  useEffect(() => {
+    if (!hasInitializedMaps.current && filteredTreeEntries.length > 0 && !loading) {
+      const initialVisibility: Record<string, boolean> = {};
+      
+      filteredTreeEntries.forEach((treeData, treeIndex) => {
+        const { orders: treeOrders, firstItemIndex } = treeData;
+        const primaryOrder = treeOrders[0];
+        // Use the same uniqueKey format as in the render section
+        const uniqueKey = `${primaryOrder._id}-${firstItemIndex}-${treeIndex}`;
+        
+        const completedTask = primaryOrder.wellwisherTasks?.find(task => 
+          task.status === 'completed' && task.plantingDetails?.plantingLocation?.coordinates
+        );
+        
+        if (completedTask?.plantingDetails?.plantingLocation) {
+          const locationKey = `location-${uniqueKey}`;
+          initialVisibility[locationKey] = true;
+        }
+      });
+      
+      if (Object.keys(initialVisibility).length > 0) {
+        setLocationVisibility(prev => ({
+          ...prev,
+          ...initialVisibility
+        }));
+        hasInitializedMaps.current = true;
+      }
+    }
+  }, [filteredTreeEntries, loading]);
 
   const fetchUserOrders = async () => {
     try {
@@ -709,7 +741,10 @@ useEffect(() => {
                           if (completedTask?.plantingDetails?.plantingLocation) {
                             const coords = completedTask.plantingDetails.plantingLocation.coordinates;
                             const locationKey = `location-${uniqueKey}`;
-                            const isVisible = locationVisibility[locationKey] || false;
+                            // Default to true on initial load (if key doesn't exist yet), false if explicitly set to false
+                            const isVisible = locationVisibility[locationKey] !== undefined 
+                              ? locationVisibility[locationKey] 
+                              : !hasInitializedMaps.current;
                             
                             return (
                               <div className="mt-1 pt-1.5 border-t border-green-100/50" key={locationKey}>

@@ -8,7 +8,7 @@ export default function CreateForestHero() {
           Create Your Forest
         </h1>
         <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white/95 max-w-3xl mx-auto mb-8 sm:mb-12 drop-shadow-lg font-medium px-4">
-          Plant trees for special moments. Celebrate life&apos;s milestones while making a lasting impact on our planet.
+          Turn special moments into living memories. Celebrate life&apos;s milestones by planting trees that continue to grow, protect, and heal our planet for years to come.
         </p>
         <div className="flex justify-center">
           <Link 

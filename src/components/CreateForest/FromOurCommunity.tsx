@@ -2,47 +2,47 @@ import Image from 'next/image';
 
 const communityStories = [
   {
-    title: 'Wedding Occasions',
-    name: 'Keerthi & Arjun Reddy',
+    title: 'Wedding Occasion',
+    name: 'Prahassan Reddy & Soumya',
     location: 'Hyderabad, Telangana',
     profileImage: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80',
-    description: 'No party favors, we\'ve planted 50 trees! They will grow over time, just like our love. If you\'d like to give us a gift, plant some trees yourself and let our Forest grow!',
+    description: 'No party favors this time — instead, we planted 50 trees! They\'ll grow over time, just like our love. If you\'d like to give us a gift, plant a few trees yourself and help our Forest keep growing!',
     tags: [
       { label: 'Wedding', icon: '💍', color: 'bg-orange-100 text-orange-700 border-orange-300' },
-      { label: '74 trees planted', icon: '🌳', color: 'bg-green-100 text-green-700 border-green-300' }
+      { label: '50 trees planted', icon: '🌿', color: 'bg-green-100 text-green-700 border-green-300' }
     ]
   },
   {
-    title: 'Welcome Matteo!',
+    title: 'Welcome Kiddo',
     name: 'Meghana & Varun Chilukuri',
     location: 'Vijayawada, Andhra Pradesh',
     profileImage: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
-    description: 'To welcome our little one we want to plant lots of trees to help make this planet a better place for him too. If you like, lend us a hand and plant more trees with us!',
+    description: 'To welcome our little one, we wanted to plant as many trees as possible so he grows up in a greener world. If you\'d like to celebrate with us, Create forest',
     tags: [
       { label: 'Birth', icon: '🍼', color: 'bg-blue-100 text-blue-700 border-blue-300' },
-      { label: '166 trees planted', icon: '🌳', color: 'bg-green-100 text-green-700 border-green-300' }
+      { label: '166 trees planted', icon: '🌿', color: 'bg-green-100 text-green-700 border-green-300' }
     ]
   },
   {
-    title: 'Graduation Beatrice',
+    title: 'Graduation Done',
     name: 'Sanjana Kolluri',
     location: 'Visakhapatnam, Andhra Pradesh',
     profileImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-    description: 'We made it! To celebrate this milestone, I\'ve decided to plant trees. What do you say, can we reach 100 new saplings?',
+    description: 'We did it! To mark this milestone, I\'ve decided to plant trees.',
     tags: [
       { label: 'Graduation', icon: '🎓', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
-      { label: '85 trees planted', icon: '🌳', color: 'bg-green-100 text-green-700 border-green-300' }
+      { label: '85 trees planted', icon: '🌿', color: 'bg-green-100 text-green-700 border-green-300' }
     ]
   },
   {
-    title: 'Brigitte\'s Birthday',
+    title: 'Eyy Happy Birthday',
     name: 'Nikhil Chaitanya',
     location: 'Tirupati, Andhra Pradesh',
     profileImage: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-    description: 'Another year older, but not wiser. Or maybe this year? Let\'s start off on the right foot by doing a good deed for the planet: I\'ve planted 37 trees, one for each candle.',
+    description: 'Another year older — and hopefully wiser! This year, I wanted to begin by doing something good for the planet. I\'ve planted 37 trees, one for each candle.',
     tags: [
       { label: 'Birthday', icon: '🎉', color: 'bg-red-100 text-red-700 border-red-300' },
-      { label: '59 trees planted', icon: '🌳', color: 'bg-green-100 text-green-700 border-green-300' }
+      { label: '37 trees planted', icon: '🌿', color: 'bg-green-100 text-green-700 border-green-300' }
     ]
   }
 ];

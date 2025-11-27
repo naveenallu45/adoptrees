@@ -2,8 +2,8 @@ import Image from 'next/image';
 
 const steps = [
   {
-    title: 'Plant trees',
-    description: 'What forest would be without trees? Start by planting one of the mixes we have prepared for you, with the right balance of forest and fruit species.',
+    title: 'Plant Trees',
+    description: 'Every forest begins with a single act of care. Choose from our thoughtfully curated mixes with the perfect blend of forest and fruit species — and start growing your Forest, tree by tree.',
     illustration: (
       <div className="relative w-full h-64 sm:h-72 md:h-80 flex items-center justify-center">
         <div className="relative w-full max-w-md">
@@ -62,7 +62,7 @@ const steps = [
   },
   {
     title: 'Customize',
-    description: 'Let everyone know why you decided to create your Forest: give it a name, choose the cover image, and write a brief description to tell its story.',
+    description: 'Give your Forest a personal touch. Name it, choose a cover image, and share why you created it — turning your Forest into a meaningful story others can connect with.',
     illustration: (
       <div className="relative w-full h-64 sm:h-72 md:h-80 flex items-center justify-center">
         <div className="relative w-full max-w-md">
@@ -116,8 +116,8 @@ const steps = [
     )
   },
   {
-    title: 'Share it with your friends',
-    description: 'This story deserves to be told! Share your Forest on social media and invite your friends to plant more trees to make it grow.',
+    title: 'Share Your Impact',
+    description: 'A beautiful story deserves to be shared. Download your certificate and share your Forest on social media — show the world the meaningful impact your memory is creating.',
     illustration: (
       <div className="relative w-full h-64 sm:h-72 md:h-80 flex items-center justify-center">
         <div className="relative w-full max-w-sm space-y-2">
@@ -194,11 +194,19 @@ export default function HowItWorksForest() {
         {/* Header */}
         <div className="text-center mb-12 sm:mb-16 md:mb-20">
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 sm:mb-8">
-            How it works
+            How It Works
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
-            Creating a Forest is a simple gesture. It only takes a moment, but the memory will last forever – for you and for those who take part by planting a tree.
-          </p>
+          <div className="text-base sm:text-lg md:text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed space-y-2">
+            <p>
+              Creating a Forest is a simple, beautiful gesture.
+            </p>
+            <p>
+              It takes only a moment — but the memory lasts forever.
+            </p>
+            <p>
+              For you, and for everyone who joins you in planting a tree.
+            </p>
+          </div>
         </div>
 
         {/* Steps */}
