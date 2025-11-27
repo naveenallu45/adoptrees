@@ -16,7 +16,7 @@ export async function createDatabaseIndexes() {
     
     
     // User model indexes
-    await User.collection.createIndex({ email: 1 }, { unique: true });
+    // Note: email index is already created by unique: true in schema, so we skip it here
     await User.collection.createIndex({ role: 1 });
     await User.collection.createIndex({ userType: 1 });
     await User.collection.createIndex({ createdAt: -1 });

@@ -32,7 +32,6 @@ const UserSchema = new Schema<IUser>(
       unique: true, 
       lowercase: true,
       trim: true,
-      index: true,
       validate: {
         validator: function(v: string) {
           return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -60,7 +59,7 @@ const UserSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true, select: false },
     userType: { type: String, enum: ['individual', 'company'], required: true },
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
-    publicId: { type: String, unique: true, index: true, sparse: true },
+    publicId: { type: String, unique: true, sparse: true },
     qrCode: { type: String }, // QR code data URL stored at registration
     image: { type: String }, // Profile image URL
     imagePublicId: { type: String }, // Cloudinary public ID for profile image

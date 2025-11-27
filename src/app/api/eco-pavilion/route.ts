@@ -4,7 +4,7 @@ import Order from '@/models/Order';
 import Tree from '@/models/Tree';
 import type { PipelineStage } from 'mongoose';
 
-export interface Achiever {
+export interface EcoPavilionMember {
   userId: string;
   userName: string;
   userEmail: string;
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     // For 'forest' filter, we'll filter items after unwinding
 
     // Aggregate users with their order statistics
-    const achieversPipeline: PipelineStage[] = [
+    const ecoPavilionPipeline: PipelineStage[] = [
       // Match only paid orders with filter conditions
       {
         $match: matchConditions
@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
       {
         $unwind: {
           path: '$userProfile',
-          preserveNullAndEmptyArrays: true // Keep achievers even if user profile not found
+          preserveNullAndEmptyArrays: true // Keep eco pavilion members even if user profile not found
         }
       },
       // Project final fields with user profile data
@@ -263,12 +263,12 @@ export async function GET(request: NextRequest) {
       }
     ];
 
-    const achieversData = await Order.aggregate(achieversPipeline);
+    const ecoPavilionData = await Order.aggregate(ecoPavilionPipeline);
 
-    // Debug: Log first achiever to check data including CO2
-    if (achieversData.length > 0 && process.env.NODE_ENV === 'development') {
-      console.log('First achiever data:', JSON.stringify(achieversData[0], null, 2));
-      console.log('CO2 value:', achieversData[0].totalCO2, 'Trees:', achieversData[0].totalTrees);
+    // Debug: Log first eco pavilion member to check data including CO2
+    if (ecoPavilionData.length > 0 && process.env.NODE_ENV === 'development') {
+      console.log('First eco pavilion member data:', JSON.stringify(ecoPavilionData[0], null, 2));
+      console.log('CO2 value:', ecoPavilionData[0].totalCO2, 'Trees:', ecoPavilionData[0].totalTrees);
       
       // Also check a sample order to see CO2 values
       const sampleOrder = await Order.findOne({ 
@@ -288,37 +288,37 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Format achievers with rank
-    const achievers: Achiever[] = achieversData.map((achiever, index) => {
+    // Format eco pavilion members with rank
+    const ecoPavilionMembers: EcoPavilionMember[] = ecoPavilionData.map((member, index) => {
       // Ensure CO2 is calculated - use the value from aggregation (stored in orders)
-      const co2Value = achiever.totalCO2 != null && achiever.totalCO2 !== undefined 
-        ? Math.round(achiever.totalCO2) 
+      const co2Value = member.totalCO2 != null && member.totalCO2 !== undefined 
+        ? Math.round(member.totalCO2) 
         : 0;
       
       return {
-        userId: achiever.userId,
-        userName: achiever.userName,
-        userEmail: achiever.userEmail,
-        userType: achiever.userType,
-        userImage: achiever.userImage && achiever.userImage.trim() !== '' ? achiever.userImage : undefined,
-        publicId: achiever.publicId || undefined,
-        totalTrees: achiever.totalTrees,
-        totalOxygen: achiever.totalOxygen || 0,
+        userId: member.userId,
+        userName: member.userName,
+        userEmail: member.userEmail,
+        userType: member.userType,
+        userImage: member.userImage && member.userImage.trim() !== '' ? member.userImage : undefined,
+        publicId: member.publicId || undefined,
+        totalTrees: member.totalTrees,
+        totalOxygen: member.totalOxygen || 0,
         totalCO2: co2Value,
-        totalOrders: achiever.totalOrders,
-        totalAmount: achiever.totalAmount,
-        lastAdoptionDate: achiever.lastAdoptionDate,
+        totalOrders: member.totalOrders,
+        totalAmount: member.totalAmount,
+        lastAdoptionDate: member.lastAdoptionDate,
         rank: index + 1
       };
     });
 
     return NextResponse.json({
       success: true,
-      data: achievers,
-      count: achievers.length
+      data: ecoPavilionMembers,
+      count: ecoPavilionMembers.length
     });
   } catch (error) {
-    console.error('Error fetching achievers:', error);
+    console.error('Error fetching eco pavilion members:', error);
     
     // Check if it's a MongoDB connection error
     const isConnectionError = error instanceof Error && (
@@ -333,7 +333,7 @@ export async function GET(request: NextRequest) {
         success: false,
         error: isConnectionError 
           ? 'Database connection failed. Please try again later.'
-          : 'Failed to fetch achievers. Please try again.',
+          : 'Failed to fetch eco pavilion members. Please try again.',
         details: process.env.NODE_ENV === 'development' 
           ? (error instanceof Error ? error.message : 'Unknown error')
           : undefined

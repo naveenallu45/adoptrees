@@ -15,7 +15,7 @@ import {
   SparklesIcon as TreeIconOutline
 } from '@heroicons/react/24/outline';
 
-interface Achiever {
+interface EcoPavilionMember {
   userId: string;
   userName: string;
   userEmail: string;
@@ -34,35 +34,35 @@ interface Achiever {
 type SortBy = 'trees' | 'oxygen' | 'co2';
 type FilterType = 'all' | 'individual' | 'company' | 'forest';
 
-export default function AchieversPage() {
-  const [achievers, setAchievers] = useState<Achiever[]>([]);
+export default function EcoPavilionPage() {
+  const [ecoPavilionMembers, setEcoPavilionMembers] = useState<EcoPavilionMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('trees');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAchievers();
+    fetchEcoPavilionMembers();
   }, [sortBy, filterType]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchAchievers = async () => {
+  const fetchEcoPavilionMembers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/achievers?sortBy=${sortBy}&filterType=${filterType}&limit=100`, {
+      const response = await fetch(`/api/eco-pavilion?sortBy=${sortBy}&filterType=${filterType}&limit=100`, {
         cache: 'no-store'
       });
       const result = await response.json();
 
       if (result.success) {
-        // Debug: Log first achiever to check CO2 value
+        // Debug: Log first eco pavilion member to check CO2 value
         if (result.data && result.data.length > 0 && process.env.NODE_ENV === 'development') {
-          console.log('First achiever from API:', result.data[0]);
+          console.log('First eco pavilion member from API:', result.data[0]);
           console.log('CO2 value:', result.data[0].totalCO2);
         }
-        setAchievers(result.data);
+        setEcoPavilionMembers(result.data);
       } else {
-        const errorMessage = result.error || 'Failed to load achievers';
+        const errorMessage = result.error || 'Failed to load eco pavilion members';
         // Show more user-friendly message for connection errors
         if (response.status === 503) {
           setError('Unable to connect to the server. Please check your internet connection and try again.');
@@ -71,8 +71,8 @@ export default function AchieversPage() {
         }
       }
     } catch (err) {
-      console.error('Error fetching achievers:', err);
-      setError('Failed to load achievers. Please try again.');
+      console.error('Error fetching eco pavilion members:', err);
+      setError('Failed to load eco pavilion members. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ export default function AchieversPage() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <TrophyIconOutline className="w-12 h-12 text-yellow-400" />
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white">
-              Achievers
+              Eco Pavilion
             </h1>
           </div>
           <p className="text-lg sm:text-xl text-green-100 max-w-2xl mx-auto">
@@ -218,7 +218,7 @@ export default function AchieversPage() {
           <div className="bg-red-900/50 border border-red-500 rounded-lg p-6 text-center backdrop-blur-sm">
             <p className="text-red-100">{error}</p>
             <button
-              onClick={fetchAchievers}
+              onClick={fetchEcoPavilionMembers}
               className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               Try Again
@@ -226,19 +226,19 @@ export default function AchieversPage() {
           </div>
         )}
 
-        {/* Achievers List */}
+        {/* Eco Pavilion Members List */}
         {!loading && !error && (
           <div className="space-y-4">
-            {achievers.length === 0 ? (
+            {ecoPavilionMembers.length === 0 ? (
               <div className="bg-white/10 backdrop-blur-sm rounded-xl shadow-lg p-12 text-center border border-white/20">
                 <TrophyIconOutline className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">No Achievers Yet</h3>
+                <h3 className="text-xl font-semibold text-white mb-2">No Members Yet</h3>
                 <p className="text-green-100">Be the first to adopt trees and appear on the leaderboard!</p>
               </div>
             ) : (
-              achievers.map((achiever, index) => (
+              ecoPavilionMembers.map((member, index) => (
                 <motion.div
-                  key={achiever.userId}
+                  key={member.userId}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -249,11 +249,11 @@ export default function AchieversPage() {
                     <div className="flex items-center gap-4 sm:gap-6">
                       {/* User Avatar */}
                       <div className="flex-shrink-0">
-                        {achiever.userImage && achiever.userImage.trim() !== '' ? (
+                        {member.userImage && member.userImage.trim() !== '' ? (
                           <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-white/50 shadow-lg ring-2 ring-white/20">
                             <Image
-                              src={achiever.userImage}
-                              alt={achiever.userName}
+                              src={member.userImage}
+                              alt={member.userName}
                               fill
                               className="object-cover"
                               sizes="96px"
@@ -261,11 +261,11 @@ export default function AchieversPage() {
                           </div>
                         ) : (
                           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center border-4 border-white/50 shadow-lg ring-2 ring-white/20">
-                            {achiever.userType === 'company' ? (
+                            {member.userType === 'company' ? (
                               <BuildingOfficeIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                             ) : (
                               <span className="text-white font-bold text-2xl sm:text-3xl">
-                                {getUserInitials(achiever.userName)}
+                                {getUserInitials(member.userName)}
                               </span>
                             )}
                           </div>
@@ -276,16 +276,16 @@ export default function AchieversPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="text-xl sm:text-2xl font-bold text-white truncate">
-                            {achiever.userName}
+                            {member.userName}
                           </h3>
-                          {achiever.userType === 'company' && (
+                          {member.userType === 'company' && (
                             <span className="px-3 py-1 bg-purple-500/60 text-white rounded-full text-xs font-bold backdrop-blur-sm border border-purple-300/30">
                               Company
                             </span>
                           )}
                         </div>
                         <p className="text-sm text-green-200 mb-4">
-                          Last adoption: {formatDate(achiever.lastAdoptionDate)}
+                          Last adoption: {formatDate(member.lastAdoptionDate)}
                         </p>
 
                         {/* Stats Grid */}
@@ -296,7 +296,7 @@ export default function AchieversPage() {
                               <span className="text-[9px] sm:text-[10px] font-semibold text-green-100 uppercase tracking-wide">Trees</span>
                             </div>
                             <p className="text-base sm:text-lg font-bold text-white">
-                              {achiever.totalTrees.toLocaleString()}
+                              {member.totalTrees.toLocaleString()}
                             </p>
                           </div>
                           <div className="bg-white/15 backdrop-blur-sm rounded-md p-1.5 sm:p-2 border border-white/30 shadow-sm flex flex-col items-center justify-center text-center">
@@ -305,7 +305,7 @@ export default function AchieversPage() {
                               <span className="text-[9px] sm:text-[10px] font-semibold text-green-100 uppercase tracking-wide">Oxygen</span>
                             </div>
                             <p className="text-base sm:text-lg font-bold text-white">
-                              {achiever.totalOxygen.toLocaleString()}
+                              {member.totalOxygen.toLocaleString()}
                             </p>
                             <p className="text-[9px] text-green-200 mt-0.5">kg/year</p>
                           </div>
@@ -317,7 +317,7 @@ export default function AchieversPage() {
                               </span>
                             </div>
                             <p className="text-base sm:text-lg font-bold text-white">
-                              {achiever.totalCO2 ? achiever.totalCO2.toLocaleString() : '0'}
+                              {member.totalCO2 ? member.totalCO2.toLocaleString() : '0'}
                             </p>
                             <p className="text-[9px] text-green-200 mt-0.5">kg CO₂/year</p>
                           </div>
