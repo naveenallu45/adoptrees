@@ -410,12 +410,30 @@ export default function AdminAdoptionsPage() {
           const items = _info.getValue();
           return (
             <div className="space-y-1">
-              {items.map((item, index) => (
-                <div key={index} className="text-sm">
-                  <span className="font-medium">{item.treeName}</span>
-                  <span className="text-gray-500 ml-1">(x{item.quantity})</span>
-                </div>
-              ))}
+              {items.map((item, index) => {
+                const treeType = item.treeType || (item.forestName ? 'forest' : 'individual');
+                const typeColors = {
+                  company: 'bg-blue-100 text-blue-800',
+                  forest: 'bg-emerald-100 text-emerald-800',
+                  individual: 'bg-green-100 text-green-800',
+                };
+                const typeLabel = {
+                  company: 'Company',
+                  forest: 'Forest',
+                  individual: 'Individual',
+                };
+                return (
+                  <div key={index} className="text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{item.treeName}</span>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${typeColors[treeType as keyof typeof typeColors] || typeColors.individual}`}>
+                        {typeLabel[treeType as keyof typeof typeLabel] || 'Individual'}
+                      </span>
+                    </div>
+                    <span className="text-gray-500">(x{item.quantity})</span>
+                  </div>
+                );
+              })}
             </div>
           );
         },

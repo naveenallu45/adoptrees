@@ -15,7 +15,10 @@ export async function GET() {
       .exec();
     
     logInfo('Trees fetched successfully', { count: trees.length });
-    return NextResponse.json({ success: true, data: trees });
+    return NextResponse.json(
+      { success: true, data: trees },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate' } }
+    );
   } catch (error) {
     logError('Failed to fetch trees', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(

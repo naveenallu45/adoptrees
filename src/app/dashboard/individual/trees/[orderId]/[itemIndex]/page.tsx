@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeftIcon,
   CheckCircleIcon,
-  MapPinIcon,
   SparklesIcon,
   CloudIcon
 } from '@heroicons/react/24/outline';
@@ -116,7 +115,6 @@ export default function TreeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [userImage, setUserImage] = useState<string | null>(null);
 
   const fetchOrder = useCallback(async () => {
@@ -214,10 +212,6 @@ export default function TreeDetailPage() {
     fetchOrder();
   }, [fetchOrder]);
 
-  // Reset location dropdown when navigating to a different tree
-  useEffect(() => {
-    setShowLocationDropdown(false);
-  }, [orderId, itemIndex]);
 
   const _handleDownloadCertificate = async (orderId: string) => {
     try {
@@ -429,12 +423,6 @@ export default function TreeDetailPage() {
                   </svg>
                   <span className="text-white text-sm font-medium">Location</span>
                 </div>
-                <div className="bg-green-800 rounded-full px-4 py-2 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                  </svg>
-                  <span className="text-white text-sm font-medium">Weather</span>
-                </div>
               </div>
             </div>
 
@@ -464,19 +452,7 @@ export default function TreeDetailPage() {
               <div>
                 <h3 className="text-white font-semibold mb-3 text-lg">Planting Location</h3>
                 <div className="bg-white rounded-2xl p-5 border-2 border-green-200 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <p className="text-green-800 font-semibold">Tree Location</p>
-                    <button
-                      onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
-                      type="button"
-                    >
-                      <MapPinIcon className="h-4 w-4 flex-shrink-0" />
-                      <span>{showLocationDropdown ? 'Hide location' : 'View location'}</span>
-                    </button>
-                  </div>
-                  {showLocationDropdown && (
-                    <div className="mt-3">
+                  <p className="text-green-800 font-semibold mb-3">Tree Location</p>
                       <PlantingLocationMap
                         latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
                         longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
@@ -486,8 +462,6 @@ export default function TreeDetailPage() {
                         className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
                         showOpenInMaps={true}
                       />
-                    </div>
-                  )}
                 </div>
               </div>
             )}

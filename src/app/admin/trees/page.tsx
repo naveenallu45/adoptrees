@@ -155,11 +155,9 @@ export default function TreesManagement() {
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
         
-        // Immediately refetch to show instant updates
-        await Promise.all([
-          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
-        ]);
+        // Immediately invalidate queries to show instant updates
+        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
 
         setShowForm(false);
         setEditingTree(null);
@@ -262,11 +260,9 @@ export default function TreesManagement() {
       }
       
       toast.success('Tree deleted successfully!');
-      // Immediately refetch to show instant updates
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
-      ]);
+      // Immediately invalidate queries to show instant updates
+      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete tree: ${errorMessage}`);
@@ -359,15 +355,20 @@ export default function TreesManagement() {
       {
         accessorKey: 'treeType',
         header: 'Type',
-        cell: ({ row }) => (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            (row.original as Tree & { treeType?: string }).treeType === 'company' 
-              ? 'bg-blue-100 text-blue-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
-            {(row.original as Tree & { treeType?: string }).treeType === 'company' ? 'Company' : 'Individual'}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const treeType = (row.original as Tree & { treeType?: string }).treeType || 'individual';
+          const typeConfig = {
+            company: { label: 'Company', color: 'bg-blue-100 text-blue-800' },
+            forest: { label: 'Forest', color: 'bg-emerald-100 text-emerald-800' },
+            individual: { label: 'Individual', color: 'bg-green-100 text-green-800' },
+          };
+          const config = typeConfig[treeType as keyof typeof typeConfig] || typeConfig.individual;
+          return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+              {config.label}
+            </span>
+          );
+        },
       },
       {
         accessorKey: 'oxygenKgs',
@@ -435,7 +436,7 @@ export default function TreesManagement() {
               {error instanceof Error ? error.message : 'Failed to load trees. Please try again.'}
             </p>
             <button
-              onClick={() => queryClient.refetchQueries({ queryKey: ['admin', 'trees'] })}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] })}
               className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 transition-colors"
             >
               Try Again

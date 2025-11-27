@@ -32,16 +32,17 @@ export default function Banner() {
     setSubmitStatus('idle');
 
     try {
-      // TODO: Replace with actual API endpoint when available
-      // For now, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Here you would typically call an API endpoint like:
-      // const response = await fetch('/api/demo-request', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email }),
-      // });
+      const response = await fetch('/api/demo-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to submit request');
+      }
       
       setSubmitStatus('success');
       setEmail('');
@@ -51,9 +52,9 @@ export default function Banner() {
         setShowInput(false);
         setSubmitStatus('idle');
       }, 2000);
-    } catch (_error) {
+    } catch (error) {
       setSubmitStatus('error');
-      setErrorMessage('Failed to submit request. Please try again.');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

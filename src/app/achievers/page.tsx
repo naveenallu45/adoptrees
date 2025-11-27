@@ -6,7 +6,9 @@ import { motion } from 'framer-motion';
 import {
   SparklesIcon,
   BuildingOfficeIcon,
-  CloudArrowDownIcon
+  CloudArrowDownIcon,
+  UserIcon,
+  RectangleStackIcon
 } from '@heroicons/react/24/solid';
 import {
   TrophyIcon as TrophyIconOutline,
@@ -30,22 +32,24 @@ interface Achiever {
 }
 
 type SortBy = 'trees' | 'oxygen' | 'co2';
+type FilterType = 'all' | 'individual' | 'company' | 'forest';
 
 export default function AchieversPage() {
   const [achievers, setAchievers] = useState<Achiever[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('trees');
+  const [filterType, setFilterType] = useState<FilterType>('all');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAchievers();
-  }, [sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sortBy, filterType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAchievers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/achievers?sortBy=${sortBy}&limit=100`, {
+      const response = await fetch(`/api/achievers?sortBy=${sortBy}&filterType=${filterType}&limit=100`, {
         cache: 'no-store'
       });
       const result = await response.json();
@@ -79,6 +83,14 @@ export default function AchieversPage() {
     return `px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
       sortBy === currentSort
         ? 'bg-yellow-500 text-green-900 shadow-lg scale-105'
+        : 'bg-white/10 text-white hover:bg-white/20 border border-white/30 backdrop-blur-sm'
+    }`;
+  };
+
+  const getFilterButtonClass = (currentFilter: FilterType) => {
+    return `px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
+      filterType === currentFilter
+        ? 'bg-blue-500 text-white shadow-lg scale-105'
         : 'bg-white/10 text-white hover:bg-white/20 border border-white/30 backdrop-blur-sm'
     }`;
   };
@@ -126,6 +138,42 @@ export default function AchieversPage() {
           <p className="text-lg sm:text-xl text-green-100 max-w-2xl mx-auto">
             Celebrating our top contributors who are making a real impact on our planet
           </p>
+        </motion.div>
+
+        {/* Filter Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="flex flex-wrap justify-center gap-3 mb-6"
+        >
+          <button
+            onClick={() => setFilterType('all')}
+            className={getFilterButtonClass('all')}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilterType('individual')}
+            className={getFilterButtonClass('individual')}
+          >
+            <UserIcon className="w-5 h-5 inline-block mr-2" />
+            Individuals
+          </button>
+          <button
+            onClick={() => setFilterType('company')}
+            className={getFilterButtonClass('company')}
+          >
+            <BuildingOfficeIcon className="w-5 h-5 inline-block mr-2" />
+            Companies
+          </button>
+          <button
+            onClick={() => setFilterType('forest')}
+            className={getFilterButtonClass('forest')}
+          >
+            <RectangleStackIcon className="w-5 h-5 inline-block mr-2" />
+            Forests
+          </button>
         </motion.div>
 
         {/* Sort Buttons */}

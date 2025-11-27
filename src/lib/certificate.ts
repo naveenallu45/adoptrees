@@ -388,7 +388,6 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     });
 
     // Draw trees count, oxygen, CO2, and tree names (4-column layout matching screenshot)
-    const statsFont = robotoBoldFont;
     const regularFont = robotoRegularFont;
     
     // Calculate CO2 from oxygen if not provided (1 kg O2 ≈ 0.715 kg CO2)
@@ -396,7 +395,6 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     
     // Position stats below user name
     const statsStartY = Math.max(nameY - 400, 280); // Space below user name (reduced padding)
-    const statValueSpacing = 45; // Space between stat label and value
     const gapBetweenStats = pageWidth * 0.13; // 13% gap between stat columns (increased by 3%)
     // Use original profileX (540) for stats center, not the shifted profileX
     const originalProfileX = 540;

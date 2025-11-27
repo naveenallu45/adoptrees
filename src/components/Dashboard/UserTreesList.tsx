@@ -15,9 +15,7 @@ import {
   DocumentArrowDownIcon,
   ArrowRightIcon,
   PlusCircleIcon,
-  SparklesIcon,
-  GlobeAltIcon,
-  CalendarDaysIcon
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import PlantingLocationMap from './PlantingLocationMap';
 
@@ -167,6 +165,11 @@ const [forestTreeIds, setForestTreeIds] = useState<Set<string>>(new Set());
       day: '2-digit',
       timeZone: 'UTC',
     }).format(new Date(isoDateString));
+  };
+
+  const capitalizeFirstLetter = (str: string) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
   useEffect(() => {
@@ -621,17 +624,25 @@ useEffect(() => {
                           <div className="flex-1 min-w-0 flex flex-row items-start gap-3 sm:gap-4">
                             {/* Left: Tree Info */}
                             <div className="flex-1 min-w-0">
+                              {/* Forest Name */}
+                              {item.forestName && (
+                                <p className="text-sm sm:text-base font-semibold text-emerald-800 mb-1">
+                                  {capitalizeFirstLetter(item.forestName)} forest
+                                </p>
+                              )}
+                              
+                              {/* Occasion */}
+                              {item.occasion && (
+                                <p className="text-sm text-emerald-700 mb-2">
+                                  Occasion of {capitalizeFirstLetter(item.occasion)}
+                                </p>
+                              )}
+                              
                               <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
                                 <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
                                   <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                                   {item.oxygenKgs} kg/year O₂
                                 </span>
-                                {item.forestName && (
-                                  <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-emerald-50 text-emerald-700 font-medium rounded-full border border-emerald-200 text-xs whitespace-nowrap">
-                                    <GlobeAltIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                    {item.forestName}
-                                  </span>
-                                )}
                                 {item.adoptionType === 'gift' && (
                                   <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
                                     <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
@@ -640,17 +651,9 @@ useEffect(() => {
                                 )}
                               </div>
                               {/* Adoption Date */}
-                              <div className="space-y-1">
                                 <div className="flex items-center justify-start gap-1.5 text-xs text-gray-500">
                                   <ClockIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                                   <span>Adopted on {formatAdoptedDate(earliestDate.toISOString())}</span>
-                                </div>
-                                {item.occasion && (
-                                  <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
-                                    <CalendarDaysIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                    <span>{item.occasion}</span>
-                                  </div>
-                                )}
                               </div>
                             </div>
                             
@@ -849,6 +852,20 @@ useEffect(() => {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
+                            {/* Forest Name */}
+                            {item.forestName && (
+                              <p className="text-sm font-semibold text-emerald-800 mb-1">
+                                {capitalizeFirstLetter(item.forestName)} forest
+                              </p>
+                            )}
+                            
+                            {/* Occasion */}
+                            {item.occasion && (
+                              <p className="text-xs text-emerald-700 mb-1">
+                                Occasion of {capitalizeFirstLetter(item.occasion)}
+                              </p>
+                            )}
+                            
                             <h4 className="text-sm font-medium text-gray-900 truncate">{item.treeName}</h4>
                             <p className="text-xs text-gray-500">
                               ₹{item.price.toLocaleString()} each
@@ -856,18 +873,6 @@ useEffect(() => {
                             <p className="text-xs text-green-600">
                               {item.oxygenKgs} kg/year O₂
                             </p>
-                            {item.forestName && (
-                              <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
-                                <GlobeAltIcon className="h-3 w-3 flex-shrink-0" />
-                                <span>{item.forestName}</span>
-                              </p>
-                            )}
-                            {item.occasion && (
-                              <p className="text-xs text-emerald-600 flex items-center gap-1">
-                                <CalendarDaysIcon className="h-3 w-3 flex-shrink-0" />
-                                <span>{item.occasion}</span>
-                              </p>
-                            )}
                             {item.adoptionType === 'gift' && (
                               <p className="text-xs text-purple-600 truncate">
                                 Gift for: {item.recipientName}

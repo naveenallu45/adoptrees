@@ -42,20 +42,71 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     const sortBy = searchParams.get('sortBy') || 'trees'; // 'trees', 'oxygen', 'co2', 'orders'
+    const filterType = searchParams.get('filterType') || 'all'; // 'all', 'individual', 'company', 'forest'
+
+    // Build match conditions based on filterType
+    const matchConditions: {
+      paymentStatus: string;
+      status: { $ne: string };
+      userType?: string;
+    } = {
+      paymentStatus: 'paid',
+      status: { $ne: 'cancelled' }
+    };
+
+    // Add userType filter for individual and company (forests can be from any user type)
+    if (filterType === 'individual') {
+      matchConditions.userType = 'individual';
+    } else if (filterType === 'company') {
+      matchConditions.userType = 'company';
+    }
+    // For 'forest' filter, we'll filter items after unwinding
 
     // Aggregate users with their order statistics
     const achieversPipeline: PipelineStage[] = [
-      // Match only paid orders
+      // Match only paid orders with filter conditions
       {
-        $match: {
-          paymentStatus: 'paid',
-          status: { $ne: 'cancelled' }
-        }
+        $match: matchConditions
       },
       // Unwind items to process each item individually
       {
         $unwind: '$items'
       },
+      // Filter items based on filterType
+      ...(filterType === 'forest' 
+        ? [
+            {
+              $match: {
+                $or: [
+                  { 'items.treeType': 'forest' },
+                  { isForestOrder: true }
+                ]
+              }
+            }
+          ]
+        : filterType === 'individual' || filterType === 'company'
+        ? [
+            {
+              $match: {
+                $and: [
+                  { 
+                    $or: [
+                      { 'items.treeType': { $ne: 'forest' } },
+                      { 'items.treeType': { $exists: false } }
+                    ]
+                  },
+                  { 
+                    $or: [
+                      { isForestOrder: { $ne: true } },
+                      { isForestOrder: { $exists: false } }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        : []
+      ),
       // Convert treeId to ObjectId for lookup
       {
         $addFields: {
