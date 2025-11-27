@@ -80,7 +80,7 @@ export default function AchieversPage() {
 
 
   const getSortButtonClass = (currentSort: SortBy) => {
-    return `px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
+    return `px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 flex items-center justify-center ${
       sortBy === currentSort
         ? 'bg-yellow-500 text-green-900 shadow-lg scale-105'
         : 'bg-white/10 text-white hover:bg-white/20 border border-white/30 backdrop-blur-sm'
@@ -88,7 +88,7 @@ export default function AchieversPage() {
   };
 
   const getFilterButtonClass = (currentFilter: FilterType) => {
-    return `px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
+    return `px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 flex items-center justify-center ${
       filterType === currentFilter
         ? 'bg-blue-500 text-white shadow-lg scale-105'
         : 'bg-white/10 text-white hover:bg-white/20 border border-white/30 backdrop-blur-sm'
@@ -145,7 +145,7 @@ export default function AchieversPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="flex flex-wrap justify-center gap-3 mb-6"
+          className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 px-2"
         >
           <button
             onClick={() => setFilterType('all')}
@@ -157,22 +157,22 @@ export default function AchieversPage() {
             onClick={() => setFilterType('individual')}
             className={getFilterButtonClass('individual')}
           >
-            <UserIcon className="w-5 h-5 inline-block mr-2" />
-            Individuals
+            <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+            <span className="whitespace-nowrap">Individuals</span>
           </button>
           <button
             onClick={() => setFilterType('company')}
             className={getFilterButtonClass('company')}
           >
-            <BuildingOfficeIcon className="w-5 h-5 inline-block mr-2" />
-            Companies
+            <BuildingOfficeIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+            <span className="whitespace-nowrap">Companies</span>
           </button>
           <button
             onClick={() => setFilterType('forest')}
             className={getFilterButtonClass('forest')}
           >
-            <RectangleStackIcon className="w-5 h-5 inline-block mr-2" />
-            Forests
+            <RectangleStackIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+            <span className="whitespace-nowrap">Forests</span>
           </button>
         </motion.div>
 
@@ -181,28 +181,28 @@ export default function AchieversPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="flex flex-wrap justify-center gap-3 mb-8"
+          className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-2"
         >
           <button
             onClick={() => setSortBy('trees')}
             className={getSortButtonClass('trees')}
           >
-            <TreeIconOutline className="w-5 h-5 inline-block mr-2" />
-            Most Trees
+            <TreeIconOutline className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+            <span className="whitespace-nowrap">Most Trees</span>
           </button>
           <button
             onClick={() => setSortBy('oxygen')}
             className={getSortButtonClass('oxygen')}
           >
-            <SparklesIcon className="w-5 h-5 inline-block mr-2" />
-            Most Oxygen
+            <SparklesIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+            <span className="whitespace-nowrap">Most Oxygen</span>
           </button>
           <button
             onClick={() => setSortBy('co2')}
             className={getSortButtonClass('co2')}
           >
-            <CloudArrowDownIcon className="w-5 h-5 inline-block mr-2" />
-            CO₂ Reduced
+            <CloudArrowDownIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+            <span className="whitespace-nowrap">CO₂ Reduced</span>
           </button>
         </motion.div>
 
