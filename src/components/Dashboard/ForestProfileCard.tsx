@@ -149,77 +149,77 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
         return;
       }
 
-      // Only count as "completed" for impacts if actually planted
-      const isActuallyPlanted = order.status === 'planted' || 
-        order.status === 'completed' || 
-        hasCompletedPlanting;
-      
-      if (isActuallyPlanted) {
-        completedOrdersCount++;
-      }
-      
-      scopedItems.forEach((item) => {
-        totalTrees += item.quantity;
-        // Count oxygen/CO2 for all adopted trees (not just planted ones)
-        // This shows the potential CO2 absorption even before planting
-        const itemOxygen = (item.oxygenKgs || 0) * item.quantity;
-        totalOxygen += itemOxygen;
+        // Only count as "completed" for impacts if actually planted
+        const isActuallyPlanted = order.status === 'planted' || 
+                                  order.status === 'completed' || 
+                                  hasCompletedPlanting;
         
-        // Debug: Log oxygen calculation
-        if (itemOxygen > 0) {
-          console.log('[ForestProfileCard] Item oxygen:', {
-            treeName: item.treeName,
-            quantity: item.quantity,
-            oxygenKgs: item.oxygenKgs,
-            totalOxygen: itemOxygen
-          });
+        if (isActuallyPlanted) {
+          completedOrdersCount++;
         }
-      });
-
-      // Find the latest date - use planting date if available, otherwise use order creation date
-      // This shows "Last adoption" for newly adopted trees that haven't been planted yet
-      const orderDate = new Date(order.createdAt);
-      if (!lastPlantingDate || orderDate > lastPlantingDate) {
-        lastPlantingDate = orderDate;
-      }
-
-      // Find the latest planting date and collect location data
-      if (order.wellwisherTasks) {
-        order.wellwisherTasks.forEach((task) => {
-          if (task.plantingDetails?.plantedAt) {
-            const plantingDate = new Date(task.plantingDetails.plantedAt);
-            if (!lastPlantingDate || plantingDate > lastPlantingDate) {
-              lastPlantingDate = plantingDate;
-            }
-
-            // Collect unique locations
-            if (task.location) {
-              uniqueLocations.add(task.location);
-            } else if (task.plantingDetails?.plantingLocation?.coordinates) {
-              // Use coordinates as location identifier (rounded to ~1km precision)
-              const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
-              const locationKey = `${Math.round(lat * 10) / 10},${Math.round(lng * 10) / 10}`;
-              uniqueLocations.add(locationKey);
-            }
-
-            // For countries, we'll use a simple heuristic based on coordinates
-            // India is roughly between 6.5°N to 35.5°N and 68°E to 97°E
-            if (task.plantingDetails?.plantingLocation?.coordinates) {
-              const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
-              // Simple country detection based on coordinates
-              if (lat >= 6.5 && lat <= 35.5 && lng >= 68 && lng <= 97) {
-                uniqueCountries.add('India');
-              } else if (lat >= 24 && lat <= 36 && lng >= -125 && lng <= -66) {
-                uniqueCountries.add('USA');
-              } else if (lat >= 35 && lat <= 72 && lng >= -10 && lng <= 40) {
-                uniqueCountries.add('Europe');
-              } else {
-                // Default to a generic country identifier
-                uniqueCountries.add('Other');
-              }
-            }
+        
+      scopedItems.forEach((item) => {
+          totalTrees += item.quantity;
+          // Count oxygen/CO2 for all adopted trees (not just planted ones)
+          // This shows the potential CO2 absorption even before planting
+          const itemOxygen = (item.oxygenKgs || 0) * item.quantity;
+          totalOxygen += itemOxygen;
+          
+          // Debug: Log oxygen calculation
+          if (itemOxygen > 0) {
+            console.log('[ForestProfileCard] Item oxygen:', {
+              treeName: item.treeName,
+              quantity: item.quantity,
+              oxygenKgs: item.oxygenKgs,
+              totalOxygen: itemOxygen
+            });
           }
         });
+
+        // Find the latest date - use planting date if available, otherwise use order creation date
+        // This shows "Last adoption" for newly adopted trees that haven't been planted yet
+        const orderDate = new Date(order.createdAt);
+        if (!lastPlantingDate || orderDate > lastPlantingDate) {
+          lastPlantingDate = orderDate;
+        }
+
+        // Find the latest planting date and collect location data
+        if (order.wellwisherTasks) {
+          order.wellwisherTasks.forEach((task) => {
+            if (task.plantingDetails?.plantedAt) {
+              const plantingDate = new Date(task.plantingDetails.plantedAt);
+              if (!lastPlantingDate || plantingDate > lastPlantingDate) {
+                lastPlantingDate = plantingDate;
+              }
+
+              // Collect unique locations
+              if (task.location) {
+                uniqueLocations.add(task.location);
+              } else if (task.plantingDetails?.plantingLocation?.coordinates) {
+                // Use coordinates as location identifier (rounded to ~1km precision)
+                const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
+                const locationKey = `${Math.round(lat * 10) / 10},${Math.round(lng * 10) / 10}`;
+                uniqueLocations.add(locationKey);
+              }
+
+              // For countries, we'll use a simple heuristic based on coordinates
+              // India is roughly between 6.5°N to 35.5°N and 68°E to 97°E
+              if (task.plantingDetails?.plantingLocation?.coordinates) {
+                const [lng, lat] = task.plantingDetails.plantingLocation.coordinates;
+                // Simple country detection based on coordinates
+                if (lat >= 6.5 && lat <= 35.5 && lng >= 68 && lng <= 97) {
+                  uniqueCountries.add('India');
+                } else if (lat >= 24 && lat <= 36 && lng >= -125 && lng <= -66) {
+                  uniqueCountries.add('USA');
+                } else if (lat >= 35 && lat <= 72 && lng >= -10 && lng <= 40) {
+                  uniqueCountries.add('Europe');
+                } else {
+                  // Default to a generic country identifier
+                  uniqueCountries.add('Other');
+                }
+              }
+            }
+          });
       }
     });
 
