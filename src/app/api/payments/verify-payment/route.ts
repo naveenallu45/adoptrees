@@ -136,12 +136,27 @@ export async function POST(request: NextRequest) {
           if (user && user.publicId) {
             const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
             const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
+            // Calculate CO2 from order items, or fallback to calculating from oxygen (1 kg O2 ≈ 0.715 kg CO2)
+            const co2Kgs = order.items.reduce((sum, item) => {
+              const itemCo2 = (item.co2Kgs || (item.oxygenKgs * 0.715)) * item.quantity;
+              return sum + itemCo2;
+            }, 0);
+            
+            // Collect unique tree names from order items
+            const treeNames: string[] = [];
+            order.items.forEach(item => {
+              if (!treeNames.includes(item.treeName)) {
+                treeNames.push(item.treeName);
+              }
+            });
             
             const certificateBuffer = await generateCertificate({
               userName: order.userName,
               profilePicUrl: undefined,
               treesCount,
               oxygenKgs,
+              co2Kgs: co2Kgs, // Always pass CO2 (calculated from items or oxygen)
+              treeNames: treeNames.length > 0 ? treeNames : undefined,
               publicId: user.publicId,
               orderId: order.orderId,
               qrCode: user.qrCode, // Use stored QR code from user
@@ -224,9 +239,23 @@ export async function POST(request: NextRequest) {
         throw new Error('User publicId not found');
       }
 
-      // Calculate total trees count and oxygen for this order
+      // Calculate total trees count, oxygen, and CO2 for this order
       const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
       const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
+      // Calculate CO2 from order items, or fallback to calculating from oxygen (1 kg O2 ≈ 0.715 kg CO2)
+      const co2Kgs = order.items.reduce((sum, item) => {
+        const itemCo2 = (item.co2Kgs || (item.oxygenKgs * 0.715)) * item.quantity;
+        return sum + itemCo2;
+      }, 0);
+      
+      // Collect unique tree names from order items
+      const treeNames: string[] = [];
+      order.items.forEach(item => {
+        // Add tree name if not already in the list
+        if (!treeNames.includes(item.treeName)) {
+          treeNames.push(item.treeName);
+        }
+      });
 
       // Generate certificate
       const certificateBuffer = await generateCertificate({
@@ -234,6 +263,8 @@ export async function POST(request: NextRequest) {
         profilePicUrl: undefined, // Profile pic can be added later if available
         treesCount,
         oxygenKgs,
+        co2Kgs: co2Kgs, // Always pass CO2 (calculated from items or oxygen)
+        treeNames: treeNames.length > 0 ? treeNames : undefined,
         publicId: user.publicId,
         orderId: order.orderId,
         qrCode: user.qrCode, // Use stored QR code from user

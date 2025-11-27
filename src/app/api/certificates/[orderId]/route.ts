@@ -98,9 +98,23 @@ export async function GET(
         }
       }
 
-      // Calculate total trees count and oxygen for this order
+      // Calculate total trees count, oxygen, and CO2 for this order
       const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
       const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
+      // Calculate CO2 from order items, or fallback to calculating from oxygen (1 kg O2 ≈ 0.715 kg CO2)
+      const co2Kgs = order.items.reduce((sum, item) => {
+        const itemCo2 = (item.co2Kgs || (item.oxygenKgs * 0.715)) * item.quantity;
+        return sum + itemCo2;
+      }, 0);
+      
+      // Collect unique tree names from order items
+      const treeNames: string[] = [];
+      order.items.forEach(item => {
+        // Add tree name if not already in the list
+        if (!treeNames.includes(item.treeName)) {
+          treeNames.push(item.treeName);
+        }
+      });
 
       // Get profile image URL (from user model or session)
       const profilePicUrl = user.image || session.user.image || undefined;
@@ -116,9 +130,20 @@ export async function GET(
         profilePicUrl: profilePicUrl,
         treesCount,
         oxygenKgs,
+        co2Kgs: co2Kgs, // Always pass CO2 (calculated from items or oxygen)
+        treeNames: treeNames.length > 0 ? treeNames : undefined,
         publicId: user.publicId,
         orderId: order.orderId,
         qrCode: qrCodeToUse, // Use QR code with current request origin
+      });
+      
+      // Debug logging
+      console.log('[CERTIFICATE] Generated certificate with:', {
+        treesCount,
+        oxygenKgs,
+        co2Kgs,
+        treeNamesCount: treeNames.length,
+        treeNames: treeNames.slice(0, 3) // Log first 3 tree names
       });
 
       // Store certificate in order asynchronously (don't block response)
