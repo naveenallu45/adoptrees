@@ -2,7 +2,7 @@ import { PDFDocument, PDFImage, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { createCanvas, loadImage } from 'canvas';
 
-const CERTIFICATE_TEMPLATE_URL = 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1764233593/certificato-treedom-2023.pdf_18_bivqcr.png';
+const CERTIFICATE_TEMPLATE_URL = 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1764239375/adoptrees2025-2_cm79e2.png';
 
 // Roboto font URLs - using Google Fonts CDN (TTF format)
 const ROBOTO_REGULAR_TTF = 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf';
