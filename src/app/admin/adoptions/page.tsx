@@ -27,6 +27,7 @@ import {
   XCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -120,6 +121,7 @@ export default function AdminAdoptionsPage() {
     pageIndex: 0,
     pageSize: 10,
   });
+  const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -257,6 +259,44 @@ export default function AdminAdoptionsPage() {
     totalCount: filteredAdoptions.length,
     totalPages: Math.ceil(filteredAdoptions.length / pagination.pageSize),
   };
+
+  // Certificate download handler
+  const handleDownloadCertificate = useCallback(async (orderId: string) => {
+    setDownloadingCertificate(orderId);
+    try {
+      const response = await fetch(`/api/certificates/${orderId}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to download certificate' }));
+        toast.error(errorData.error || 'Failed to download certificate');
+        return;
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `certificate-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('Certificate downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      toast.error('Failed to download certificate. Please try again.');
+    } finally {
+      setDownloadingCertificate(null);
+    }
+  }, []);
 
   // Delete handler - must be defined before columns useMemo
   const handleDelete = useCallback(async (id: string, orderId: string) => {
@@ -491,12 +531,52 @@ export default function AdminAdoptionsPage() {
         ),
       }),
       columnHelper.display({
+        id: 'certificate',
+        header: 'Certificate',
+        cell: (info) => {
+          const adoption = info.row.original;
+          const canDownloadCertificate = adoption.paymentStatus === 'paid' && 
+            (adoption.status === 'confirmed' || adoption.status === 'planted' || adoption.status === 'completed');
+          const isDownloading = downloadingCertificate === adoption.orderId;
+          
+          if (!canDownloadCertificate) {
+            return (
+              <span className="text-xs text-gray-400">N/A</span>
+            );
+          }
+          
+          return (
+            <button
+              onClick={() => handleDownloadCertificate(adoption.orderId)}
+              disabled={isDownloading}
+              className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Download Certificate"
+            >
+              {isDownloading ? (
+                <>
+                  <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <DocumentArrowDownIcon className="h-3 w-3 mr-1" />
+                  Download
+                </>
+              )}
+            </button>
+          );
+        },
+      }),
+      columnHelper.display({
         id: 'actions',
         header: 'Actions',
         cell: (info) => {
           const adoption = info.row.original;
           return (
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => handleDelete(adoption._id, adoption.orderId)}
                 className="text-red-600 hover:text-red-700 transition-colors"
@@ -509,7 +589,7 @@ export default function AdminAdoptionsPage() {
         },
       }),
     ],
-    [handleDelete]
+    [handleDelete, handleDownloadCertificate, downloadingCertificate]
   ) as ColumnDef<Adoption>[];
 
   const table = useReactTable({

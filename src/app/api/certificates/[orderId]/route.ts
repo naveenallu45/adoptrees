@@ -3,7 +3,9 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import User from '@/models/User';
+import Tree from '@/models/Tree';
 import QRCode from 'qrcode';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
@@ -23,11 +25,17 @@ export async function GET(
 
     const { orderId } = await params;
 
-    // Find the order and include certificate field
-    const order = await Order.findOne({ 
-      orderId,
-      userId: session.user.id 
-    }).select('+certificate');
+    // Check if user is admin
+    const adminCheck = await requireAdmin();
+    const isAdmin = adminCheck.authorized;
+
+    // Find the order - admins can access any order, regular users only their own
+    const orderQuery: { orderId: string; userId?: string } = { orderId };
+    if (!isAdmin) {
+      orderQuery.userId = session.user.id;
+    }
+
+    const order = await Order.findOne(orderQuery).select('+certificate');
 
     if (!order) {
       return NextResponse.json(
@@ -101,11 +109,45 @@ export async function GET(
       // Calculate total trees count, oxygen, and CO2 for this order
       const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
       const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
-      // Calculate CO2 from order items, or fallback to calculating from oxygen (1 kg O2 ≈ 0.715 kg CO2)
-      const co2Kgs = order.items.reduce((sum, item) => {
-        const itemCo2 = (item.co2Kgs || (item.oxygenKgs * 0.715)) * item.quantity;
-        return sum + itemCo2;
-      }, 0);
+      
+      // Fetch current tree CO2 values from database (same as tree detail view)
+      // This ensures we use the exact CO2 value shown in "view more" section
+      let co2Kgs = 0;
+      const calculateCO2 = (oxygenKgs: number): number => {
+        return Math.round(oxygenKgs * 1.4 * 10); // 10 years estimate - same as tree detail view
+      };
+      
+      for (const item of order.items) {
+        try {
+          // Fetch current tree data from database to get exact CO2 value
+          const tree = await Tree.findById(item.treeId).select('co2 oxygenKgs').lean();
+          
+          // Use the same calculation as tree detail view:
+          // If tree.co2 exists, use Math.abs(tree.co2), otherwise calculate from oxygen
+          const treeCo2 = tree?.co2 !== undefined && tree?.co2 !== null 
+            ? Math.abs(tree.co2) // Use absolute value like tree detail view
+            : calculateCO2(tree?.oxygenKgs || item.oxygenKgs);
+          
+          const itemCo2 = treeCo2 * item.quantity;
+          co2Kgs += itemCo2;
+          
+          console.log('[CERTIFICATE] Tree CO2 from database:', {
+            treeName: item.treeName,
+            treeId: item.treeId,
+            treeCo2FromDB: tree?.co2,
+            treeCo2Abs: treeCo2,
+            quantity: item.quantity,
+            itemCo2Total: itemCo2
+          });
+        } catch (err) {
+          // If tree fetch fails, fallback to order item value or calculate from oxygen
+          console.warn('[CERTIFICATE] Failed to fetch tree data, using order item value:', err);
+          const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
+            ? Math.abs(item.co2Kgs) * item.quantity
+            : calculateCO2(item.oxygenKgs);
+          co2Kgs += itemCo2;
+        }
+      }
       
       // Collect unique tree names from order items
       const treeNames: string[] = [];
@@ -119,9 +161,12 @@ export async function GET(
       // Get profile image URL (from user model or session)
       const profilePicUrl = user.image || session.user.image || undefined;
 
+      // For gift orders, use gift recipient name; otherwise use current user name
       // Use current user name from User model or session (not the old order.userName)
       // This ensures the certificate always shows the latest updated name
-      const currentUserName = user.name || session.user.name || order.userName || 'User';
+      const currentUserName = order.isGift && order.giftRecipientName 
+        ? order.giftRecipientName 
+        : (user.name || session.user.name || order.userName || 'User');
 
       // Generate certificate - use QR code with correct origin (matches dashboard)
       const { generateCertificate } = await import('@/lib/certificate');

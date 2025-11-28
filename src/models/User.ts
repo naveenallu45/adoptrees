@@ -28,7 +28,8 @@ const UserSchema = new Schema<IUser>(
     companyName: { type: String },
     email: { 
       type: String, 
-      required: true, 
+      required: true,
+      // Note: unique index created via database-optimization script, not in schema to avoid duplicate warnings
       lowercase: true,
       trim: true,
       validate: {
@@ -58,16 +59,22 @@ const UserSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true, select: false },
     userType: { type: String, enum: ['individual', 'company'], required: true },
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
-    publicId: { type: String, unique: true, sparse: true },
+    publicId: { 
+      type: String,
+      // Note: unique sparse index created via database-optimization script, not in schema to avoid duplicate warnings
+    },
     qrCode: { type: String }, // QR code data URL stored at registration
     image: { type: String }, // Profile image URL
     imagePublicId: { type: String }, // Cloudinary public ID for profile image
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: false // Disable automatic index creation - indexes are created via database-optimization script
+  }
 );
 
-// Define email index explicitly to avoid duplicate index warning
-UserSchema.index({ email: 1 }, { unique: true });
+// Note: Indexes are created via database-optimization script to avoid duplicate warnings
+// in Next.js multi-process environment. Schema-level index definitions removed.
 
 // Ensure email is lowercase and publicId exists before saving
 UserSchema.pre('save', async function(next) {

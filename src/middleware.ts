@@ -175,8 +175,10 @@ export async function middleware(request: NextRequest) {
   );
 
   // Prevent admin and wellwisher users from accessing user API routes
+  // Exception: Allow admins to access /api/certificates for downloading user certificates
   const userApiRoutes = ['/api/orders', '/api/payments', '/api/certificates', '/api/trees'];
   const isUserApiRoute = userApiRoutes.some(route => pathname.startsWith(route));
+  const isCertificateRoute = pathname.startsWith('/api/certificates');
 
   if (isUserRoute || isUserApiRoute) {
     const session = await auth();
@@ -185,15 +187,20 @@ export async function middleware(request: NextRequest) {
       const userRole = (session.user as { role?: string }).role;
       
       // Redirect admin users to admin dashboard
+      // Exception: Allow admins to access certificate routes
       if (userRole === 'admin') {
-        if (isUserApiRoute) {
+        if (isUserApiRoute && !isCertificateRoute) {
           return NextResponse.json(
             { success: false, error: 'Unauthorized - Admin users cannot access user API routes' },
             { status: 403 }
           );
         }
-        const url = new URL('/admin', request.url);
-        return NextResponse.redirect(url);
+        // Allow admin access to certificate routes, but redirect for other user routes
+        if (isUserRoute) {
+          const url = new URL('/admin', request.url);
+          return NextResponse.redirect(url);
+        }
+        // For certificate routes, allow through (no redirect)
       }
       
       // Redirect wellwisher users to wellwisher dashboard

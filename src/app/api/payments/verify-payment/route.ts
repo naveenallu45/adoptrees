@@ -136,9 +136,12 @@ export async function POST(request: NextRequest) {
           if (user && user.publicId) {
             const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
             const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
-            // Calculate CO2 from order items, or fallback to calculating from oxygen (1 kg O2 ≈ 0.715 kg CO2)
+            // Calculate CO2 from order items - use actual tree CO2 value (can be negative), only fallback if not provided
             const co2Kgs = order.items.reduce((sum, item) => {
-              const itemCo2 = (item.co2Kgs || (item.oxygenKgs * 0.715)) * item.quantity;
+              // Use item.co2Kgs if it's defined (including 0 or negative values), otherwise calculate from oxygen
+              const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
+                ? item.co2Kgs * item.quantity
+                : (item.oxygenKgs * 0.715) * item.quantity;
               return sum + itemCo2;
             }, 0);
             
@@ -242,9 +245,12 @@ export async function POST(request: NextRequest) {
       // Calculate total trees count, oxygen, and CO2 for this order
       const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
       const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
-      // Calculate CO2 from order items, or fallback to calculating from oxygen (1 kg O2 ≈ 0.715 kg CO2)
+      // Calculate CO2 from order items - use actual tree CO2 value (can be negative), only fallback if not provided
       const co2Kgs = order.items.reduce((sum, item) => {
-        const itemCo2 = (item.co2Kgs || (item.oxygenKgs * 0.715)) * item.quantity;
+        // Use item.co2Kgs if it's defined (including 0 or negative values), otherwise calculate from oxygen
+        const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
+          ? item.co2Kgs * item.quantity
+          : (item.oxygenKgs * 0.715) * item.quantity;
         return sum + itemCo2;
       }, 0);
       
@@ -257,9 +263,14 @@ export async function POST(request: NextRequest) {
         }
       });
 
+      // For gift orders, use gift recipient name; otherwise use order user name
+      const certificateUserName = order.isGift && order.giftRecipientName 
+        ? order.giftRecipientName 
+        : order.userName;
+
       // Generate certificate
       const certificateBuffer = await generateCertificate({
-        userName: order.userName,
+        userName: certificateUserName,
         profilePicUrl: undefined, // Profile pic can be added later if available
         treesCount,
         oxygenKgs,

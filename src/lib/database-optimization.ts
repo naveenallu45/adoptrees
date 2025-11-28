@@ -16,11 +16,13 @@ export async function createDatabaseIndexes() {
     
     
     // User model indexes
-    // Note: email index is already created by unique: true in schema, so we skip it here
+    // Create unique indexes for email and publicId (moved from schema to avoid duplicate warnings)
+    await User.collection.createIndex({ email: 1 }, { unique: true });
+    await User.collection.createIndex({ publicId: 1 }, { unique: true, sparse: true });
     await User.collection.createIndex({ role: 1 });
     await User.collection.createIndex({ userType: 1 });
     await User.collection.createIndex({ createdAt: -1 });
-    await User.collection.createIndex({ email: 1, role: 1 }); // Compound index
+    await User.collection.createIndex({ email: 1, role: 1 }); // Compound index (different from unique email index)
     
     // Order model indexes
     await Order.collection.createIndex({ orderId: 1 }, { unique: true });
