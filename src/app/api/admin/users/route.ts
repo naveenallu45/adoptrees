@@ -27,7 +27,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch users by type, exclude password hash
-    const users = await User.find({ userType: type, role: 'user' })
+    // Only fetch users with role 'user' - explicitly exclude admin and wellwisher roles
+    const users = await User.find({ 
+      userType: type, 
+      role: 'user' // Only regular users, exclude admin and wellwisher roles
+    })
       .select('-passwordHash')
       .sort({ createdAt: -1 })
       .lean();
