@@ -1,4 +1,10 @@
 import Image from 'next/image';
+import { communityStories } from '@/lib/community-stories';
+
+// Get first community story for "Plant Trees" step
+const firstStory = communityStories[0];
+// Get birthday story (Arjun) for "Customize" step
+const birthdayStory = communityStories.find(story => story.title.includes('Birthday')) || communityStories[3];
 
 const steps = [
   {
@@ -7,14 +13,15 @@ const steps = [
     illustration: (
       <div className="relative w-full h-64 sm:h-72 md:h-80 flex items-center justify-center">
         <div className="relative w-full max-w-md">
-          {/* Stacked tree cards with images */}
+          {/* Stacked tree cards with community images */}
           <div className="absolute -top-4 -left-4 w-32 h-40 sm:w-36 sm:h-44 bg-white rounded-xl shadow-xl border-2 border-green-200 overflow-hidden transform rotate-3 z-10">
             <div className="relative w-full h-3/4">
               <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
+                src={communityStories[1].profileImage}
                 alt="Tree mix 5"
                 fill
                 className="object-cover"
+                style={{ objectPosition: 'top center' }}
                 sizes="(max-width: 640px) 128px, 144px"
               />
             </div>
@@ -28,10 +35,11 @@ const steps = [
           <div className="absolute top-0 left-0 w-32 h-40 sm:w-36 sm:h-44 bg-white rounded-xl shadow-xl border-2 border-green-200 overflow-hidden transform -rotate-2 z-20">
             <div className="relative w-full h-3/4">
               <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
+                src={firstStory.profileImage}
                 alt="Tree mix 10"
                 fill
                 className="object-cover"
+                style={{ objectPosition: 'top center' }}
                 sizes="(max-width: 640px) 128px, 144px"
               />
             </div>
@@ -45,10 +53,11 @@ const steps = [
           <div className="relative w-32 h-40 sm:w-36 sm:h-44 bg-white rounded-xl shadow-xl border-2 border-green-300 overflow-hidden z-30 ml-auto mr-8">
             <div className="relative w-full h-3/4">
               <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
+                src={firstStory.profileImage}
                 alt="Tree selection"
                 fill
                 className="object-cover"
+                style={{ objectPosition: 'top center' }}
                 sizes="(max-width: 640px) 128px, 144px"
               />
             </div>
@@ -70,10 +79,11 @@ const steps = [
           <div className="relative w-48 h-56 sm:w-56 sm:h-64 bg-white rounded-xl shadow-xl border-2 border-green-200 overflow-hidden mx-auto">
             <div className="relative w-full h-3/4">
               <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
+                src={birthdayStory.profileImage}
                 alt="Forest customization"
                 fill
                 className="object-cover"
+                style={{ objectPosition: 'top center' }}
                 sizes="(max-width: 640px) 192px, 224px"
               />
             </div>
@@ -82,15 +92,15 @@ const steps = [
                 <div className="w-5 h-5 bg-green-500 rounded flex items-center justify-center">
                   <span className="text-xs">🌳</span>
                 </div>
-                <span className="text-xs font-semibold text-gray-800">Priya&apos;s Birthday Forest</span>
+                <span className="text-xs font-semibold text-gray-800">{birthdayStory.name}&apos;s {birthdayStory.tags.find(t => !t.label.includes('trees'))?.label || 'Forest'}</span>
               </div>
             </div>
           </div>
           
           {/* Occasion badge */}
           <div className="absolute -top-3 right-4 sm:right-8 bg-white rounded-lg shadow-lg border-2 border-green-300 px-3 py-1.5 flex items-center space-x-1.5 z-10">
-            <span className="text-green-600 text-xs">🎉</span>
-            <span className="text-xs font-semibold text-gray-800">Priya&apos;s Birthday</span>
+            <span className="text-green-600 text-xs">{birthdayStory.tags.find(t => !t.label.includes('trees'))?.icon || '🎉'}</span>
+            <span className="text-xs font-semibold text-gray-800">{birthdayStory.name}&apos;s {birthdayStory.tags.find(t => !t.label.includes('trees'))?.label || 'Birthday'}</span>
             <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -99,10 +109,11 @@ const steps = [
           {/* Cover image selector */}
           <div className="absolute -bottom-2 -left-6 w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg shadow-lg border-2 border-yellow-300 overflow-hidden z-10">
             <Image
-              src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
+              src={birthdayStory.profileImage}
               alt="Cover option"
               fill
               className="object-cover"
+              style={{ objectPosition: 'top center' }}
               sizes="96px"
             />
           </div>
@@ -121,66 +132,38 @@ const steps = [
     illustration: (
       <div className="relative w-full h-64 sm:h-72 md:h-80 flex items-center justify-center">
         <div className="relative w-full max-w-sm space-y-2">
-          {/* Friend cards with Andhra Pradesh names */}
-          <div className="w-full max-w-xs mx-auto bg-white rounded-xl shadow-lg border-2 border-green-200 flex items-center space-x-3 p-3 hover:shadow-xl transition-all duration-300">
-            <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-blue-300 flex-shrink-0">
-              <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
-                alt="Rajesh Kumar"
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 48px, 56px"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm sm:text-base font-semibold text-gray-800 truncate">Rajesh Kumar</div>
-              <div className="text-xs text-gray-500">Visakhapatnam, AP</div>
-            </div>
-            <div className="bg-green-100 rounded-full px-3 py-1.5 flex items-center space-x-1.5 flex-shrink-0 border border-green-300">
-              <span className="text-green-600 text-sm">🌳</span>
-              <span className="text-green-700 text-sm font-bold">3</span>
-            </div>
-          </div>
-          
-          <div className="w-full max-w-xs mx-auto bg-white rounded-xl shadow-lg border-2 border-green-200 flex items-center space-x-3 p-3 hover:shadow-xl transition-all duration-300">
-            <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-pink-300 flex-shrink-0">
-              <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
-                alt="Lakshmi Priya"
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 48px, 56px"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm sm:text-base font-semibold text-gray-800 truncate">Lakshmi Priya</div>
-              <div className="text-xs text-gray-500">Vijayawada, AP</div>
-            </div>
-            <div className="bg-green-100 rounded-full px-3 py-1.5 flex items-center space-x-1.5 flex-shrink-0 border border-green-300">
-              <span className="text-green-600 text-sm">🌳</span>
-              <span className="text-green-700 text-sm font-bold">1</span>
-            </div>
-          </div>
-          
-          <div className="w-full max-w-xs mx-auto bg-white rounded-xl shadow-lg border-2 border-green-200 flex items-center space-x-3 p-3 hover:shadow-xl transition-all duration-300">
-            <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-purple-300 flex-shrink-0">
-              <Image
-                src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1763958836/ChatGPT_Image_Nov_24_2025_at_10_03_00_AM_uw0uhc.png"
-                alt="Srinivas Reddy"
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 48px, 56px"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm sm:text-base font-semibold text-gray-800 truncate">Srinivas Reddy</div>
-              <div className="text-xs text-gray-500">Guntur, AP</div>
-            </div>
-            <div className="bg-green-100 rounded-full px-3 py-1.5 flex items-center space-x-1.5 flex-shrink-0 border border-green-300">
-              <span className="text-green-600 text-sm">🌳</span>
-              <span className="text-green-700 text-sm font-bold">8</span>
-            </div>
-          </div>
+          {/* Friend cards using community stories data - show first 3 */}
+          {communityStories.slice(0, 3).map((story, index) => {
+            // Extract tree count from tags
+            const treeTag = story.tags.find(tag => tag.label.includes('trees planted'));
+            const treeCount = treeTag ? treeTag.label.match(/\d+/)?.[0] || '0' : '0';
+            
+            // Different border colors for variety
+            const borderColors = ['border-blue-300', 'border-pink-300', 'border-purple-300'];
+            
+            return (
+              <div key={index} className="w-full max-w-xs mx-auto bg-white rounded-xl shadow-lg border-2 border-green-200 flex items-center space-x-3 p-3 hover:shadow-xl transition-all duration-300">
+                <div className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 ${borderColors[index]} flex-shrink-0`}>
+                  <Image
+                    src={story.profileImage}
+                    alt={story.name}
+                    fill
+                    className="object-cover"
+                    style={{ objectPosition: 'top center' }}
+                    sizes="(max-width: 640px) 48px, 56px"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm sm:text-base font-semibold text-gray-800 truncate">{story.name}</div>
+                  <div className="text-xs text-gray-500">{story.location}</div>
+                </div>
+                <div className="bg-green-100 rounded-full px-3 py-1.5 flex items-center space-x-1.5 flex-shrink-0 border border-green-300">
+                  <span className="text-green-600 text-sm">🌳</span>
+                  <span className="text-green-700 text-sm font-bold">{treeCount}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     )
