@@ -15,7 +15,7 @@ const DemoRequestSchema = new Schema<IDemoRequest>(
       required: true,
       trim: true,
       lowercase: true,
-      index: true,
+      // Index created via schema.index() below - don't duplicate here
     },
     status: {
       type: String,
