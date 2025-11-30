@@ -111,3 +111,51 @@ export async function sendOTPEmail(email: string, otp: string): Promise<boolean>
   });
 }
 
+export async function sendWelcomeEmail(email: string, name: string, userType: 'individual' | 'company'): Promise<boolean> {
+  const displayName = name || (userType === 'company' ? 'Valued Customer' : 'Friend');
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Adoptrees</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Adoptrees!</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1f2937; margin-top: 0;">Hello ${displayName}! 👋</h2>
+          <p>We're thrilled to have you join the Adoptrees community! 🌳</p>
+          <p>Your account has been successfully created. You can now:</p>
+          <ul style="color: #374151; line-height: 1.8;">
+            <li>Browse and adopt trees to make a positive impact on the environment</li>
+            <li>Create your own forest for special occasions</li>
+            <li>Track your tree adoptions and watch them grow</li>
+            <li>Share your forest with friends and family</li>
+          </ul>
+          <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1f2937; font-weight: 500;">Ready to start planting? Visit your dashboard to begin your journey!</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com'}/dashboard/${userType}/trees" 
+               style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 0;">
+              Go to Dashboard
+            </a>
+          </div>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">If you have any questions, feel free to reach out to us. We're here to help!</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">Best regards,<br>The Adoptrees Team 🌿</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: 'Welcome to Adoptrees - Start Your Green Journey! 🌳',
+    html,
+  });
+}
+

@@ -6,6 +6,7 @@ import User from '@/models/User';
 import { registerSchema } from '@/lib/validations/auth';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { sanitizeInput } from '@/lib/security';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,6 +84,15 @@ export async function POST(req: NextRequest) {
         // Log error but don't fail registration if QR code generation fails
         console.error('Error generating QR code during registration:', qrError);
       }
+    }
+
+    // Send welcome email (don't fail registration if email fails)
+    try {
+      const userName = userType === 'individual' ? name : companyName;
+      await sendWelcomeEmail(user.email, userName || '', userType);
+    } catch (emailError) {
+      // Log error but don't fail registration if email sending fails
+      console.error('Error sending welcome email during registration:', emailError);
     }
 
     return NextResponse.json(
