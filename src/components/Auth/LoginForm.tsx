@@ -143,6 +143,12 @@ export default function LoginForm() {
             <div className="text-red-600 text-xs sm:text-sm bg-red-50 border border-red-100 rounded-lg p-2 sm:p-3">{error}</div>
           )}
 
+          <div className="text-right">
+            <Link href="/forgot-password" className="text-xs sm:text-sm text-green-600 hover:text-green-700 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}

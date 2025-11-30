@@ -31,6 +31,14 @@ const envSchema = z.object({
   // Server-side Google Maps/Geolocation API key (optional)
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   
+  // Email (SMTP) Configuration
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM_EMAIL: z.string().email().optional(),
+  SMTP_FROM_NAME: z.string().optional(),
+  
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
@@ -56,6 +64,12 @@ function validateEnv(): Env {
       SENTRY_DSN: process.env.SENTRY_DSN,
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
       GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
+      SMTP_HOST: process.env.SMTP_HOST,
+      SMTP_PORT: process.env.SMTP_PORT,
+      SMTP_USER: process.env.SMTP_USER,
+      SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+      SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL,
+      SMTP_FROM_NAME: process.env.SMTP_FROM_NAME,
       NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
     };
   }
@@ -77,6 +91,12 @@ function validateEnv(): Env {
       SENTRY_DSN: process.env.SENTRY_DSN,
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
       GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
+      SMTP_HOST: process.env.SMTP_HOST,
+      SMTP_PORT: process.env.SMTP_PORT,
+      SMTP_USER: process.env.SMTP_USER,
+      SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+      SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL,
+      SMTP_FROM_NAME: process.env.SMTP_FROM_NAME,
       NODE_ENV: process.env.NODE_ENV,
     });
   } catch (_error) {
