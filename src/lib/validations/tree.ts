@@ -27,7 +27,6 @@ export const treeSchema = z.object({
   info: z
     .string()
     .min(10, 'Tree information must be at least 10 characters')
-    .max(500, 'Tree information must not exceed 500 characters')
     .trim(),
   oxygenKgs: z
     .number()

@@ -4,6 +4,8 @@ import Order from '@/models/Order';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 import { uploadToCloudinary } from '@/lib/upload';
 import { z } from 'zod';
+import { sendPlantingConfirmationEmail } from '@/lib/email';
+import { logError } from '@/lib/logger';
 
 // Validation schema for planting details
 const plantingDetailsSchema = z.object({
@@ -280,6 +282,47 @@ export async function POST(request: NextRequest) {
     const allTasksCompleted = updateResult.wellwisherTasks?.every(task => task.status === 'completed');
     if (allTasksCompleted && updateResult.status !== 'completed') {
       await Order.findByIdAndUpdate(orderId, { status: 'completed' });
+    }
+
+    // Send planting confirmation email (don't fail if email fails)
+    try {
+      const task = updateResult.wellwisherTasks?.[taskIndex];
+      if (task && task.plantingDetails) {
+        const recipientEmail = updateResult.isGift && updateResult.giftRecipientEmail 
+          ? updateResult.giftRecipientEmail 
+          : updateResult.userEmail;
+        const recipientName = updateResult.isGift && updateResult.giftRecipientName 
+          ? updateResult.giftRecipientName 
+          : updateResult.userName;
+        
+        // Get tree details from order items
+        const orderItem = updateResult.items.find((item: { treeName: string }) => 
+          task.task.includes(item.treeName)
+        );
+        const treeName = orderItem?.treeName || task.task.replace('Plant and care for ', '');
+        const quantity = orderItem?.quantity || 1;
+        
+        // Extract location if available
+        const plantingLocation = task.plantingDetails.plantingLocation 
+          ? {
+              latitude: task.plantingDetails.plantingLocation.coordinates[1],
+              longitude: task.plantingDetails.plantingLocation.coordinates[0],
+            }
+          : undefined;
+        
+        await sendPlantingConfirmationEmail(
+          recipientEmail,
+          recipientName,
+          treeName,
+          quantity,
+          task.plantingDetails.plantingImages || [],
+          plantingLocation,
+          task.plantingDetails.plantingNotes
+        );
+      }
+    } catch (emailError) {
+      // Log error but don't fail the planting upload
+      logError('Error sending planting confirmation email', emailError as Error);
     }
 
     const responseData: {

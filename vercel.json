@@ -6,8 +6,16 @@
   "regions": ["bom1"],
   "crons": [
     {
-      "path": "/api/cron/init",
+      "path": "/api/cron/growth-updates",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/quarterly-task",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/marketing-emails",
+      "schedule": "0 4 * * *"
     }
   ],
   "headers": [
@@ -98,6 +106,15 @@
     },
     "src/app/api/cron/init/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/cron/growth-updates/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/cron/quarterly-task/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/cron/marketing-emails/route.ts": {
+      "maxDuration": 600
     },
     "src/app/api/payments/create-order/route.ts": {
       "maxDuration": 30

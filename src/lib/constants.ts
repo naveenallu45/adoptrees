@@ -55,7 +55,6 @@ export const VALIDATION = {
   },
   TREE_INFO: {
     MIN_LENGTH: 10,
-    MAX_LENGTH: 500,
   },
   PRICE: {
     MAX: 1000000,

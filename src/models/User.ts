@@ -18,6 +18,7 @@ export interface IUser {
   qrCode?: string; // QR code data URL stored at registration
   image?: string; // Profile image URL
   imagePublicId?: string; // Cloudinary public ID for profile image
+  lastMarketingEmailSent?: Date; // Last time marketing email was sent to this user
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +67,7 @@ const UserSchema = new Schema<IUser>(
     qrCode: { type: String }, // QR code data URL stored at registration
     image: { type: String }, // Profile image URL
     imagePublicId: { type: String }, // Cloudinary public ID for profile image
+    lastMarketingEmailSent: { type: Date }, // Last time marketing email was sent to this user
   },
   { 
     timestamps: true,

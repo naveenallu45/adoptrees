@@ -8,6 +8,7 @@ import Coupon from '@/models/Coupon';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { generateCertificate } from '@/lib/certificate';
+import { sendThankYouEmailWithCertificate } from '@/lib/email';
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
@@ -234,6 +235,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Calculate total trees count, oxygen, and CO2 for this order (needed for certificate and email)
+    const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
     // Generate and store certificate
     try {
       // Get user details including publicId and qrCode
@@ -241,9 +245,6 @@ export async function POST(request: NextRequest) {
       if (!user || !user.publicId) {
         throw new Error('User publicId not found');
       }
-
-      // Calculate total trees count, oxygen, and CO2 for this order
-      const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
       const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
       // Calculate CO2 from order items - use actual tree CO2 value (can be negative), only fallback if not provided
       const co2Kgs = order.items.reduce((sum, item) => {
@@ -290,6 +291,33 @@ export async function POST(request: NextRequest) {
     }
 
     await order.save();
+
+    // Send thank you email with certificate (don't fail if email fails)
+    try {
+      const recipientEmail = order.isGift && order.giftRecipientEmail 
+        ? order.giftRecipientEmail 
+        : order.userEmail;
+      const recipientName = order.isGift && order.giftRecipientName 
+        ? order.giftRecipientName 
+        : order.userName;
+      
+      if (order.certificate) {
+        await sendThankYouEmailWithCertificate(
+          recipientEmail,
+          recipientName,
+          order.orderId,
+          treesCount,
+          order.certificate
+        );
+        logPaymentEvent('thank_you_email_sent', {
+          orderId: order.orderId,
+          recipientEmail
+        });
+      }
+    } catch (emailError) {
+      // Log error but don't fail the payment verification
+      logError('Error sending thank you email', emailError as Error);
+    }
 
     logPaymentEvent('payment_verification_successful', {
       orderId: order.orderId,

@@ -4,6 +4,8 @@ import Order from '@/models/Order';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 import { uploadToCloudinary } from '@/lib/upload';
 import { nanoid } from 'nanoid';
+import { sendGrowthUpdateEmail } from '@/lib/email';
+import { logError } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -191,6 +193,39 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Failed to update task. Please refresh and try again.' },
         { status: 500 }
       );
+    }
+
+    // Send growth update email (don't fail if email fails)
+    try {
+      const updatedTask = updateResult.wellwisherTasks?.find(t => t.taskId === taskId);
+      if (updatedTask && growthUpdate) {
+        const recipientEmail = updateResult.isGift && updateResult.giftRecipientEmail 
+          ? updateResult.giftRecipientEmail 
+          : updateResult.userEmail;
+        const recipientName = updateResult.isGift && updateResult.giftRecipientName 
+          ? updateResult.giftRecipientName 
+          : updateResult.userName;
+        
+        // Get tree details from order items
+        const orderItem = updateResult.items.find((item: { treeName: string }) => 
+          updatedTask.task.includes(item.treeName)
+        );
+        const treeName = orderItem?.treeName || updatedTask.task.replace('Plant and care for ', '');
+        const quantity = orderItem?.quantity || 1;
+        
+        await sendGrowthUpdateEmail(
+          recipientEmail,
+          recipientName,
+          treeName,
+          quantity,
+          growthUpdate.images,
+          growthUpdate.notes,
+          growthUpdate.daysSincePlanting
+        );
+      }
+    } catch (emailError) {
+      // Log error but don't fail the growth update upload
+      logError('Error sending growth update email', emailError as Error);
     }
 
     return NextResponse.json({

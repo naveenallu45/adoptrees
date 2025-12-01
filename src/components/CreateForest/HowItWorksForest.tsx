@@ -47,7 +47,7 @@ const steps = [
               10
             </div>
             <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm px-2 py-1 text-center">
-              <span className="text-[10px] font-semibold text-gray-700">Mix 10</span>
+              <span className="text-[10px] font-semibold text-gray-700 truncate block">{firstStory.name}</span>
             </div>
           </div>
           <div className="relative w-32 h-40 sm:w-36 sm:h-44 bg-white rounded-xl shadow-xl border-2 border-green-300 overflow-hidden z-30 ml-auto mr-8">

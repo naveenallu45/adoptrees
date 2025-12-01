@@ -43,8 +43,7 @@ const TreeSchema: Schema = new Schema({
   info: {
     type: String,
     required: [true, 'Tree information is required'],
-    trim: true,
-    maxlength: [500, 'Tree information cannot exceed 500 characters']
+    trim: true
   },
   oxygenKgs: {
     type: Number,
