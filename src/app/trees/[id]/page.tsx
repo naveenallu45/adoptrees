@@ -282,7 +282,10 @@ export default function TreeInfoPage() {
   // CO2 can be 0, undefined, or null - check explicitly for null/undefined
   // Use tree.co2 if it exists (including 0), otherwise calculate
   const co2Value = (tree.co2 !== undefined && tree.co2 !== null && !isNaN(tree.co2)) ? Math.abs(tree.co2) : null;
-  const co2Display = co2Value !== null ? co2Value : calculateCO2(tree.oxygenKgs);
+  // Admin enters annual CO₂ absorption; if not present, we calculate an annual estimate
+  const annualCo2 = co2Value !== null ? co2Value : calculateCO2(tree.oxygenKgs);
+  // Big headline value should show 10-year total
+  const tenYearCo2 = annualCo2 * 10;
   const displayPrice = tree.packagePrice || tree.price;
   const originalPrice = tree.packagePrice ? tree.price * (tree.packageQuantity || 1) : null;
   const discount = originalPrice ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : null;
@@ -401,11 +404,21 @@ export default function TreeInfoPage() {
               </div>
               <div className="flex items-center gap-2 text-gray-700">
                 <span className="font-semibold">CO₂:</span>
-                <span className="text-green-600 font-semibold">{co2Display} kg/year</span>
+                <span className="text-green-600 font-semibold">
+                  {annualCo2} kg/year
+                  {tree.treeType === 'company' && tree.packageQuantity && tree.packageQuantity > 1
+                    ? ` / ${tree.packageQuantity} trees`
+                    : ''}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-gray-700">
                 <span className="font-semibold">Oxygen:</span>
-                <span className="text-green-600 font-semibold">{tree.oxygenKgs} kg/year</span>
+                <span className="text-green-600 font-semibold">
+                  {tree.oxygenKgs} kg/year
+                  {tree.treeType === 'company' && tree.packageQuantity && tree.packageQuantity > 1
+                    ? ` / ${tree.packageQuantity} trees`
+                    : ''}
+                </span>
               </div>
             </div>
 
@@ -715,12 +728,12 @@ export default function TreeInfoPage() {
                 {/* CO₂ amount */}
                 <div className="flex-1">
                   <div className="mb-1">
-                    <span className="text-4xl font-bold text-gray-900">{co2Display}</span>
+                    <span className="text-4xl font-bold text-gray-900">{tenYearCo2}</span>
                     <span className="text-lg text-gray-900 ml-1">KG of CO₂</span>
                   </div>
                   {/* Calculate car equivalent: ~0.165 kg CO₂ per km (average car) */}
                   <p className="text-gray-700 text-sm mt-1">
-                    equal to that produced by <strong className="font-bold">{Math.round(co2Display / 0.165)}km by Car</strong>*
+                    equal to that produced by <strong className="font-bold">{Math.round(tenYearCo2 / 0.165)}km by Car</strong>*
                   </p>
                 </div>
               </div>
@@ -736,7 +749,7 @@ export default function TreeInfoPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 text-sm">Average annual absorption</span>
-                  <span className="text-gray-700 text-sm">{Math.round(co2Display / 10)}Kg</span>
+                  <span className="text-gray-700 text-sm">{Math.round(annualCo2)}Kg</span>
                 </div>
               </div>
 
