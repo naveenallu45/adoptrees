@@ -12,6 +12,7 @@ import {
   TicketIcon,
   GlobeAltIcon,
   CalendarDaysIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { name: 'Company Users', href: '/admin/users/companies', icon: BuildingOfficeIcon },
   { name: 'Well-Wishers', href: '/admin/wellwishers', icon: HeartIcon },
   { name: 'Coupons', href: '/admin/coupons', icon: TicketIcon },
+  { name: 'Marketing', href: '/admin/marketing', icon: EnvelopeIcon },
   { name: 'Demo Requests', href: '/admin/demo-requests', icon: CalendarDaysIcon },
 ];
 

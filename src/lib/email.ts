@@ -410,69 +410,166 @@ export async function sendGrowthUpdateEmail(
 }
 
 /**
+ * Get marketing email template by ID
+ */
+export function getMarketingEmailTemplate(templateId: string, displayName: string, userType: 'individual' | 'company', appUrl: string) {
+  const templates: Record<string, { title: string; content: string; cta: string; ctaLink: string }> = {
+    'adopt-trees': {
+      title: '🌿 Plant More Trees, Create More Impact!',
+      content: `
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Hello ${displayName}!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Every tree you plant makes a difference. Join thousands of others who are contributing to a greener India!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Did you know that a single tree can absorb up to 22 kg of CO₂ per year? Imagine the impact when we plant together!</p>
+        <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #065f46; font-weight: 600;">🌱 Why Adopt Trees?</p>
+          <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #047857;">
+            <li>Combat climate change by absorbing CO₂</li>
+            <li>Produce clean oxygen for our planet</li>
+            <li>Support local communities and farmers</li>
+            <li>Create a lasting environmental legacy</li>
+          </ul>
+        </div>
+      `,
+      cta: 'Adopt Trees Now',
+      ctaLink: `${appUrl}/individuals`
+    },
+    'create-forest': {
+      title: '🌳 Create a Forest for Your Special Moments',
+      content: `
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Hello ${displayName}!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Celebrate birthdays, weddings, anniversaries, and more by creating a forest that grows with your memories!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Share your forest with friends and family, and let them contribute to your green legacy.</p>
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #92400e; font-weight: 600;">✨ Perfect For:</p>
+          <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #78350f;">
+            <li>Birthday celebrations</li>
+            <li>Wedding anniversaries</li>
+            <li>Corporate milestones</li>
+            <li>Memorial tributes</li>
+            <li>Any special occasion</li>
+          </ul>
+        </div>
+      `,
+      cta: 'Create Your Forest',
+      ctaLink: `${appUrl}/create-forest`
+    },
+    'tree-growth': {
+      title: '💚 Your Trees Are Growing Strong!',
+      content: `
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Hello ${displayName}!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Your adopted trees are being cared for by our dedicated well-wishers and are growing beautifully!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Check your dashboard to see the latest growth updates, planting photos, and location details.</p>
+        <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #1e40af; font-weight: 600;">📊 Track Your Impact:</p>
+          <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1e3a8a;">
+            <li>View real-time growth photos</li>
+            <li>See planting locations on map</li>
+            <li>Track CO₂ absorption progress</li>
+            <li>Download your certificate</li>
+          </ul>
+        </div>
+      `,
+      cta: 'View Your Trees',
+      ctaLink: `${appUrl}/dashboard/${userType}/trees`
+    },
+    'green-revolution': {
+      title: '🌱 Join the Green Revolution',
+      content: `
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Hello ${displayName}!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Be part of India's green transformation! Every tree you adopt helps restore our environment and supports local communities.</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Together, we're building a sustainable future, one tree at a time.</p>
+        <div style="background: #f0fdf4; border: 2px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
+          <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 700;">🌍 Make a Difference Today</p>
+          <p style="margin: 10px 0 0 0; color: #047857; font-size: 14px;">Your contribution matters. Every tree counts!</p>
+        </div>
+      `,
+      cta: 'Start Planting',
+      ctaLink: `${appUrl}/individuals`
+    },
+    'gift-tree': {
+      title: '🎁 Gift a Tree, Gift a Future',
+      content: `
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Hello ${displayName}!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Looking for a meaningful gift? Give the gift of a greener future!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Plant trees in someone's name for birthdays, anniversaries, or any special occasion. It's a gift that keeps growing!</p>
+        <div style="background: #fce7f3; border-left: 4px solid #ec4899; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #9f1239; font-weight: 600;">💝 Why Gift Trees?</p>
+          <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #831843;">
+            <li>Meaningful and sustainable</li>
+            <li>Creates lasting memories</li>
+            <li>Supports environmental causes</li>
+            <li>Perfect for any occasion</li>
+          </ul>
+        </div>
+      `,
+      cta: 'Send a Gift Tree',
+      ctaLink: `${appUrl}/individuals`
+    },
+    'environmental-impact': {
+      title: '🌿 Your Impact on the Environment',
+      content: `
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Hello ${displayName}!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Thank you for being part of our mission to create a greener India!</p>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">Your tree adoptions are making a real difference. Here's how:</p>
+        <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 2px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 8px;">
+          <p style="margin: 0 0 15px 0; color: #065f46; font-size: 18px; font-weight: 700; text-align: center;">📈 Environmental Impact</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+              <p style="margin: 0; color: #10b981; font-size: 24px; font-weight: 700;">🌳</p>
+              <p style="margin: 5px 0 0 0; color: #065f46; font-size: 14px; font-weight: 600;">Trees Planted</p>
+            </div>
+            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+              <p style="margin: 0; color: #10b981; font-size: 24px; font-weight: 700;">💨</p>
+              <p style="margin: 5px 0 0 0; color: #065f46; font-size: 14px; font-weight: 600;">Oxygen Produced</p>
+            </div>
+            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+              <p style="margin: 0; color: #10b981; font-size: 24px; font-weight: 700;">🌍</p>
+              <p style="margin: 5px 0 0 0; color: #065f46; font-size: 14px; font-weight: 600;">CO₂ Absorbed</p>
+            </div>
+            <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+              <p style="margin: 0; color: #10b981; font-size: 24px; font-weight: 700;">🤝</p>
+              <p style="margin: 5px 0 0 0; color: #065f46; font-size: 14px; font-weight: 600;">Communities Supported</p>
+            </div>
+          </div>
+        </div>
+      `,
+      cta: 'Adopt More Trees',
+      ctaLink: `${appUrl}/individuals`
+    }
+  };
+
+  return templates[templateId] || templates['adopt-trees'];
+}
+
+/**
  * Send marketing email to registered users
  * This email is sent every 10 days to keep users engaged
  */
 export async function sendMarketingEmail(
   email: string,
   name: string,
-  userType: 'individual' | 'company'
+  userType: 'individual' | 'company',
+  templateId?: string
 ): Promise<boolean> {
   const displayName = name || (userType === 'company' ? 'Valued Customer' : 'Friend');
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
   
-  // Rotate between different marketing messages
-  const marketingMessages = [
-    {
-      title: '🌿 Plant More Trees, Create More Impact!',
-      content: `
-        <p style="color: #374151;">Every tree you plant makes a difference. Join thousands of others who are contributing to a greener India!</p>
-        <p style="color: #374151;">Did you know that a single tree can absorb up to 22 kg of CO₂ per year? Imagine the impact when we plant together!</p>
-      `,
-      cta: 'Adopt More Trees',
-      ctaLink: `${appUrl}/individuals`
-    },
-    {
-      title: '🌳 Create a Forest for Your Special Moments',
-      content: `
-        <p style="color: #374151;">Celebrate birthdays, weddings, anniversaries, and more by creating a forest that grows with your memories!</p>
-        <p style="color: #374151;">Share your forest with friends and family, and let them contribute to your green legacy.</p>
-      `,
-      cta: 'Create Your Forest',
-      ctaLink: `${appUrl}/create-forest`
-    },
-    {
-      title: '💚 Your Trees Are Growing Strong!',
-      content: `
-        <p style="color: #374151;">Your adopted trees are being cared for by our dedicated well-wishers and are growing beautifully!</p>
-        <p style="color: #374151;">Check your dashboard to see the latest growth updates, planting photos, and location details.</p>
-      `,
-      cta: 'View Your Trees',
-      ctaLink: `${appUrl}/dashboard/${userType}/trees`
-    },
-    {
-      title: '🌱 Join the Green Revolution',
-      content: `
-        <p style="color: #374151;">Be part of India's green transformation! Every tree you adopt helps restore our environment and supports local communities.</p>
-        <p style="color: #374151;">Together, we're building a sustainable future, one tree at a time.</p>
-      `,
-      cta: 'Start Planting',
-      ctaLink: `${appUrl}/individuals`
-    },
-    {
-      title: '🎁 Gift a Tree, Gift a Future',
-      content: `
-        <p style="color: #374151;">Looking for a meaningful gift? Give the gift of a greener future!</p>
-        <p style="color: #374151;">Plant trees in someone's name for birthdays, anniversaries, or any special occasion. It's a gift that keeps growing!</p>
-      `,
-      cta: 'Send a Gift Tree',
-      ctaLink: `${appUrl}/individuals`
-    }
-  ];
-  
-  // Select a random message (based on current date for consistency)
-  const messageIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 10)) % marketingMessages.length;
-  const message = marketingMessages[messageIndex];
+  // Use provided template or rotate between different marketing messages
+  let message;
+  if (templateId) {
+    message = getMarketingEmailTemplate(templateId, displayName, userType, appUrl);
+  } else {
+    // Rotate between different marketing messages for automated emails
+    const marketingMessages = [
+      getMarketingEmailTemplate('adopt-trees', displayName, userType, appUrl),
+      getMarketingEmailTemplate('create-forest', displayName, userType, appUrl),
+      getMarketingEmailTemplate('tree-growth', displayName, userType, appUrl),
+      getMarketingEmailTemplate('green-revolution', displayName, userType, appUrl),
+      getMarketingEmailTemplate('gift-tree', displayName, userType, appUrl)
+    ];
+    const messageIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 10)) % marketingMessages.length;
+    message = marketingMessages[messageIndex];
+  }
   
   const html = `
     <!DOCTYPE html>
@@ -487,7 +584,6 @@ export async function sendMarketingEmail(
           <h1 style="color: white; margin: 0; font-size: 28px;">${message.title}</h1>
         </div>
         <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
-          <h2 style="color: #1f2937; margin-top: 0;">Hello ${displayName}! 👋</h2>
           ${message.content}
           <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
             <p style="margin: 0; color: #1f2937; font-weight: 500;">💡 Fun Fact:</p>
