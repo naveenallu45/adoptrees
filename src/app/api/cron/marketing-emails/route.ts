@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         { lastMarketingEmailSent: { $exists: false } }, // Never sent
         { lastMarketingEmailSent: { $lte: tenDaysAgo } } // Sent 10+ days ago
       ]
-    }).select('email name companyName userType lastMarketingEmailSent').limit(100); // Limit to 100 users per run
+    }).select('email name companyName userType lastMarketingEmailSent').limit(50); // Limit to 50 users per run to stay within 300s timeout
     
     logger.info('Marketing email cron job - users found', {
       count: usersToEmail.length,
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         }
         
         // Add a small delay between emails to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 second delay (reduced to stay within timeout)
       } catch (error) {
         emailsFailed++;
         logger.error('Error sending marketing email to user', {

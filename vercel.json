@@ -114,7 +114,7 @@
       "maxDuration": 300
     },
     "src/app/api/cron/marketing-emails/route.ts": {
-      "maxDuration": 600
+      "maxDuration": 300
     },
     "src/app/api/payments/create-order/route.ts": {
       "maxDuration": 30
