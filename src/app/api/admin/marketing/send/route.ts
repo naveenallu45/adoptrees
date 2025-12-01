@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import Order from '@/models/Order';
 import { sendMarketingEmail } from '@/lib/email';
 import { logError } from '@/lib/logger';
 import { z } from 'zod';
@@ -9,6 +10,7 @@ import { z } from 'zod';
 const sendMarketingEmailSchema = z.object({
   templateId: z.string().min(1, 'Template ID is required'),
   userType: z.enum(['all', 'individual', 'company']).optional().default('all'),
+  adoptionStatus: z.enum(['all', 'adopted', 'nonAdopted']).optional().default('all'),
   limit: z.number().min(1).max(1000).optional().default(100),
 });
 
@@ -42,16 +44,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { templateId, userType, limit } = validationResult.data;
+    const { templateId, userType, adoptionStatus, limit } = validationResult.data;
 
-    // Build query based on user type
+    // Build base query for users
     const query: Record<string, unknown> = {
       role: 'user',
-      email: { $exists: true, $ne: '' }
     };
 
     if (userType !== 'all') {
       query.userType = userType;
+    }
+
+    // Apply adoption status filter using orders
+    if (adoptionStatus && adoptionStatus !== 'all') {
+      // Find all user emails with at least one paid, non-cancelled order
+      const adoptedUserEmails: string[] = await Order.distinct('userEmail', {
+        paymentStatus: 'paid',
+        status: { $ne: 'cancelled' },
+      });
+
+      if (adoptionStatus === 'adopted') {
+        query.email = { $in: adoptedUserEmails };
+      } else if (adoptionStatus === 'nonAdopted') {
+        query.email = { $nin: adoptedUserEmails };
+      }
+    } else {
+      // Default email condition when not filtering by adoption status
+      query.email = { $exists: true, $ne: '' };
     }
 
     // Find users to send emails to

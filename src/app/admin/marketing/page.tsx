@@ -67,6 +67,7 @@ export default function MarketingManagement() {
   const [sending, setSending] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('adopt-trees');
   const [userType, setUserType] = useState<'all' | 'individual' | 'company'>('all');
+  const [adoptionStatus, setAdoptionStatus] = useState<'all' | 'adopted' | 'nonAdopted'>('all');
   const [emailLimit, setEmailLimit] = useState<number>(100);
 
   const fetchStats = async () => {
@@ -105,6 +106,13 @@ export default function MarketingManagement() {
         <ul style="text-align: left; margin: 15px 0;">
           <li><strong>Template:</strong> ${emailTemplates.find(t => t.id === selectedTemplate)?.name}</li>
           <li><strong>User Type:</strong> ${userType === 'all' ? 'All Users' : userType === 'individual' ? 'Individual Users' : 'Company Users'}</li>
+          <li><strong>Segment:</strong> ${
+            adoptionStatus === 'all'
+              ? 'All users'
+              : adoptionStatus === 'adopted'
+                ? 'Adopted users (with at least one paid order)'
+                : 'Non-adopted users (no paid orders)'
+          }</li>
           <li><strong>Limit:</strong> Up to ${emailLimit} users</li>
         </ul>
         <p style="color: #dc2626; font-weight: 600;">This action cannot be undone!</p>
@@ -133,6 +141,7 @@ export default function MarketingManagement() {
         body: JSON.stringify({
           templateId: selectedTemplate,
           userType,
+          adoptionStatus,
           limit: emailLimit
         }),
       });
@@ -326,6 +335,39 @@ export default function MarketingManagement() {
                 {userType === 'company' && `Total: ${stats.companyUsers} users`}
               </p>
             )}
+          </div>
+
+          {/* Adoption Status Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              User Segment
+            </label>
+            <div className="flex gap-4">
+              {(['all', 'adopted', 'nonAdopted'] as const).map((segment) => (
+                <label key={segment} className="flex items-center">
+                  <input
+                    type="radio"
+                    name="adoptionStatus"
+                    value={segment}
+                    checked={adoptionStatus === segment}
+                    onChange={(e) =>
+                      setAdoptionStatus(e.target.value as 'all' | 'adopted' | 'nonAdopted')
+                    }
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">
+                    {segment === 'all'
+                      ? 'All users'
+                      : segment === 'adopted'
+                        ? 'Adopted users'
+                        : 'Non-adopted users'}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Adopted users have at least one paid, non-cancelled order. Non-adopted users have no paid orders.
+            </p>
           </div>
 
           {/* Email Limit */}
