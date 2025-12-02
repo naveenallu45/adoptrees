@@ -5,6 +5,7 @@ import User from '@/models/User';
 import Order from '@/models/Order';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import { sendWellWisherUpdateEmail } from '@/lib/email';
 
 export async function GET(
   request: NextRequest,
@@ -160,6 +161,23 @@ export async function PUT(
       updateData,
       { new: true, runValidators: true }
     ).select('-passwordHash');
+
+    // Send update email with login details if password was changed or email was changed (don't fail if email fails)
+    const emailChanged = email !== existingWellWisher.email;
+    const passwordChanged = !!(password && password.trim() !== '');
+    
+    if (passwordChanged || emailChanged) {
+      try {
+        await sendWellWisherUpdateEmail(
+          updatedWellWisher.email,
+          updatedWellWisher.name || '',
+          passwordChanged ? password : undefined,
+          emailChanged
+        );
+      } catch (emailError) {
+        console.error('Error sending update email:', emailError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

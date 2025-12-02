@@ -6,6 +6,7 @@ import Order from '@/models/Order';
 import bcrypt from 'bcryptjs';
 import { wellWisherRegistrationSchema } from '@/lib/validations/wellwisher';
 import { checkRateLimit, getClientIp, sanitizeInput, logSecurityEvent } from '@/lib/security';
+import { sendWellWisherOnboardingEmail, sendWellWisherGreetingEmail } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   try {
@@ -234,6 +235,20 @@ export async function POST(request: NextRequest) {
       wellWisherId: wellWisher._id, 
       adminId: session.user.id 
     }, ip);
+
+    // Send onboarding email with login details (don't fail if email fails)
+    try {
+      await sendWellWisherOnboardingEmail(wellWisher.email, wellWisher.name || '', password);
+    } catch (emailError) {
+      console.error('Error sending onboarding email:', emailError);
+    }
+
+    // Send greeting email (don't fail if email fails)
+    try {
+      await sendWellWisherGreetingEmail(wellWisher.email, wellWisher.name || '');
+    } catch (emailError) {
+      console.error('Error sending greeting email:', emailError);
+    }
 
     return NextResponse.json({
       success: true,

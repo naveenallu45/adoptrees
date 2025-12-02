@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import User from '@/models/User';
 import { logPaymentEvent, logError } from '@/lib/logger';
+import { sendWellWisherTaskAssignmentEmail } from '@/lib/email';
 
 // Store processed webhook IDs to prevent duplicate processing
 const processedWebhooks = new Set<string>();
@@ -129,6 +131,27 @@ async function handlePaymentCaptured(payment: { id: string; [key: string]: unkno
 
         order.assignedWellwisher = wellwisherId;
       order.wellwisherTasks = wellwisherTasks;
+      
+      // Send task assignment email to well-wisher (don't fail if email fails)
+      try {
+        const wellWisher = await User.findById(wellwisherId).select('email name');
+        if (wellWisher) {
+          const totalTrees = order.items.reduce((sum: number, item: { quantity: number; [key: string]: unknown }) => sum + item.quantity, 0);
+          await sendWellWisherTaskAssignmentEmail(
+            wellWisher.email,
+            wellWisher.name || '',
+            order.orderId,
+            wellwisherTasks,
+            {
+              totalTrees,
+              customerName: order.userName,
+              isGift: order.isGift || false
+            }
+          );
+        }
+      } catch (emailError) {
+        console.error('Error sending task assignment email:', emailError);
+      }
       }
     }
 

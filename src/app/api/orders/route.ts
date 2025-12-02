@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order, { IOrder } from '@/models/Order';
 import Tree from '@/models/Tree';
+import User from '@/models/User';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { sendWellWisherTaskAssignmentEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -197,6 +199,27 @@ export async function POST(request: NextRequest) {
       order.assignedWellwisher = wellwisherId;
       order.wellwisherTasks = wellwisherTasks;
       await order.save();
+      
+      // Send task assignment email to well-wisher (don't fail if email fails)
+      try {
+        const wellWisher = await User.findById(wellwisherId).select('email name');
+        if (wellWisher) {
+          const totalTrees = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+          await sendWellWisherTaskAssignmentEmail(
+            wellWisher.email,
+            wellWisher.name || '',
+            order.orderId,
+            wellwisherTasks,
+            {
+              totalTrees,
+              customerName: session.user.name || session.user.email || 'Customer',
+              isGift: isGift || false
+            }
+          );
+        }
+      } catch (emailError) {
+        console.error('Error sending task assignment email:', emailError);
+      }
     }
 
     return NextResponse.json({

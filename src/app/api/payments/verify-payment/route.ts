@@ -8,7 +8,7 @@ import Coupon from '@/models/Coupon';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { generateCertificate } from '@/lib/certificate';
-import { sendThankYouEmailWithCertificate } from '@/lib/email';
+import { sendThankYouEmailWithCertificate, sendWellWisherTaskAssignmentEmail } from '@/lib/email';
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
@@ -232,6 +232,27 @@ export async function POST(request: NextRequest) {
 
         order.assignedWellwisher = wellwisherId;
       order.wellwisherTasks = wellwisherTasks;
+      
+      // Send task assignment email to well-wisher (don't fail if email fails)
+      try {
+        const wellWisher = await User.findById(wellwisherId).select('email name');
+        if (wellWisher) {
+          const totalTrees = order.items.reduce((sum, item) => sum + item.quantity, 0);
+          await sendWellWisherTaskAssignmentEmail(
+            wellWisher.email,
+            wellWisher.name || '',
+            order.orderId,
+            wellwisherTasks,
+            {
+              totalTrees,
+              customerName: order.userName,
+              isGift: order.isGift || false
+            }
+          );
+        }
+      } catch (emailError) {
+        console.error('Error sending task assignment email:', emailError);
+      }
       }
     }
 

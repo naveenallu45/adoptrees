@@ -618,3 +618,358 @@ export async function sendMarketingEmail(
   });
 }
 
+/**
+ * Send onboarding email to well-wisher with login details
+ */
+export async function sendWellWisherOnboardingEmail(
+  email: string,
+  name: string,
+  password: string
+): Promise<boolean> {
+  const displayName = name || 'Well-Wisher';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
+  const loginUrl = `${appUrl}/wellwisher/login`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Adoptrees - Well-Wisher Onboarding</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🌿 Welcome to Adoptrees! 🌿</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1f2937; margin-top: 0;">Hello ${displayName}! 👋</h2>
+          <p style="font-size: 16px; color: #374151;">We're thrilled to have you join our team as a Well-Wisher! Your role is crucial in helping us plant and care for trees across India. 🌳</p>
+          
+          <div style="background: white; border: 2px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 8px;">
+            <h3 style="color: #1f2937; margin-top: 0; font-size: 18px;">🔐 Your Login Credentials</h3>
+            <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; margin: 15px 0;">
+              <p style="margin: 0; color: #065f46; font-weight: 600; margin-bottom: 8px;">Email:</p>
+              <p style="margin: 0; color: #1f2937; font-size: 16px; font-family: monospace; word-break: break-all;">${email}</p>
+            </div>
+            <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; margin: 15px 0;">
+              <p style="margin: 0; color: #065f46; font-weight: 600; margin-bottom: 8px;">Password:</p>
+              <p style="margin: 0; color: #1f2937; font-size: 16px; font-family: monospace; letter-spacing: 2px;">${password}</p>
+            </div>
+            <p style="color: #dc2626; font-size: 14px; margin-top: 15px; padding: 10px; background: #fef2f2; border-radius: 6px; border-left: 4px solid #dc2626;">
+              <strong>⚠️ Important:</strong> Please save these credentials securely. For security reasons, we recommend changing your password after your first login.
+            </p>
+          </div>
+          
+          <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1f2937; font-weight: 500;">📋 What You'll Be Doing:</p>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li>Plant trees assigned to you</li>
+              <li>Upload planting photos and location details</li>
+              <li>Provide regular growth updates with photos</li>
+              <li>Help create a greener India, one tree at a time!</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" 
+               style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 0;">
+              Login to Your Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">If you have any questions or need assistance, feel free to reach out to us. We're here to support you!</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">Best regards,<br>The Adoptrees Team 🌿</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: '🌿 Welcome to Adoptrees - Well-Wisher Onboarding',
+    html,
+  });
+}
+
+/**
+ * Send greeting email to well-wisher on onboarding
+ */
+export async function sendWellWisherGreetingEmail(
+  email: string,
+  name: string
+): Promise<boolean> {
+  const displayName = name || 'Well-Wisher';
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Greetings from Adoptrees</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🌳 Greetings from Adoptrees! 🌳</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1f2937; margin-top: 0;">Hello ${displayName}! 👋</h2>
+          <p style="font-size: 16px; color: #374151;">Welcome to the Adoptrees family! We're so excited to have you on board as a Well-Wisher. 🌿</p>
+          
+          <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 25px; margin: 20px 0; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 700;">Thank you for joining our mission to create a Greener India!</p>
+            <p style="margin: 10px 0 0 0; color: #047857; font-size: 14px;">Your dedication to planting and caring for trees makes a real difference in our environment.</p>
+          </div>
+          
+          <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1f2937; font-weight: 500;">💚 Together, we're:</p>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li>Planting trees that will grow for generations</li>
+              <li>Creating cleaner air and healthier ecosystems</li>
+              <li>Supporting local communities and farmers</li>
+              <li>Building a sustainable future for India</li>
+            </ul>
+          </div>
+          
+          <p style="color: #374151; font-size: 16px; margin-top: 25px;">We're here to support you every step of the way. If you ever need help or have questions, don't hesitate to reach out!</p>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">Once again, welcome to the team! We're grateful to have you with us. 🌱</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">Best regards,<br>The Adoptrees Team 🌿</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: '🌳 Greetings from Adoptrees - Welcome to Our Team!',
+    html,
+  });
+}
+
+/**
+ * Send update email to well-wisher with updated login details
+ */
+export async function sendWellWisherUpdateEmail(
+  email: string,
+  name: string,
+  password?: string,
+  emailChanged?: boolean
+): Promise<boolean> {
+  const displayName = name || 'Well-Wisher';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
+  const loginUrl = `${appUrl}/wellwisher/login`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your Well-Wisher Account Has Been Updated</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">📝 Account Updated</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1f2937; margin-top: 0;">Hello ${displayName}! 👋</h2>
+          <p style="font-size: 16px; color: #374151;">Your Well-Wisher account has been updated by the administrator.</p>
+          
+          ${emailChanged ? `
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #92400e; font-weight: 600;">📧 Email Address Changed</p>
+              <p style="margin: 5px 0 0 0; color: #78350f; font-size: 14px;">Your login email has been updated to: <strong>${email}</strong></p>
+            </div>
+          ` : ''}
+          
+          ${password ? `
+            <div style="background: white; border: 2px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 8px;">
+              <h3 style="color: #1f2937; margin-top: 0; font-size: 18px;">🔐 Updated Password</h3>
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <p style="margin: 0; color: #065f46; font-weight: 600; margin-bottom: 8px;">New Password:</p>
+                <p style="margin: 0; color: #1f2937; font-size: 16px; font-family: monospace; letter-spacing: 2px;">${password}</p>
+              </div>
+              <p style="color: #dc2626; font-size: 14px; margin-top: 15px; padding: 10px; background: #fef2f2; border-radius: 6px; border-left: 4px solid #dc2626;">
+                <strong>⚠️ Important:</strong> Please use this new password to login. For security reasons, we recommend changing it after your next login.
+              </p>
+            </div>
+          ` : ''}
+          
+          <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1f2937; font-weight: 500;">📋 Updated Login Information:</p>
+            <div style="margin-top: 10px;">
+              <p style="margin: 5px 0; color: #374151;"><strong>Email:</strong> ${email}</p>
+              ${password ? `<p style="margin: 5px 0; color: #374151;"><strong>Password:</strong> Updated (see above)</p>` : '<p style="margin: 5px 0; color: #374151;"><strong>Password:</strong> Unchanged</p>'}
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" 
+               style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 0;">
+              Login to Your Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">If you didn't request this update or have any concerns, please contact us immediately.</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">Best regards,<br>The Adoptrees Team 🌿</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: '📝 Your Well-Wisher Account Has Been Updated',
+    html,
+  });
+}
+
+/**
+ * Send task assignment email to well-wisher when tasks are assigned
+ */
+export async function sendWellWisherTaskAssignmentEmail(
+  email: string,
+  name: string,
+  orderId: string,
+  tasks: Array<{
+    taskId: string;
+    task: string;
+    description: string;
+    scheduledDate: Date;
+    priority: 'low' | 'medium' | 'high';
+  }>,
+  orderDetails?: {
+    totalTrees?: number;
+    customerName?: string;
+    isGift?: boolean;
+  }
+): Promise<boolean> {
+  const displayName = name || 'Well-Wisher';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
+  const dashboardUrl = `${appUrl}/wellwisher`;
+  
+  const totalTasks = tasks.length;
+  const totalTrees = orderDetails?.totalTrees || tasks.length;
+  const customerName = orderDetails?.customerName || 'Customer';
+  
+  // Format scheduled dates
+  const tasksListHtml = tasks.map((task, index) => {
+    const scheduledDate = new Date(task.scheduledDate);
+    const formattedDate = scheduledDate.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    
+    const priorityColors = {
+      low: '#6b7280',
+      medium: '#f59e0b',
+      high: '#dc2626'
+    };
+    
+    const priorityLabels = {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High'
+    };
+    
+    return `
+      <div style="background: white; border-left: 4px solid ${priorityColors[task.priority]}; padding: 15px; margin: 10px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+          <p style="margin: 0; color: #1f2937; font-weight: 600; font-size: 16px;">Task ${index + 1}: ${task.task}</p>
+          <span style="background: ${priorityColors[task.priority]}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+            ${priorityLabels[task.priority]} Priority
+          </span>
+        </div>
+        <p style="margin: 5px 0; color: #6b7280; font-size: 14px;">${task.description}</p>
+        <p style="margin: 5px 0 0 0; color: #374151; font-size: 13px;">
+          <strong>📅 Scheduled:</strong> ${formattedDate}
+        </p>
+      </div>
+    `;
+  }).join('');
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Tasks Assigned - Adoptrees</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🌳 New Tasks Assigned! 🌳</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1f2937; margin-top: 0;">Hello ${displayName}! 👋</h2>
+          <p style="font-size: 16px; color: #374151;">You have been assigned <strong>${totalTasks} new task${totalTasks > 1 ? 's' : ''}</strong> for order <strong>${orderId}</strong>.</p>
+          
+          ${orderDetails?.isGift ? `
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #92400e; font-weight: 600;">🎁 Gift Order</p>
+              <p style="margin: 5px 0 0 0; color: #78350f; font-size: 14px;">This is a gift order for ${customerName}</p>
+            </div>
+          ` : `
+            <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #1f2937; font-weight: 500;">👤 Customer:</p>
+              <p style="margin: 5px 0 0 0; color: #374151; font-size: 14px;">${customerName}</p>
+            </div>
+          `}
+          
+          <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 700;">📊 Task Summary</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+              <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                <p style="margin: 0; color: #10b981; font-size: 24px; font-weight: 700;">${totalTasks}</p>
+                <p style="margin: 5px 0 0 0; color: #065f46; font-size: 14px; font-weight: 600;">Task${totalTasks > 1 ? 's' : ''}</p>
+              </div>
+              <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                <p style="margin: 0; color: #10b981; font-size: 24px; font-weight: 700;">${totalTrees}</p>
+                <p style="margin: 5px 0 0 0; color: #065f46; font-size: 14px; font-weight: 600;">Tree${totalTrees > 1 ? 's' : ''}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div style="margin: 25px 0;">
+            <h3 style="color: #1f2937; margin-bottom: 15px; font-size: 18px;">📋 Task Details:</h3>
+            ${tasksListHtml}
+          </div>
+          
+          <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1f2937; font-weight: 500;">📝 Next Steps:</p>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li>Review the task details and schedule</li>
+              <li>Prepare for planting at the scheduled dates</li>
+              <li>Upload planting photos and location details when completed</li>
+              <li>Provide regular growth updates as the trees grow</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${dashboardUrl}" 
+               style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 0;">
+              View Tasks in Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">Thank you for your dedication to planting and caring for trees. Your work is making a real difference! 🌿</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">Best regards,<br>The Adoptrees Team 🌿</p>
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+            Order ID: ${orderId}
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `🌳 New Tasks Assigned - Order ${orderId}`,
+    html,
+  });
+}
+

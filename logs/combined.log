@@ -132,3 +132,27 @@
 {"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-11-25T10:48:18.139Z"}
 {"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-11-25T10:48:18.899Z"}
 {"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-11-25T10:48:18.902Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:50:28.989Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T06:50:28.995Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:50:28.997Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:50:29.987Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T06:50:29.991Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:50:29.994Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:52:24.708Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T06:52:24.716Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:52:24.719Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:52:25.873Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T06:52:25.877Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T06:52:25.878Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:10:54.381Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T07:10:54.387Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:10:54.389Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:10:55.309Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T07:10:55.313Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:10:55.314Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:11:53.711Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T07:11:53.716Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:11:53.719Z"}
+{"level":"info","message":"Growth update cron job started - runs daily at 2:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:11:54.723Z"}
+{"level":"info","message":"Quarterly (90-day) cron job started - runs daily at 3:00 AM UTC to move completed tasks to updating after 90 days","service":"adoptrees-app","timestamp":"2025-12-02T07:11:54.726Z"}
+{"level":"info","message":"Marketing email cron job started - runs daily at 4:00 AM UTC","service":"adoptrees-app","timestamp":"2025-12-02T07:11:54.727Z"}

@@ -43,9 +43,9 @@ export default function WellWisherSidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-gradient-to-b from-green-900 to-green-800 text-white">
+    <div className="flex h-screen w-64 flex-col bg-gradient-to-b from-green-900 to-green-800 text-white overflow-y-auto">
       {/* Logo/Header */}
-      <div className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 border-b border-green-700">
+      <div className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 border-b border-green-700 flex-shrink-0">
         <h1 className="text-lg sm:text-xl lg:text-2xl font-bold">Well-Wisher</h1>
         
         {/* Mobile close button */}
@@ -60,7 +60,7 @@ export default function WellWisherSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 sm:px-4 py-4 sm:py-6">
+      <nav className="flex-1 space-y-1 px-3 sm:px-4 py-4 sm:py-6 min-h-0">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -99,7 +99,7 @@ export default function WellWisherSidebar() {
       </nav>
 
       {/* Logout Button */}
-      <div className="border-t border-green-700 p-3 sm:p-4">
+      <div className="border-t border-green-700 p-3 sm:p-4 flex-shrink-0">
         <motion.button
           onClick={handleLogout}
           className="flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-bold bg-white text-black transition-all duration-200 hover:bg-gray-100"
