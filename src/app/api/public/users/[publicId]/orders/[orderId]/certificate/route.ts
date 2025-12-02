@@ -14,6 +14,11 @@ function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Simple ObjectId validator to avoid CastErrors for non-hex order IDs
+function isLikelyObjectId(id: string): boolean {
+  return /^[0-9a-fA-F]{24}$/.test(id);
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ publicId: string; orderId: string }> }
@@ -46,15 +51,23 @@ export async function GET(
       email: 'email' in userDoc ? userDoc.email as string | undefined : undefined,
     };
     
-    // Find the specific order - only paid orders
-    const order = await Order.findOne({
-      $or: [
-        { orderId: orderIdParam, userId: String(user._id) },
-        { orderId: orderIdParam, userEmail: user.email },
+    // Build a safe query for the specific order - only paid orders
+    const orConditions: Record<string, unknown>[] = [
+      { orderId: orderIdParam, userId: String(user._id) },
+      { orderId: orderIdParam, userEmail: user.email },
+    ];
+
+    // Only query by _id when the parameter looks like a valid ObjectId
+    if (isLikelyObjectId(orderIdParam)) {
+      orConditions.push(
         { _id: orderIdParam, userId: String(user._id) },
         { _id: orderIdParam, userEmail: user.email }
-      ],
-      paymentStatus: 'paid' // Only show paid orders for public viewing
+      );
+    }
+
+    const order = await Order.findOne({
+      $or: orConditions,
+      paymentStatus: 'paid', // Only show paid orders for public viewing
     }).select('+certificate');
 
     if (!order) {

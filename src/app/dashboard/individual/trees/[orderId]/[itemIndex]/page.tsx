@@ -126,7 +126,17 @@ export default function TreeDetailPage() {
       
       if (publicId) {
         // Public access - use public API endpoint
-        const response = await fetch(`/api/public/users/${publicId}/orders/${orderId}`);
+        // URL-encode publicId to handle special characters
+        const encodedPublicId = encodeURIComponent(publicId);
+        const response = await fetch(`/api/public/users/${encodedPublicId}/orders/${orderId}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[TreeDetail] API error:', response.status, errorText);
+          setError(`Failed to load tree details: ${response.status}`);
+          return;
+        }
+        
         const result = await response.json();
         
         if (result.success && result.data) {
@@ -137,8 +147,12 @@ export default function TreeDetailPage() {
             if (result.user?.image) {
               setUserImage(result.user.image);
             }
+          } else {
+            setError('Tree item not found or order not paid');
+            return;
           }
         } else {
+          console.error('[TreeDetail] API returned error:', result.error);
           setError(result.error || 'Tree not found');
           return;
         }

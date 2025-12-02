@@ -624,7 +624,7 @@ useEffect(() => {
                     
                     const basePath = userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees';
                     const detailPath = `${basePath}/${primaryOrder.orderId || primaryOrder._id}/${firstItemIndex}`;
-                    const detailUrl = publicId ? `${detailPath}?publicId=${publicId}` : detailPath;
+                    const detailUrl = publicId ? `${detailPath}?publicId=${encodeURIComponent(publicId)}` : detailPath;
                     
                     return (
                       <motion.div
