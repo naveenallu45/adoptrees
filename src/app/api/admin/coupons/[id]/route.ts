@@ -3,6 +3,10 @@ import connectDB from '@/lib/mongodb';
 import Coupon from '@/models/Coupon';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // PUT - Update coupon
 export async function PUT(
   request: NextRequest,
@@ -14,14 +18,28 @@ export async function PUT(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
     if (session.user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Access denied. Admin role required.' },
-        { status: 403 }
+        { 
+          status: 403,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
@@ -36,7 +54,14 @@ export async function PUT(
     if (!coupon) {
       return NextResponse.json(
         { success: false, error: 'Coupon not found' },
-        { status: 404 }
+        { 
+          status: 404,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
@@ -47,7 +72,14 @@ export async function PUT(
       if (existingCoupon) {
         return NextResponse.json(
           { success: false, error: 'Coupon code already exists' },
-          { status: 400 }
+          { 
+            status: 400,
+            headers: {
+              'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          }
         );
       }
       coupon.code = code.toUpperCase().trim();
@@ -58,7 +90,14 @@ export async function PUT(
       if (discountPercentage < 1 || discountPercentage > 100) {
         return NextResponse.json(
           { success: false, error: 'Discount percentage must be between 1 and 100' },
-          { status: 400 }
+          { 
+            status: 400,
+            headers: {
+              'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          }
         );
       }
       coupon.discountPercentage = discountPercentage;
@@ -69,7 +108,14 @@ export async function PUT(
         if (!totalUsageLimit || totalUsageLimit < 1) {
           return NextResponse.json(
             { success: false, error: 'Total usage limit is required when usage limit type is custom' },
-            { status: 400 }
+            { 
+              status: 400,
+              headers: {
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            }
           );
         }
         coupon.totalUsageLimit = totalUsageLimit;
@@ -81,7 +127,14 @@ export async function PUT(
       if (perUserUsageLimit < 1) {
         return NextResponse.json(
           { success: false, error: 'Per user usage limit must be at least 1' },
-          { status: 400 }
+          { 
+            status: 400,
+            headers: {
+              'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          }
         );
       }
       coupon.perUserUsageLimit = perUserUsageLimit;
@@ -94,6 +147,12 @@ export async function PUT(
       success: true,
       data: coupon,
       message: 'Coupon updated successfully'
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
   } catch (error: unknown) {
     console.error('Error updating coupon:', error);
@@ -101,14 +160,28 @@ export async function PUT(
     if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
       return NextResponse.json(
         { success: false, error: 'Coupon code already exists' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to update coupon';
     return NextResponse.json(
       { success: false, error: errorMessage },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     );
   }
 }
@@ -124,14 +197,28 @@ export async function DELETE(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
     if (session.user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Access denied. Admin role required.' },
-        { status: 403 }
+        { 
+          status: 403,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
@@ -143,19 +230,39 @@ export async function DELETE(
     if (!coupon) {
       return NextResponse.json(
         { success: false, error: 'Coupon not found' },
-        { status: 404 }
+        { 
+          status: 404,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
     return NextResponse.json({
       success: true,
       message: 'Coupon deleted successfully'
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
   } catch (error) {
     console.error('Error deleting coupon:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to delete coupon' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     );
   }
 }

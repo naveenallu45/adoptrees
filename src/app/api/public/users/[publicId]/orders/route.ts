@@ -3,14 +3,34 @@ import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import User from '@/models/User';
 
+// Disable caching for public routes
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ publicId: string }> }) {
   try {
     await connectDB();
 
     const { publicId: publicIdParam } = await params;
-    const pid = (publicIdParam || '').toLowerCase();
+    const pid = (publicIdParam || '').toLowerCase().trim();
+    
+    if (!pid) {
+      return NextResponse.json({ success: false, error: 'Invalid public ID' }, { status: 400 });
+    }
+    
+    // Query user by publicId (should be lowercase based on schema)
     const userDoc = await User.findOne({ publicId: pid }).lean();
+    
     if (!userDoc || !('_id' in userDoc)) {
+      console.error(`[PublicAPI] User not found for publicId: ${pid}`);
+      // Try to find any user with similar publicId for debugging
+      const similarUsers = await User.find({ 
+        publicId: { $exists: true, $ne: null } 
+      }).select('publicId').limit(5).lean();
+      console.log(
+        `[PublicAPI] Sample publicIds in DB:`,
+        (similarUsers as Array<{ publicId?: string }>).map((u) => u.publicId)
+      );
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 

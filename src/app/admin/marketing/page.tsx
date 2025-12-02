@@ -27,6 +27,12 @@ const emailTemplates: EmailTemplate[] = [
     preview: '🌳 Create a Forest for Your Special Moments'
   },
   {
+    id: 'forest',
+    name: 'Forest Growth',
+    description: 'Encourage users to grow and manage their forest',
+    preview: '🌲 Grow Your Forest: Watch Your Legacy Flourish'
+  },
+  {
     id: 'tree-growth',
     name: 'Tree Growth Update',
     description: 'Remind users to check their tree growth progress',
@@ -49,6 +55,18 @@ const emailTemplates: EmailTemplate[] = [
     name: 'Environmental Impact',
     description: 'Show users their environmental impact',
     preview: '🌿 Your Impact on the Environment'
+  },
+  {
+    id: 'christmas',
+    name: 'Christmas Campaign',
+    description: 'Seasonal campaign for Christmas gifting and impact',
+    preview: '🎄 This Christmas, Plant Hope with Every Tree'
+  },
+  {
+    id: 'new-year',
+    name: 'New Year Campaign',
+    description: 'Kick off the New Year with a green resolution',
+    preview: '✨ New Year, Greener You: Start with a Tree'
   }
 ];
 

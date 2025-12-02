@@ -476,7 +476,12 @@ useEffect(() => {
     
     setDownloadingCertificate(orderId);
     try {
-      const response = await fetch(`/api/certificates/${orderId}`);
+      // Use public endpoint if publicId is present, otherwise use authenticated endpoint
+      const endpoint = publicId 
+        ? `/api/public/users/${publicId}/orders/${orderId}/certificate`
+        : `/api/certificates/${orderId}`;
+      
+      const response = await fetch(endpoint);
       
       if (!response.ok) {
         const error = await response.json();
