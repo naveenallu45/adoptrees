@@ -106,11 +106,11 @@ export default function DemoRequestsPage() {
       }
 
       toast.success('Status updated successfully');
-      // Invalidate and refetch to ensure data consistency
-      await queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+      // Immediately refetch to ensure data consistency
+      await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
     } catch (error) {
       // Revert optimistic update on error
-      await queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+      await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
       toast.error(error instanceof Error ? error.message : 'Failed to update status');
     }
   };
@@ -139,8 +139,8 @@ export default function DemoRequestsPage() {
         }
 
         toast.success('Demo request deleted successfully');
-        // Invalidate and refetch queries instantly
-        await queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+        // Immediately refetch queries for instant updates
+        await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Failed to delete request');
       }
@@ -167,8 +167,8 @@ export default function DemoRequestsPage() {
       toast.success('Notes updated successfully');
       setSelectedRequest(null);
       setNotes('');
-      // Invalidate and refetch queries instantly
-      await queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+      // Immediately refetch queries for instant updates
+      await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update notes');
     } finally {

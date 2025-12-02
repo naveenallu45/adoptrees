@@ -155,9 +155,11 @@ export default function TreesManagement() {
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
         
-        // Immediately invalidate queries to show instant updates
-        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+        // Immediately refetch queries to show instant updates
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        ]);
 
         setShowForm(false);
         setEditingTree(null);
@@ -260,9 +262,11 @@ export default function TreesManagement() {
       }
       
       toast.success('Tree deleted successfully!');
-      // Immediately invalidate queries to show instant updates
-      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      // Immediately refetch queries to show instant updates
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+      ]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete tree: ${errorMessage}`);
@@ -436,7 +440,7 @@ export default function TreesManagement() {
               {error instanceof Error ? error.message : 'Failed to load trees. Please try again.'}
             </p>
             <button
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] })}
+              onClick={() => queryClient.refetchQueries({ queryKey: ['admin', 'trees'] })}
               className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 transition-colors"
             >
               Try Again
