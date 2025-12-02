@@ -7,22 +7,28 @@ import User from '@/models/User';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Safely escape RegExp special characters in a string
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ publicId: string }> }) {
   try {
     await connectDB();
 
     const { publicId: publicIdParam } = await params;
-    const pid = (publicIdParam || '').toLowerCase().trim();
+    const rawPublicId = (publicIdParam || '').trim();
     
-    if (!pid) {
+    if (!rawPublicId) {
       return NextResponse.json({ success: false, error: 'Invalid public ID' }, { status: 400 });
     }
     
-    // Query user by publicId (should be lowercase based on schema)
-    const userDoc = await User.findOne({ publicId: pid }).lean();
+    // Query user by publicId (case-insensitive to support legacy mixed-case IDs)
+    const publicIdRegex = new RegExp(`^${escapeRegExp(rawPublicId)}$`, 'i');
+    const userDoc = await User.findOne({ publicId: publicIdRegex }).lean();
     
     if (!userDoc || !('_id' in userDoc)) {
-      console.error(`[PublicAPI] User not found for publicId: ${pid}`);
+      console.error(`[PublicAPI] User not found for publicId: ${rawPublicId}`);
       // Try to find any user with similar publicId for debugging
       const similarUsers = await User.find({ 
         publicId: { $exists: true, $ne: null } 
