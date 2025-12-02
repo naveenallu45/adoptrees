@@ -5,7 +5,6 @@ import Tree from '@/models/Tree';
 import { deleteFromCloudinary } from '@/lib/upload';
 import { requireAdmin } from '@/lib/api-auth';
 import { treeUpdateSchema, validateImageFile, MAX_FILE_SIZE } from '@/lib/validations/tree';
-import { revalidatePath } from 'next/cache';
 import { logError, logInfo, logWarning } from '@/lib/logger';
 import cloudinary from '@/lib/cloudinary';
 
@@ -477,11 +476,6 @@ export async function PUT(
       name: tree.name 
     });
 
-    // Revalidate Next.js cache
-    revalidatePath('/individuals');
-    revalidatePath('/companies');
-    revalidatePath(`/tree/${id}`);
-
     return NextResponse.json({
       success: true,
       data: tree,
@@ -563,12 +557,6 @@ export async function DELETE(
     }
 
     logInfo('Tree deleted successfully', { treeId: id, name: tree.name });
-
-    // Revalidate Next.js cache for user-facing pages
-    revalidatePath('/individuals');
-    revalidatePath('/companies');
-    revalidatePath('/api/trees');
-    revalidatePath(`/tree/${id}`);
 
     return NextResponse.json({
       success: true,
