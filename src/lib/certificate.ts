@@ -408,7 +408,8 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Use original profileX (540) for stats center, not the shifted profileX
     const originalProfileX = 540;
     const centerX = originalProfileX + profileSize / 2;
-    const statsCenterX = centerX - (pageWidth * 0.06); // Shift 6% to the left (additional 1% shift for all values)
+    // Slightly adjust stats center 1% to the right to better align values with template
+    const statsCenterX = centerX - (pageWidth * 0.05);
     
     // Column 1: Tree name (first field)
     if (data.treeNames && data.treeNames.length > 0) {
