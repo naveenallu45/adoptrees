@@ -37,17 +37,26 @@ export async function GET() {
 
     const giftOrders = orders.filter(order => order.isGift).length;
 
-    return NextResponse.json({
-      success: true,
-      data: orders,
-      metrics: {
-        totalCount,
-        totalRevenue,
-        statusCounts,
-        userTypeCounts,
-        giftOrders,
+    return NextResponse.json(
+      {
+        success: true,
+        data: orders,
+        metrics: {
+          totalCount,
+          totalRevenue,
+          statusCounts,
+          userTypeCounts,
+          giftOrders,
+        },
       },
-    });
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch adoptions' },

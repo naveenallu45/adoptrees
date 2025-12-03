@@ -233,12 +233,6 @@ export default function MomentsThatDeserve() {
               <p>
                 Some memories deserve more than a celebration — they deserve to grow.
               </p>
-              <p>
-                From birthdays to weddings, from new beginnings to milestones,
-              </p>
-              <p>
-                Every tree planted becomes a story rooted in love.
-              </p>
             </div>
           </div>
 
@@ -339,15 +333,15 @@ export default function MomentsThatDeserve() {
 
                       {/* Price and Oxygen Contribution */}
                       <div className="flex justify-between items-start mb-3">
-                        <div>
+                        <div className="flex-1">
                           <p className="text-xs text-gray-600 mb-1 font-medium">Price</p>
                           <span className="text-xl sm:text-2xl font-bold text-gray-900">
                             ₹{(tree.packagePrice || tree.price).toLocaleString()}
                           </span>
                           {tree.packageQuantity && tree.packageQuantity > 1 && (
-                            <p className="text-[10px] text-gray-500 mt-0.5">
-                              Package: {tree.packageQuantity} trees
-                            </p>
+                            <div className="mt-2 bg-green-600 text-white rounded-lg px-2.5 py-1.5 shadow-sm border border-green-700/30 inline-block">
+                              <p className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">Package: {tree.packageQuantity} trees</p>
+                            </div>
                           )}
                         </div>
                         <div className="text-right sm:bg-white/80 sm:backdrop-blur-sm sm:rounded-lg px-2.5 py-1.5 sm:shadow-sm sm:border sm:border-green-200/50">
@@ -381,7 +375,7 @@ export default function MomentsThatDeserve() {
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
                             </svg>
-                              <span>{session && !isEligibleForestUser ? 'Unavailable' : 'Add to Forest'}</span>
+                              <span>{session && !isEligibleForestUser ? 'Unavailable' : 'Add'}</span>
                           </>
                         )}
                       </button>

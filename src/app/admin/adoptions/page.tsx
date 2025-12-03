@@ -129,8 +129,14 @@ export default function AdminAdoptionsPage() {
   const { data: allData, isLoading, error, refetch } = useQuery({
     queryKey: ['admin-adoptions-all'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/adoptions/all', {
+      // Add cache-busting timestamp to ensure fresh data
+      const response = await fetch(`/api/admin/adoptions/all?t=${Date.now()}`, {
         cache: 'no-store', // Always fetch fresh data from server
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       if (!response.ok) {
         throw new Error('Failed to fetch adoptions');
@@ -340,10 +346,9 @@ export default function AdminAdoptionsPage() {
         // If 404, adoption doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('Adoption was already deleted from database.');
-          // Force immediate refetch to sync with server
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] })
-          ]);
+          // Force immediate refetch to sync with server - invalidate cache first
+          queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
+          await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
           return;
         }
         
@@ -361,13 +366,17 @@ export default function AdminAdoptionsPage() {
       }
       
       toast.success('Adoption deleted successfully!');
-      // Immediately refetch to show instant updates
-      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'] });
+      // Immediately invalidate cache and refetch to show instant updates
+      queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
+      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
     } catch (error) {
       // Rollback optimistic update on error
       if (previousData) {
         queryClient.setQueryData(['admin-adoptions-all'], previousData);
       }
+      // Still try to refetch to ensure UI is in sync
+      queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
+      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Failed to delete adoption: ${errorMessage}`);
     }

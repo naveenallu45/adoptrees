@@ -231,29 +231,22 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
                 {/* Price and Package Information */}
                 <div className="mb-2 sm:mb-3">
                   <div className="flex justify-between items-start mb-1.5 sm:mb-2">
-                    <div>
+                    <div className="flex-1">
                       <p className="text-[10px] sm:text-xs text-gray-600 mb-0.5 sm:mb-1 font-medium">Price</p>
                       <span className="text-lg sm:text-2xl font-bold text-gray-900">
                         {tree.packagePrice ? `₹${tree.packagePrice.toLocaleString()}` : `₹${tree.price.toLocaleString()}`}
                       </span>
+                      {tree.packageQuantity && tree.packageQuantity > 1 && (
+                        <div className="mt-1.5 sm:mt-2 bg-green-600 text-white rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 shadow-sm border border-green-700/30 inline-block">
+                          <p className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">Package: {tree.packageQuantity} trees</p>
+                        </div>
+                      )}
                     </div>
                     <div className="text-right sm:bg-white/80 sm:backdrop-blur-sm sm:rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 sm:shadow-sm sm:border sm:border-green-200/50">
                       <p className="text-[10px] sm:text-xs text-gray-600 mb-0.5 font-medium">Oxygen</p>
                       <p className="text-[10px] sm:text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                     </div>
                   </div>
-                  {tree.packageQuantity && tree.packageQuantity > 1 && (
-                    <div className="bg-white/60 backdrop-blur-sm border border-green-200/50 rounded-lg p-1.5 sm:p-2 mt-1.5 sm:mt-2">
-                      <p className="text-[10px] sm:text-xs text-gray-700 font-medium">
-                        Package: {tree.packageQuantity} trees
-                        {tree.packagePrice && (
-                          <span className="ml-1 sm:ml-2 text-gray-600">
-                            (₹{Math.round(tree.packagePrice / tree.packageQuantity).toLocaleString()} per tree)
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* Action Buttons */}
