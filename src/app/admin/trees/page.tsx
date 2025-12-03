@@ -9,7 +9,7 @@ import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useTrees, type Tree } from '@/hooks/useAdminData';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { VALID_LOCAL_USES } from '@/lib/validations/tree';
 
 export default function TreesManagement() {
@@ -226,6 +226,56 @@ export default function TreesManagement() {
     setShowForm(true);
   };
 
+  // OPTIMISTIC DELETE: Update UI instantly before server responds
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/admin/trees/${id}?t=${Date.now()}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete tree');
+      }
+      return data;
+    },
+    // OPTIMISTIC UPDATE: Remove tree from cache immediately (UI updates instantly)
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['admin', 'trees'] });
+      
+      const previousData = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
+      
+      // Update cache immediately - tree disappears from table instantly
+      if (previousData) {
+        queryClient.setQueryData(['admin', 'trees'], 
+          previousData.filter(tree => tree._id !== id)
+        );
+      }
+      
+      return { previousData };
+    },
+    onError: (error, id, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['admin', 'trees'], context.previousData);
+      }
+      toast.error(error.message || 'Failed to delete tree');
+    },
+    onSuccess: () => {
+      toast.success('Tree deleted successfully!');
+    },
+    onSettled: () => {
+      // Background sync
+      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+    },
+  });
+
   const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Tree?',
@@ -244,46 +294,11 @@ export default function TreesManagement() {
       }
     });
 
-    if (!result.isConfirmed) return;
-
-    // No cache manipulation - wait for server response
-
-    try {
-      const response = await fetch(`/api/admin/trees/${id}?t=${Date.now()}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        // Show specific error message based on status code
-        if (response.status === 400) {
-          toast.error(data.error || 'Invalid tree ID. Please refresh the page and try again.');
-        } else {
-          toast.error(data.error || 'Failed to delete tree. Please try again.');
-        }
-        return;
-      }
-      
-      toast.success('Tree deleted successfully!');
-      // Invalidate and immediately refetch queries to show instant updates
-      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'trees'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
-      ]);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast.error(`Failed to delete tree: ${errorMessage}`);
+    if (result.isConfirmed) {
+      // UI updates instantly via optimistic update
+      deleteMutation.mutate(id);
     }
-  }, [queryClient]);
+  }, [deleteMutation]);
 
   const handleCancel = () => {
     setShowForm(false);
@@ -416,7 +431,8 @@ export default function TreesManagement() {
             </button>
             <button
               onClick={() => handleDelete(row.original._id)}
-              className="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+              className="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Delete"
             >
               <TrashIcon className="h-4 w-4" />
@@ -426,7 +442,7 @@ export default function TreesManagement() {
         enableSorting: false,
       },
     ],
-    [handleDelete]
+    [handleDelete, deleteMutation.isPending]
   );
 
   if (loading && trees.length === 0) {

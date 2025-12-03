@@ -7,12 +7,61 @@ import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useIndividualUsers, type IndividualUser } from '@/hooks/useAdminData';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 
 export default function IndividualUsersPage() {
   const queryClient = useQueryClient();
   const { data: usersData, isLoading: loading } = useIndividualUsers();
   const users = (usersData || []) as IndividualUser[];
+
+  // OPTIMISTIC DELETE: Update UI instantly before server responds
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/admin/users/${id}?t=${Date.now()}`, {
+        method: 'DELETE',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
+      return data;
+    },
+    // OPTIMISTIC UPDATE: Remove user from cache immediately (UI updates instantly)
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['admin', 'users', 'individuals'] });
+      
+      const previousData = queryClient.getQueryData<IndividualUser[]>(['admin', 'users', 'individuals']);
+      
+      // Update cache immediately - user disappears from table instantly
+      if (previousData) {
+        queryClient.setQueryData(['admin', 'users', 'individuals'], 
+          previousData.filter(user => user._id !== id)
+        );
+      }
+      
+      return { previousData };
+    },
+    onError: (error, id, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['admin', 'users', 'individuals'], context.previousData);
+      }
+      toast.error(error.message || 'Failed to delete user');
+    },
+    onSuccess: () => {
+      toast.success('User deleted successfully!');
+    },
+    onSettled: () => {
+      // Background sync
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'individuals'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+    },
+  });
 
   const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
@@ -32,44 +81,11 @@ export default function IndividualUsersPage() {
       }
     });
 
-    if (!result.isConfirmed) return;
-
-    // No cache manipulation - wait for server response
-
-    try {
-      const response = await fetch(`/api/admin/users/${id}?t=${Date.now()}`, {
-        method: 'DELETE',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      const data = await response.json();
-      
-      if (!response.ok || !data.success) {
-        // Show specific error message based on status code
-        if (response.status === 400) {
-          toast.error(data.error || 'Invalid user ID. Please refresh the page and try again.');
-        } else {
-          toast.error(data.error || 'Failed to delete user. Please try again.');
-        }
-        return;
-      }
-      
-      toast.success('User deleted successfully!');
-      // Invalidate and immediately refetch to show instant updates
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'individuals'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
-      ]);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast.error(`Failed to delete user: ${errorMessage}`);
+    if (result.isConfirmed) {
+      // UI updates instantly via optimistic update
+      deleteMutation.mutate(id);
     }
-  }, [queryClient]);
+  }, [deleteMutation]);
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<IndividualUser>[]>(
@@ -137,7 +153,8 @@ export default function IndividualUsersPage() {
         cell: ({ row }) => (
           <button
             onClick={() => handleDelete(row.original._id)}
-            className="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700"
+            disabled={deleteMutation.isPending}
+            className="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Delete User"
           >
             <TrashIcon className="h-4 w-4" />
@@ -146,7 +163,7 @@ export default function IndividualUsersPage() {
         enableSorting: false,
       },
     ],
-    [handleDelete]
+    [handleDelete, deleteMutation.isPending]
   );
 
   if (loading && users.length === 0) {
