@@ -384,11 +384,11 @@ export default function TreeInfoPage() {
               </div>
               <div className="flex-1">
                 <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{tree.name}</h1>
-                {discount && discount > 0 && (
+                {discount !== null && discount !== undefined && discount > 0 ? (
                   <span className="inline-block bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded mb-2">
                     -{discount}%
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
 
