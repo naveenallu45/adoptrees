@@ -43,8 +43,13 @@ export default function CouponsManagement() {
   const fetchCoupons = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/coupons', {
-        cache: 'no-store'
+      const response = await fetch(`/api/admin/coupons?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       const result = await response.json();
       
@@ -99,10 +104,13 @@ export default function CouponsManagement() {
       const url = editingCoupon ? `/api/admin/coupons/${editingCoupon._id}` : '/api/admin/coupons';
       const method = editingCoupon ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await fetch(`${url}?t=${Date.now()}`, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
         body: JSON.stringify(payload),
       });
@@ -112,9 +120,10 @@ export default function CouponsManagement() {
       if (result.success) {
         toast.success(editingCoupon ? 'Coupon updated successfully' : 'Coupon created successfully');
         handleCancel();
-        // Immediately refetch to show instant updates
+        // Invalidate and immediately refetch to show instant updates
+        queryClient.invalidateQueries({ queryKey: ['coupons'] });
         await fetchCoupons();
-        await queryClient.refetchQueries({ queryKey: ['coupons'] });
+        await queryClient.refetchQueries({ queryKey: ['coupons'], type: 'active' });
       } else {
         toast.error(result.error || 'Failed to save coupon');
       }
@@ -168,17 +177,23 @@ export default function CouponsManagement() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/admin/coupons/${coupon._id}`, {
+        const response = await fetch(`/api/admin/coupons/${coupon._id}?t=${Date.now()}`, {
           method: 'DELETE',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
         });
 
         const deleteResult = await response.json();
 
         if (deleteResult.success) {
           toast.success('Coupon deleted successfully');
-          // Immediately refetch to show instant updates
+          // Invalidate and immediately refetch to show instant updates
+          queryClient.invalidateQueries({ queryKey: ['coupons'] });
           await fetchCoupons();
-          await queryClient.refetchQueries({ queryKey: ['coupons'] });
+          await queryClient.refetchQueries({ queryKey: ['coupons'], type: 'active' });
         } else {
           toast.error(deleteResult.error || 'Failed to delete coupon');
         }

@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
     },
   },
   
+  
   // Image optimization
   images: {
     remotePatterns: [

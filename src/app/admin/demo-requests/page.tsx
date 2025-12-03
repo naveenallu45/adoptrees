@@ -58,9 +58,16 @@ export default function DemoRequestsPage() {
     queryKey: ['demo-requests', statusFilter],
     queryFn: async () => {
       const url = statusFilter === 'all' 
-        ? '/api/demo-requests'
-        : `/api/demo-requests?status=${statusFilter}`;
-      const response = await fetch(url, { cache: 'no-store' });
+        ? `/api/demo-requests?t=${Date.now()}`
+        : `/api/demo-requests?status=${statusFilter}&t=${Date.now()}`;
+      const response = await fetch(url, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch demo requests');
       return response.json();
     },
@@ -93,9 +100,14 @@ export default function DemoRequestsPage() {
     });
 
     try {
-      const response = await fetch(`/api/demo-requests/${id}`, {
+      const response = await fetch(`/api/demo-requests/${id}?t=${Date.now()}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -106,11 +118,13 @@ export default function DemoRequestsPage() {
       }
 
       toast.success('Status updated successfully');
-      // Immediately refetch to ensure data consistency
-      await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
+      // Invalidate and immediately refetch to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+      await queryClient.refetchQueries({ queryKey: ['demo-requests'], type: 'active' });
     } catch (error) {
-      // Revert optimistic update on error
-      await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
+      // Invalidate and revert optimistic update on error
+      queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+      await queryClient.refetchQueries({ queryKey: ['demo-requests'], type: 'active' });
       toast.error(error instanceof Error ? error.message : 'Failed to update status');
     }
   };
@@ -128,8 +142,13 @@ export default function DemoRequestsPage() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/demo-requests/${id}`, {
+        const response = await fetch(`/api/demo-requests/${id}?t=${Date.now()}`, {
           method: 'DELETE',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
         });
 
         const result = await response.json();
@@ -139,8 +158,9 @@ export default function DemoRequestsPage() {
         }
 
         toast.success('Demo request deleted successfully');
-        // Immediately refetch queries for instant updates
-        await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
+        // Invalidate and immediately refetch queries for instant updates
+        queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+        await queryClient.refetchQueries({ queryKey: ['demo-requests'], type: 'active' });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Failed to delete request');
       }
@@ -152,9 +172,14 @@ export default function DemoRequestsPage() {
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/demo-requests/${selectedRequest._id}`, {
+      const response = await fetch(`/api/demo-requests/${selectedRequest._id}?t=${Date.now()}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
         body: JSON.stringify({ notes }),
       });
 
@@ -167,8 +192,9 @@ export default function DemoRequestsPage() {
       toast.success('Notes updated successfully');
       setSelectedRequest(null);
       setNotes('');
-      // Immediately refetch queries for instant updates
-      await queryClient.refetchQueries({ queryKey: ['demo-requests'] });
+      // Invalidate and immediately refetch queries for instant updates
+      queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
+      await queryClient.refetchQueries({ queryKey: ['demo-requests'], type: 'active' });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update notes');
     } finally {

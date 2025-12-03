@@ -1,43 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Work_Sans, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import AdminShell from "@/components/AdminShell";
 import AuthProvider from "@/components/Auth/AuthProvider";
 import QueryProvider from "@/components/QueryProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
-
-const inter = Inter({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
-  fallback: ["system-ui", "arial", "sans-serif"],
-  adjustFontFallback: true,
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-  fallback: ["Courier New", "monospace"],
-  adjustFontFallback: true,
-});
-
-const workSans = Work_Sans({
-  variable: "--font-work-sans",
-  subsets: ["latin"],
-  display: "swap",
-  fallback: ["system-ui", "arial", "sans-serif"],
-  adjustFontFallback: true,
-});
-
-const nunitoSans = Nunito_Sans({
-  variable: "--font-nunito-sans",
-  subsets: ["latin"],
-  display: "swap",
-  fallback: ["system-ui", "arial", "sans-serif"],
-  adjustFontFallback: true,
-});
+import { inter, jetbrainsMono, workSans, nunitoSans } from "@/lib/fonts";
 
 export const metadata: Metadata = {
   title: {

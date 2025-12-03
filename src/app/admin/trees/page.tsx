@@ -127,13 +127,18 @@ export default function TreesManagement() {
 
     try {
       const url = editingTree 
-        ? `/api/admin/trees/${editingTree._id}` 
-        : '/api/admin/trees';
+        ? `/api/admin/trees/${editingTree._id}?t=${Date.now()}` 
+        : `/api/admin/trees?t=${Date.now()}`;
       
       const method = editingTree ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
         method,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
         body: formDataToSend,
       });
 
@@ -155,10 +160,12 @@ export default function TreesManagement() {
       if (data.success) {
         toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
         
-        // Immediately refetch queries to show instant updates
+        // Invalidate and immediately refetch queries to show instant updates
+        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
         await Promise.all([
-          queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-          queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+          queryClient.refetchQueries({ queryKey: ['admin', 'trees'], type: 'active' }),
+          queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
         ]);
 
         setShowForm(false);
@@ -242,10 +249,13 @@ export default function TreesManagement() {
     // No cache manipulation - wait for server response
 
     try {
-      const response = await fetch(`/api/admin/trees/${id}`, {
+      const response = await fetch(`/api/admin/trees/${id}?t=${Date.now()}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
       });
 
@@ -262,10 +272,12 @@ export default function TreesManagement() {
       }
       
       toast.success('Tree deleted successfully!');
-      // Immediately refetch queries to show instant updates
+      // Invalidate and immediately refetch queries to show instant updates
+      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'trees'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        queryClient.refetchQueries({ queryKey: ['admin', 'trees'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
       ]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';

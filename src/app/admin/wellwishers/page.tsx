@@ -50,10 +50,13 @@ export default function AdminWellWishersPage() {
     setFormData({ name: '', email: '', phone: '', password: '' });
     
     try {
-      const response = await fetch('/api/admin/wellwishers', {
+      const response = await fetch(`/api/admin/wellwishers?t=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
         body: JSON.stringify(formDataCopy),
       });
@@ -70,10 +73,12 @@ export default function AdminWellWishersPage() {
 
       toast.success('Well-wisher registered successfully!');
       
-      // Immediately refetch to show instant updates
+      // Invalidate and immediately refetch to show instant updates
+      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
       ]);
     } catch (error) {
       // Reopen form on error
@@ -150,10 +155,13 @@ export default function AdminWellWishersPage() {
     setEditFormData({ name: '', email: '', phone: '', password: '' });
     
     try {
-      const response = await fetch(`/api/admin/wellwishers/${wellWisherId}`, {
+      const response = await fetch(`/api/admin/wellwishers/${wellWisherId}?t=${Date.now()}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
         body: JSON.stringify(editFormDataCopy),
       });
@@ -178,10 +186,12 @@ export default function AdminWellWishersPage() {
       
       toast.success('Well-wisher updated successfully!');
       
-      // Immediately refetch to show instant updates
+      // Invalidate and immediately refetch to show instant updates
+      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
       ]);
     } catch (error) {
       // Reopen form on error
@@ -211,8 +221,13 @@ export default function AdminWellWishersPage() {
     setDeletingWellWisher(null);
     
     try {
-      const response = await fetch(`/api/admin/wellwishers/${wellWisherId}`, {
+      const response = await fetch(`/api/admin/wellwishers/${wellWisherId}?t=${Date.now()}`, {
         method: 'DELETE',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
 
       const data = await response.json();
@@ -228,10 +243,12 @@ export default function AdminWellWishersPage() {
       }
       
       toast.success('Well-wisher deleted successfully!');
-      // Immediately refetch to show instant updates
+      // Invalidate and immediately refetch to show instant updates
+      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
       ]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';

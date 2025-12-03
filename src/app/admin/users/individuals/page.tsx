@@ -37,8 +37,13 @@ export default function IndividualUsersPage() {
     // No cache manipulation - wait for server response
 
     try {
-      const response = await fetch(`/api/admin/users/${id}`, {
+      const response = await fetch(`/api/admin/users/${id}?t=${Date.now()}`, {
         method: 'DELETE',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       const data = await response.json();
       
@@ -53,10 +58,12 @@ export default function IndividualUsersPage() {
       }
       
       toast.success('User deleted successfully!');
-      // Immediately refetch to show instant updates
+      // Invalidate and immediately refetch to show instant updates
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users', 'individuals'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'] }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'] })
+        queryClient.refetchQueries({ queryKey: ['admin', 'users', 'individuals'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
       ]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
