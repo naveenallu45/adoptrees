@@ -114,8 +114,10 @@ export async function PUT(
 
     await connectDB();
 
-    // Check if well-wisher exists
-    const existingWellWisher = await User.findById(id);
+    // OPTIMIZED: Check existence and email uniqueness in parallel if email is being changed
+    const normalizedEmail = email.toLowerCase();
+    const existingWellWisher = await User.findById(id).select('email role').lean() as { email: string; role: string } | null;
+    
     if (!existingWellWisher || existingWellWisher.role !== 'wellwisher') {
       return NextResponse.json(
         { success: false, message: 'Well-wisher not found' },
@@ -124,11 +126,13 @@ export async function PUT(
     }
 
     // Check if email is being changed and if it's already taken by another user
-    if (email !== existingWellWisher.email) {
+    const emailChanged = normalizedEmail !== existingWellWisher.email;
+    if (emailChanged) {
       const emailExists = await User.findOne({ 
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         _id: { $ne: id }
-      });
+      }).select('_id').lean();
+      
       if (emailExists) {
         return NextResponse.json(
           { success: false, message: 'Email already exists' },
@@ -162,21 +166,19 @@ export async function PUT(
       { new: true, runValidators: true }
     ).select('-passwordHash');
 
-    // Send update email with login details if password was changed or email was changed (don't fail if email fails)
-    const emailChanged = email !== existingWellWisher.email;
+    // OPTIMIZED: Send update email asynchronously (non-blocking)
     const passwordChanged = !!(password && password.trim() !== '');
     
     if (passwordChanged || emailChanged) {
-      try {
-        await sendWellWisherUpdateEmail(
-          updatedWellWisher.email,
-          updatedWellWisher.name || '',
-          passwordChanged ? password : undefined,
-          emailChanged
-        );
-      } catch (emailError) {
+      // Fire and forget - don't await email sending
+      sendWellWisherUpdateEmail(
+        normalizedEmail,
+        name,
+        passwordChanged ? password : undefined,
+        emailChanged
+      ).catch((emailError) => {
         console.error('Error sending update email:', emailError);
-      }
+      });
     }
 
     return NextResponse.json({
@@ -225,27 +227,21 @@ export async function DELETE(
 
     await connectDB();
 
-    // Check if well-wisher exists
-    const existingWellWisher = await User.findById(id);
+    // OPTIMIZED: Check existence and get orders/well-wishers in parallel
+    const wellWisherId = id.toString();
+    
+    const [existingWellWisher, assignedOrders, availableWellWishers] = await Promise.all([
+      User.findById(id).select('role').lean() as Promise<{ role: string } | null>,
+      Order.find({ assignedWellwisher: wellWisherId }).select('_id orderId wellwisherTasks').lean(),
+      User.find({ role: 'wellwisher', _id: { $ne: id } }).select('_id').lean()
+    ]);
+
     if (!existingWellWisher || existingWellWisher.role !== 'wellwisher') {
       return NextResponse.json(
         { success: false, message: 'Well-wisher not found' },
         { status: 404 }
       );
     }
-
-    const wellWisherId = id.toString();
-
-    // Find all orders assigned to this well-wisher
-    const assignedOrders = await Order.find({
-      assignedWellwisher: wellWisherId
-    });
-
-    // Get all available well-wishers (excluding the one being deleted)
-    const availableWellWishers = await User.find({
-      role: 'wellwisher',
-      _id: { $ne: id }
-    }).select('_id');
 
     // If there are no available well-wishers, we can't reassign
     // In this case, we'll still delete but warn about orphaned tasks
@@ -260,38 +256,36 @@ export async function DELETE(
       });
     }
 
-    // Redistribute tasks equally among available well-wishers
-    // Use round-robin approach for equal distribution
-    let wellWisherIndex = 0;
+    // OPTIMIZED: Redistribute tasks equally among available well-wishers
+    // Use round-robin approach and parallelize all order updates
     const reassignmentUpdates: Array<{ orderId: string; newWellWisherId: string; tasksCount: number }> = [];
+    const updatePromises: Promise<unknown>[] = [];
 
-    for (const order of assignedOrders) {
+    assignedOrders.forEach((order, index) => {
       // Select next well-wisher in round-robin fashion
-      const newWellWisher = availableWellWishers[wellWisherIndex % availableWellWishers.length];
-      const newWellWisherId = newWellWisher._id.toString();
+      const newWellWisher = availableWellWishers[index % availableWellWishers.length];
+      // Handle _id which can be ObjectId or string when using .lean()
+      const newWellWisherId = newWellWisher._id instanceof mongoose.Types.ObjectId
+        ? newWellWisher._id.toString()
+        : String(newWellWisher._id);
 
-      // Update order with new well-wisher assignment
-      // This preserves all tasks (upcoming, ongoing, completed, updating) and just reassigns them
-      await Order.findByIdAndUpdate(
-        order._id,
-        {
-          $set: {
-            assignedWellwisher: newWellWisherId
-          }
-        }
+      // OPTIMIZED: Parallelize order updates instead of sequential await
+      updatePromises.push(
+        Order.findByIdAndUpdate(
+          order._id,
+          { $set: { assignedWellwisher: newWellWisherId } }
+        )
       );
 
       reassignmentUpdates.push({
-        orderId: order.orderId || String(order._id),
+        orderId: (order.orderId as string) || String(order._id),
         newWellWisherId: newWellWisherId,
-        tasksCount: order.wellwisherTasks?.length || 0
+        tasksCount: (order.wellwisherTasks as unknown[])?.length || 0
       });
+    });
 
-      // Move to next well-wisher for next order
-      wellWisherIndex++;
-    }
-
-    // Delete well-wisher after reassigning all tasks
+    // OPTIMIZED: Wait for all order updates in parallel, then delete well-wisher
+    await Promise.all(updatePromises);
     await User.findByIdAndDelete(id);
 
     return NextResponse.json({

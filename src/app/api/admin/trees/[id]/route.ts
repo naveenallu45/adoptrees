@@ -351,19 +351,18 @@ export async function PUT(
       updateData.imageUrl = uploadResult.secure_url;
       updateData.imagePublicId = uploadResult.public_id;
       
-      // Delete old image (best effort)
+      // OPTIMIZED: Delete old image asynchronously (non-blocking)
       if (existingTree?.imagePublicId) {
-        try {
-          await deleteFromCloudinary(existingTree.imagePublicId);
+        deleteFromCloudinary(existingTree.imagePublicId).then(() => {
           logInfo('Old image deleted from Cloudinary', { treeId: id, publicId: existingTree.imagePublicId });
-        } catch (deleteError) {
+        }).catch((deleteError) => {
           logWarning('Failed to delete old image from Cloudinary', { 
             treeId: id, 
             publicId: existingTree.imagePublicId,
             error: deleteError instanceof Error ? deleteError.message : String(deleteError)
           });
-          // Continue with update even if old image deletion fails
-        }
+        });
+        // Don't await - continue with update immediately
       }
     }
 
@@ -434,20 +433,25 @@ export async function PUT(
       updateData.smallImageUrls = filteredUrls;
       updateData.smallImagePublicIds = filteredPublicIds;
 
-      // Delete old small images that were replaced (best effort)
-      for (const oldPublicId of oldPublicIdsToDelete) {
-        try {
-          await deleteFromCloudinary(oldPublicId);
-          logInfo('Old small image deleted from Cloudinary', { treeId: id, publicId: oldPublicId });
-        } catch (deleteError) {
-          logWarning('Failed to delete old small image from Cloudinary', { 
-            treeId: id, 
-            publicId: oldPublicId,
-            error: deleteError instanceof Error ? deleteError.message : String(deleteError)
-          });
-          // Continue even if deletion fails
-        }
-      }
+      // OPTIMIZED: Delete old small images asynchronously in parallel (non-blocking)
+      const deletionPromises = oldPublicIdsToDelete.map(oldPublicId =>
+        deleteFromCloudinary(oldPublicId)
+          .then(() => {
+            logInfo('Old small image deleted from Cloudinary', { treeId: id, publicId: oldPublicId });
+          })
+          .catch((deleteError) => {
+            logWarning('Failed to delete old small image from Cloudinary', { 
+              treeId: id, 
+              publicId: oldPublicId,
+              error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+            });
+          })
+      );
+      
+      // Fire and forget - don't await Cloudinary deletions
+      Promise.all(deletionPromises).catch(() => {
+        // Already logged individual errors above
+      });
     }
 
     // Sanitize string fields
@@ -514,9 +518,15 @@ export async function DELETE(
       );
     }
 
-    const tree = await Tree.findById(id).lean();
+    // OPTIMIZED: Use findByIdAndUpdate to get tree data and soft delete in one operation
+    // Select only fields needed for Cloudinary deletion
+    const updatedTree = await Tree.findByIdAndUpdate(
+      id, 
+      { isActive: false },
+      { new: false } // Return original document to get imagePublicId
+    ).select('imagePublicId smallImagePublicIds name').lean();
 
-    if (!tree) {
+    if (!updatedTree) {
       logWarning('Tree delete failed: tree not found', { treeId: id });
       return NextResponse.json(
         { success: false, error: 'Tree not found' },
@@ -524,39 +534,49 @@ export async function DELETE(
       );
     }
 
-    logInfo('Deleting tree', { treeId: id, name: tree.name });
+    logInfo('Deleting tree', { treeId: id, name: updatedTree.name });
 
-    // Delete image from Cloudinary (best effort)
-    if (tree.imagePublicId) {
-      try {
-        await deleteFromCloudinary(tree.imagePublicId);
-        logInfo('Image deleted from Cloudinary', { treeId: id, publicId: tree.imagePublicId });
-      } catch (imgError) {
-        logWarning('Failed to delete image from Cloudinary', { 
-          treeId: id, 
-          publicId: tree.imagePublicId,
-          error: imgError instanceof Error ? imgError.message : String(imgError)
-        });
-        // Continue with database deletion even if image deletion fails
-      }
-    }
-
-    // Soft delete by setting isActive to false
-    const updatedTree = await Tree.findByIdAndUpdate(
-      id, 
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!updatedTree) {
-      logError('Failed to soft delete tree', new Error('Update returned null'), { treeId: id });
-      return NextResponse.json(
-        { success: false, error: 'Failed to delete tree' },
-        { status: 500 }
+    // OPTIMIZED: Delete images from Cloudinary asynchronously (non-blocking)
+    // Don't wait for Cloudinary deletion - return response immediately
+    const cloudinaryDeletions: Promise<void>[] = [];
+    
+    if (updatedTree.imagePublicId) {
+      cloudinaryDeletions.push(
+        deleteFromCloudinary(updatedTree.imagePublicId).catch((imgError) => {
+          logWarning('Failed to delete image from Cloudinary', { 
+            treeId: id, 
+            publicId: updatedTree.imagePublicId,
+            error: imgError instanceof Error ? imgError.message : String(imgError)
+          });
+        })
       );
     }
 
-    logInfo('Tree deleted successfully', { treeId: id, name: tree.name });
+    // Delete small images if they exist
+    if (updatedTree.smallImagePublicIds && Array.isArray(updatedTree.smallImagePublicIds)) {
+      for (const publicId of updatedTree.smallImagePublicIds) {
+        if (publicId) {
+          cloudinaryDeletions.push(
+            deleteFromCloudinary(publicId).catch((imgError) => {
+              logWarning('Failed to delete small image from Cloudinary', { 
+                treeId: id, 
+                publicId,
+                error: imgError instanceof Error ? imgError.message : String(imgError)
+              });
+            })
+          );
+        }
+      }
+    }
+
+    // Fire and forget - don't await Cloudinary deletions
+    Promise.all(cloudinaryDeletions).then(() => {
+      logInfo('Cloudinary cleanup completed', { treeId: id });
+    }).catch(() => {
+      // Already logged individual errors above
+    });
+
+    logInfo('Tree deleted successfully', { treeId: id, name: updatedTree.name });
 
     return NextResponse.json({
       success: true,

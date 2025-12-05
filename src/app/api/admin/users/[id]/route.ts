@@ -29,26 +29,28 @@ export async function DELETE(
 
     await connectDB();
 
-    // Find user
-    const user = await User.findById(id);
+    // OPTIMIZED: Use findOneAndDelete with query to prevent admin deletion
+    // This is atomic - checks role and deletes in one operation
+    const deletedUser = await User.findOneAndDelete({
+      _id: id,
+      role: { $ne: 'admin' } // Prevent admin deletion
+    });
 
-    if (!user) {
+    if (!deletedUser) {
+      // Check if user exists but is admin
+      const user = await User.findById(id).select('role').lean() as { role: string } | null;
+      if (user && user.role === 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'Cannot delete admin users' },
+          { status: 403 }
+        );
+      }
+      
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
-
-    // Prevent deletion of admin users
-    if (user.role === 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Cannot delete admin users' },
-        { status: 403 }
-      );
-    }
-
-    // Delete the user
-    await User.findByIdAndDelete(id);
 
     return NextResponse.json({
       success: true,

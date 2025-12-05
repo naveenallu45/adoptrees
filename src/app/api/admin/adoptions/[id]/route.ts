@@ -31,8 +31,8 @@ export async function DELETE(
 
     await connectDB();
 
-    // Find and delete the order
-    const order = await Order.findById(id);
+    // OPTIMIZED: Use findByIdAndDelete - single atomic operation
+    const order = await Order.findByIdAndDelete(id);
     
     if (!order) {
       return NextResponse.json(
@@ -40,9 +40,6 @@ export async function DELETE(
         { status: 404 }
       );
     }
-
-    // Delete the order
-    await Order.findByIdAndDelete(id);
 
     return NextResponse.json({
       success: true,

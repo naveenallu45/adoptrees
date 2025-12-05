@@ -33,7 +33,7 @@ import { motion } from 'framer-motion';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useQueryClient } from '@tanstack/react-query';
+import { useAdoptionMutations } from '@/hooks/useAdminMutations';
 
 interface Adoption {
   _id: string;
@@ -123,7 +123,7 @@ export default function AdminAdoptionsPage() {
   });
   const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
 
-  const queryClient = useQueryClient();
+  const { updateAdoption, deleteAdoption } = useAdoptionMutations();
 
   // Fetch all adoptions data once
   const { data: allData, isLoading, error, refetch } = useQuery({
@@ -325,68 +325,13 @@ export default function AdminAdoptionsPage() {
 
     if (!result.isConfirmed) return;
 
-    // OPTIMIZED: Optimistically remove adoption from UI IMMEDIATELY (before API call)
-    const previousData = queryClient.getQueryData<{ data: Adoption[]; metrics?: unknown }>(['admin-adoptions-all']);
-    
-    queryClient.setQueryData(['admin-adoptions-all'], (old: { data: Adoption[]; metrics?: unknown } | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        data: old.data.filter((adoption) => adoption._id !== id)
-      };
-    });
-
+    // Mutation handles optimistic update automatically
     try {
-      const response = await fetch(`/api/admin/adoptions/${id}?t=${Date.now()}`, {
-        method: 'DELETE',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        // If 404, adoption doesn't exist in DB - keep it removed from UI (already deleted)
-        if (response.status === 404) {
-          toast.success('Adoption was already deleted from database.');
-          // Refetch to ensure consistency
-          queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
-          await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
-          return;
-        }
-        
-        // Rollback optimistic update on other errors
-        if (previousData) {
-          queryClient.setQueryData(['admin-adoptions-all'], previousData);
-        }
-        // Show specific error message based on status code
-        if (response.status === 400) {
-          toast.error(data.error || 'Invalid adoption ID. Please refresh the page and try again.');
-        } else {
-          toast.error(data.error || 'Failed to delete adoption. Please try again.');
-        }
-        return;
-      }
-      
-      toast.success('Adoption deleted successfully!');
-      // Refetch to ensure consistency with server (metrics might have changed)
-      queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
-    } catch (error) {
-      // Rollback optimistic update on error
-      if (previousData) {
-        queryClient.setQueryData(['admin-adoptions-all'], previousData);
-      }
-      // Refetch to ensure UI is in sync
-      queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast.error(`Failed to delete adoption: ${errorMessage}`);
+      await deleteAdoption.mutateAsync(id);
+    } catch (_error) {
+      // Error handling is done in the mutation hook
     }
-  }, [queryClient]);
+  }, [deleteAdoption]);
 
   // Define columns
   const columns = useMemo(
@@ -504,13 +449,40 @@ export default function AdminAdoptionsPage() {
       columnHelper.accessor('status', {
         header: 'Status',
         cell: (_info) => {
+          const adoption = _info.row.original;
           const status = _info.getValue();
           const Icon = statusIcons[status];
+          
+          const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+            const newStatus = e.target.value;
+            try {
+              await updateAdoption.mutateAsync({
+                orderId: adoption.orderId,
+                status: newStatus,
+              });
+            } catch (_error) {
+              // Error handling is done in the mutation hook
+            }
+          };
+
           return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[status]}`}>
-              <Icon className="w-3 h-3 mr-1" />
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
+            <div className="flex items-center gap-1">
+              <Icon className="w-3 h-3" />
+              <select
+                value={status}
+                onChange={handleStatusChange}
+                disabled={updateAdoption.isPending}
+                className={`px-2 py-1 rounded text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 ${statusColors[status]} ${
+                  updateAdoption.isPending ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'
+                }`}
+              >
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="planted">Planted</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
           );
         },
       }),
@@ -604,7 +576,7 @@ export default function AdminAdoptionsPage() {
         },
       }),
     ],
-    [handleDelete, handleDownloadCertificate, downloadingCertificate]
+    [handleDelete, handleDownloadCertificate, downloadingCertificate, updateAdoption]
   ) as ColumnDef<Adoption>[];
 
   const table = useReactTable({

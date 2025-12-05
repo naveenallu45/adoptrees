@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useQuery } from '@tanstack/react-query';
+import { useCouponMutations } from '@/hooks/useAdminMutations';
 
 interface Coupon {
   _id: string;
@@ -23,11 +25,33 @@ interface Coupon {
 }
 
 export default function CouponsManagement() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use React Query for data fetching
+  const { data: couponsData, isLoading: loading } = useQuery<{ success: boolean; data: Coupon[] }>({
+    queryKey: ['admin', 'coupons'],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/coupons?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch coupons');
+      }
+      return result;
+    },
+    staleTime: 0,
+    refetchOnMount: true,
+  });
+
+  const coupons = couponsData?.data || [];
+  const { createCoupon, updateCoupon, deleteCoupon } = useCouponMutations();
   const [showForm, setShowForm] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = createCoupon.isPending || updateCoupon.isPending;
   const [formData, setFormData] = useState({
     code: '',
     category: 'individual' as 'individual' | 'company',
@@ -38,39 +62,10 @@ export default function CouponsManagement() {
     isActive: true
   });
 
-  const fetchCoupons = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/admin/coupons?t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        setCoupons(result.data);
-      } else {
-        toast.error(result.error || 'Failed to fetch coupons');
-      }
-    } catch (error) {
-      console.error('Error fetching coupons:', error);
-      toast.error('Failed to fetch coupons');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCoupons();
-  }, [fetchCoupons]);
+  // Data fetching is handled by React Query
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
 
     const payload: {
       code: string;
@@ -92,105 +87,24 @@ export default function CouponsManagement() {
     if (formData.usageLimitType === 'custom') {
       if (!formData.totalUsageLimit || parseInt(formData.totalUsageLimit) < 1) {
         toast.error('Total usage limit is required when usage limit type is custom');
-        setSubmitting(false);
         return;
       }
       payload.totalUsageLimit = parseInt(formData.totalUsageLimit);
     }
 
-    // Optimistic UI: Update immediately before server response
-    const previousCoupons = [...coupons];
-    let optimisticCoupon: Coupon | null = null;
-
-    if (editingCoupon) {
-      // Optimistic update: Update existing coupon in UI immediately
-      optimisticCoupon = {
-        ...editingCoupon,
-        code: payload.code,
-        category: payload.category,
-        discountPercentage: payload.discountPercentage,
-        usageLimitType: payload.usageLimitType,
-        perUserUsageLimit: payload.perUserUsageLimit,
-        isActive: payload.isActive,
-        totalUsageLimit: payload.totalUsageLimit,
-        updatedAt: new Date().toISOString(),
-      };
-      setCoupons(prev => prev.map(coupon => coupon._id === editingCoupon._id ? optimisticCoupon! : coupon));
-    } else {
-      // Optimistic create: Add new coupon to UI immediately with temporary ID
-      const tempId = `temp-${Date.now()}`;
-      optimisticCoupon = {
-        _id: tempId,
-        code: payload.code,
-        category: payload.category,
-        discountPercentage: payload.discountPercentage,
-        usageLimitType: payload.usageLimitType,
-        perUserUsageLimit: payload.perUserUsageLimit,
-        isActive: payload.isActive,
-        totalUsageLimit: payload.totalUsageLimit,
-        usedCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setCoupons(prev => [optimisticCoupon!, ...prev]);
-    }
-
-    // Close form immediately for better UX
+    // Close form immediately for instant UX
     const editingCouponCopy = editingCoupon;
     handleCancel();
 
+    // Use React Query mutations for instant UI updates
     try {
-      const url = editingCouponCopy ? `/api/admin/coupons/${editingCouponCopy._id}` : '/api/admin/coupons';
-      const method = editingCouponCopy ? 'PUT' : 'POST';
-
-      const response = await fetch(`${url}?t=${Date.now()}`, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(editingCouponCopy ? 'Coupon updated successfully' : 'Coupon created successfully');
-        // Refetch to get server data (with proper ID, etc.)
-        await fetchCoupons();
+      if (editingCouponCopy) {
+        await updateCoupon.mutateAsync({ id: editingCouponCopy._id, payload });
       } else {
-        // Rollback on error
-        setCoupons(previousCoupons);
-        setShowForm(true);
-        if (editingCouponCopy) {
-          setEditingCoupon(editingCouponCopy);
-          setFormData({
-            code: editingCouponCopy.code,
-            category: editingCouponCopy.category,
-            discountPercentage: editingCouponCopy.discountPercentage.toString(),
-            usageLimitType: editingCouponCopy.usageLimitType,
-            totalUsageLimit: editingCouponCopy.totalUsageLimit?.toString() || '',
-            perUserUsageLimit: editingCouponCopy.perUserUsageLimit.toString(),
-            isActive: editingCouponCopy.isActive
-          });
-        } else {
-          setFormData({
-            code: payload.code,
-            category: payload.category,
-            discountPercentage: payload.discountPercentage.toString(),
-            usageLimitType: payload.usageLimitType,
-            totalUsageLimit: payload.totalUsageLimit?.toString() || '',
-            perUserUsageLimit: payload.perUserUsageLimit.toString(),
-            isActive: payload.isActive
-          });
-        }
-        toast.error(result.error || 'Failed to save coupon');
+        await createCoupon.mutateAsync(payload);
       }
-    } catch (error) {
-      // Rollback on error
-      setCoupons(previousCoupons);
+    } catch (_error) {
+      // Reopen form on error
       setShowForm(true);
       if (editingCouponCopy) {
         setEditingCoupon(editingCouponCopy);
@@ -214,10 +128,6 @@ export default function CouponsManagement() {
           isActive: payload.isActive
         });
       }
-      console.error('Error saving coupon:', error);
-      toast.error('Failed to save coupon');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -251,50 +161,25 @@ export default function CouponsManagement() {
 
   const handleDelete = useCallback(async (coupon: Coupon) => {
     const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: `Do you want to delete coupon "${coupon.code}"? This action cannot be undone.`,
+      title: 'Delete Coupon?',
+      text: `Are you sure you want to delete coupon "${coupon.code}"? This action cannot be undone!`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#dc2626',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, delete it!',
-      cancelButtonText: 'Cancel'
+      cancelButtonText: 'Cancel',
     });
 
     if (result.isConfirmed) {
-      // Optimistic UI: Remove coupon immediately
-      const previousCoupons = [...coupons];
-      setCoupons(prev => prev.filter(c => c._id !== coupon._id));
-
       try {
-        const response = await fetch(`/api/admin/coupons/${coupon._id}?t=${Date.now()}`, {
-          method: 'DELETE',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
-        });
-
-        const deleteResult = await response.json();
-
-        if (deleteResult.success) {
-          toast.success('Coupon deleted successfully');
-          // Refetch to ensure consistency
-          await fetchCoupons();
-        } else {
-          // Rollback on error
-          setCoupons(previousCoupons);
-          toast.error(deleteResult.error || 'Failed to delete coupon');
-        }
-      } catch (error) {
-        // Rollback on error
-        setCoupons(previousCoupons);
-        console.error('Error deleting coupon:', error);
-        toast.error('Failed to delete coupon');
+        // Mutation handles optimistic update automatically
+        await deleteCoupon.mutateAsync(coupon._id);
+      } catch (_error) {
+        // Error handling is done in the mutation hook
       }
     }
-  }, [coupons, fetchCoupons]);
+  }, [deleteCoupon]);
 
   const columns = useMemo<ColumnDef<Coupon>[]>(
     () => [

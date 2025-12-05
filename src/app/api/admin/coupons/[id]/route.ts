@@ -32,29 +32,36 @@ export async function PUT(
     const body = await request.json();
     const { code, category, discountPercentage, usageLimitType, totalUsageLimit, perUserUsageLimit, isActive } = body;
 
-    // Find coupon
-    const coupon = await Coupon.findById(id);
-    if (!coupon) {
-      return NextResponse.json(
-        { success: false, error: 'Coupon not found' },
-        { status: 404 }
-      );
-    }
+    // OPTIMIZED: Build update object first, then use findByIdAndUpdate
+    const updateData: Record<string, unknown> = {};
 
-    // Validation
-    if (code && code !== coupon.code) {
-      // Check if new code already exists
-      const existingCoupon = await Coupon.findOne({ code: code.toUpperCase().trim(), _id: { $ne: id } });
-      if (existingCoupon) {
+    // Check if code is being changed and validate uniqueness
+    if (code) {
+      const normalizedCode = code.toUpperCase().trim();
+      // Check if new code already exists (only if code is being changed)
+      const existingCoupon = await Coupon.findById(id).select('code').lean() as { code: string } | null;
+      if (!existingCoupon) {
         return NextResponse.json(
-          { success: false, error: 'Coupon code already exists' },
-          { status: 400 }
+          { success: false, error: 'Coupon not found' },
+          { status: 404 }
         );
       }
-      coupon.code = code.toUpperCase().trim();
+      
+      if (normalizedCode !== existingCoupon.code) {
+        const codeExists = await Coupon.findOne({ code: normalizedCode, _id: { $ne: id } });
+        if (codeExists) {
+          return NextResponse.json(
+            { success: false, error: 'Coupon code already exists' },
+            { status: 400 }
+          );
+        }
+        updateData.code = normalizedCode;
+      }
     }
 
-    if (category) coupon.category = category;
+    // Validate and build update object
+    if (category) updateData.category = category;
+    
     if (discountPercentage !== undefined) {
       if (discountPercentage < 1 || discountPercentage > 100) {
         return NextResponse.json(
@@ -62,10 +69,11 @@ export async function PUT(
           { status: 400 }
         );
       }
-      coupon.discountPercentage = discountPercentage;
+      updateData.discountPercentage = discountPercentage;
     }
+    
     if (usageLimitType) {
-      coupon.usageLimitType = usageLimitType;
+      updateData.usageLimitType = usageLimitType;
       if (usageLimitType === 'custom') {
         if (!totalUsageLimit || totalUsageLimit < 1) {
           return NextResponse.json(
@@ -73,11 +81,12 @@ export async function PUT(
             { status: 400 }
           );
         }
-        coupon.totalUsageLimit = totalUsageLimit;
+        updateData.totalUsageLimit = totalUsageLimit;
       } else {
-        coupon.totalUsageLimit = undefined;
+        updateData.totalUsageLimit = undefined;
       }
     }
+    
     if (perUserUsageLimit !== undefined) {
       if (perUserUsageLimit < 1) {
         return NextResponse.json(
@@ -85,11 +94,24 @@ export async function PUT(
           { status: 400 }
         );
       }
-      coupon.perUserUsageLimit = perUserUsageLimit;
+      updateData.perUserUsageLimit = perUserUsageLimit;
     }
-    if (isActive !== undefined) coupon.isActive = isActive;
+    
+    if (isActive !== undefined) updateData.isActive = isActive;
 
-    await coupon.save();
+    // OPTIMIZED: Use findByIdAndUpdate instead of find + save
+    const coupon = await Coupon.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!coupon) {
+      return NextResponse.json(
+        { success: false, error: 'Coupon not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
@@ -8,34 +8,25 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useQuery } from '@tanstack/react-query';
 import { fetchTrees, type Tree } from '@/hooks/useAdminData';
+import { useTreeMutations } from '@/hooks/useAdminMutations';
 import { VALID_LOCAL_USES } from '@/lib/validations/tree';
 
 export default function TreesManagement() {
-  const [trees, setTrees] = useState<Tree[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  // Use React Query for data fetching with instant cache updates
+  const { data: trees = [], isLoading: loading, error, refetch } = useQuery<Tree[]>({
+    queryKey: ['admin', 'trees'],
+    queryFn: fetchTrees,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true,
+  });
 
-  useEffect(() => {
-    const loadTrees = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchTrees();
-        setTrees(data);
-      } catch (err) {
-        console.error('Error loading trees:', err);
-        setError(err instanceof Error ? err : new Error('Failed to load trees'));
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadTrees();
-  }, []);
+  const { createTree, updateTree, deleteTree } = useTreeMutations();
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTree, setEditingTree] = useState<Tree | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = createTree.isPending || updateTree.isPending;
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -58,28 +49,23 @@ export default function TreesManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
     
     // Validate package fields for company and forest trees
     if (formData.treeType === 'company' || formData.treeType === 'forest') {
       if (!formData.packageQuantity || formData.packageQuantity === '') {
         toast.error(`Package quantity is required for ${formData.treeType === 'company' ? 'company' : 'forest'} trees`);
-        setSubmitting(false);
         return;
       }
       if (!formData.packagePrice || formData.packagePrice === '') {
         toast.error(`Package price is required for ${formData.treeType === 'company' ? 'company' : 'forest'} trees`);
-        setSubmitting(false);
         return;
       }
       if (parseInt(formData.packageQuantity) < 1) {
         toast.error('Package quantity must be at least 1');
-        setSubmitting(false);
         return;
       }
       if (parseFloat(formData.packagePrice) <= 0) {
         toast.error('Package price must be greater than 0');
-        setSubmitting(false);
         return;
       }
     }
@@ -89,7 +75,6 @@ export default function TreesManagement() {
       const priceValue = parseFloat(formData.price);
       if (isNaN(priceValue) || priceValue <= 0) {
         toast.error('Price must be a valid positive number');
-        setSubmitting(false);
         return;
       }
     }
@@ -140,62 +125,10 @@ export default function TreesManagement() {
       }
     });
 
-    // Optimistic UI: Update immediately before server response
-    const previousTrees = [...trees];
-    let optimisticTree: Tree | null = null;
-
-    if (editingTree) {
-      // Optimistic update: Update existing tree in UI immediately
-      optimisticTree = {
-        ...editingTree,
-        name: formData.name,
-        price: parseFloat(priceToSend),
-        info: formData.info,
-        oxygenKgs: parseFloat(formData.oxygenKgs),
-        treeType: formData.treeType as 'individual' | 'company' | 'forest',
-        packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : undefined,
-        packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : undefined,
-        scientificSpecies: formData.scientificSpecies || undefined,
-        speciesInfoAvailable: formData.speciesInfoAvailable,
-        co2: formData.co2 ? parseFloat(formData.co2) : undefined,
-        foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : undefined,
-        economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : undefined,
-        co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : undefined,
-        environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : undefined,
-        localUses: formData.localUses,
-      };
-      setTrees(prev => prev.map(tree => tree._id === editingTree._id ? optimisticTree! : tree));
-    } else {
-      // Optimistic create: Add new tree to UI immediately with temporary ID
-      const tempId = `temp-${Date.now()}`;
-      optimisticTree = {
-        _id: tempId,
-        name: formData.name,
-        price: parseFloat(priceToSend),
-        info: formData.info,
-        oxygenKgs: parseFloat(formData.oxygenKgs),
-        imageUrl: formData.image ? URL.createObjectURL(formData.image) : '/placeholder-tree.jpg',
-        treeType: formData.treeType as 'individual' | 'company' | 'forest',
-        packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : undefined,
-        packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : undefined,
-        scientificSpecies: formData.scientificSpecies || undefined,
-        speciesInfoAvailable: formData.speciesInfoAvailable,
-        co2: formData.co2 ? parseFloat(formData.co2) : undefined,
-        foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : undefined,
-        economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : undefined,
-        co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : undefined,
-        environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : undefined,
-        localUses: formData.localUses,
-        smallImageUrls: formData.smallImages.filter(img => img !== null).map(img => URL.createObjectURL(img!)),
-        createdAt: new Date().toISOString(),
-      };
-      setTrees(prev => [optimisticTree!, ...prev]);
-    }
-
-    // Close form immediately for better UX
+    // React Query mutations handle optimistic updates automatically
+    // Close form immediately for instant UX
     setShowForm(false);
     const editingTreeCopy = editingTree;
-    const formDataCopy = { ...formData };
     setEditingTree(null);
     setFormData({
       name: '',
@@ -217,70 +150,36 @@ export default function TreesManagement() {
       smallImages: [null, null, null, null]
     });
 
+    // Use React Query mutations for instant UI updates
     try {
-      const url = editingTreeCopy 
-        ? `/api/admin/trees/${editingTreeCopy._id}?t=${Date.now()}` 
-        : `/api/admin/trees?t=${Date.now()}`;
-      
-      const method = editingTreeCopy ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        body: formDataToSend,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Rollback on error
-        setTrees(previousTrees);
-        setShowForm(true);
-        setEditingTree(editingTreeCopy);
-        setFormData(formDataCopy);
-        
-        // Handle validation errors with details
-        if (data.details && Array.isArray(data.details)) {
-          const errorMessages = data.details.map((detail: { field: string; message: string }) => 
-            `${detail.field}: ${detail.message}`
-          ).join('\n');
-          toast.error(`Validation failed:\n${errorMessages}`, { duration: 5000 });
-        } else {
-          toast.error(data.error || `Failed to ${editingTreeCopy ? 'update' : 'create'} tree`);
-        }
-        setSubmitting(false);
-        return;
-      }
-      
-      if (data.success) {
-        toast.success(editingTreeCopy ? 'Tree updated successfully!' : 'Tree added successfully!');
-        
-        // Refetch trees to get server data (with proper IDs, images, etc.)
-        const refreshedData = await fetchTrees();
-        setTrees(refreshedData);
+      if (editingTreeCopy) {
+        await updateTree.mutateAsync({ id: editingTreeCopy._id, formData: formDataToSend });
       } else {
-        // Rollback on error
-        setTrees(previousTrees);
-        setShowForm(true);
-        setEditingTree(editingTreeCopy);
-        setFormData(formDataCopy);
-        const errorMsg = data.error || 'Failed to save tree';
-        toast.error(errorMsg);
+        await createTree.mutateAsync(formDataToSend);
       }
-    } catch (error) {
-      // Rollback on error
-      setTrees(previousTrees);
+    } catch (_error) {
+      // Reopen form on error
       setShowForm(true);
       setEditingTree(editingTreeCopy);
-      setFormData(formDataCopy);
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast.error(`Failed to ${editingTreeCopy ? 'update' : 'create'} tree: ${errorMessage}`);
-    } finally {
-      setSubmitting(false);
+      setFormData({
+        name: formData.name,
+        price: formData.price,
+        info: formData.info,
+        oxygenKgs: formData.oxygenKgs,
+        treeType: formData.treeType,
+        packageQuantity: formData.packageQuantity,
+        packagePrice: formData.packagePrice,
+        scientificSpecies: formData.scientificSpecies,
+        speciesInfoAvailable: formData.speciesInfoAvailable,
+        co2: formData.co2,
+        foodSecurity: formData.foodSecurity,
+        economicDevelopment: formData.economicDevelopment,
+        co2Absorption: formData.co2Absorption,
+        environmentalProtection: formData.environmentalProtection,
+        localUses: formData.localUses,
+        image: formData.image,
+        smallImages: formData.smallImages
+      });
     }
   };
 
@@ -330,35 +229,15 @@ export default function TreesManagement() {
     if (result.isConfirmed) {
       try {
         setDeleting(id);
-        // Optimistically remove from UI
-        setTrees(prev => prev.filter(tree => tree._id !== id));
-        
-        const response = await fetch(`/api/admin/trees/${id}?t=${Date.now()}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
-        });
-        const data = await response.json();
-        
-        if (!response.ok || !data.success) {
-          // Rollback on error
-          const refreshedData = await fetchTrees();
-          setTrees(refreshedData);
-          throw new Error(data.error || 'Failed to delete tree');
-        }
-        
-        toast.success('Tree deleted successfully!');
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to delete tree');
+        // Mutation handles optimistic update automatically
+        await deleteTree.mutateAsync(id);
+      } catch (_error) {
+        // Error handling is done in the mutation hook
       } finally {
         setDeleting(null);
       }
     }
-  }, []);
+  }, [deleteTree]);
 
   const handleCancel = () => {
     setShowForm(false);
@@ -528,17 +407,9 @@ export default function TreesManagement() {
               {error instanceof Error ? error.message : 'Failed to load trees. Please try again.'}
             </p>
             <button
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  setError(null);
-                  const data = await fetchTrees();
-                  setTrees(data);
-                } catch (err) {
-                  setError(err instanceof Error ? err : new Error('Failed to load trees'));
-                } finally {
-                  setLoading(false);
-                }
+              onClick={() => {
+                // Use React Query's refetch to retry
+                refetch();
               }}
               className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 transition-colors"
             >
@@ -960,6 +831,24 @@ export default function TreesManagement() {
               </div>
             </form>
           </motion.div>
+        )}
+
+        {/* Loading Dialog - Centered on screen (non-blocking) */}
+        {createTree.isPending && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full mx-4 pointer-events-auto">
+              <div className="flex flex-col items-center justify-center gap-4">
+                <svg className="h-12 w-12 animate-spin text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Adding Tree</h3>
+                  <p className="text-sm text-gray-600">Please wait while we add the tree to the system...</p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Data Table with Pagination */}
