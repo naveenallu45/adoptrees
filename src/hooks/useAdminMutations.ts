@@ -20,18 +20,54 @@ export function useTreeMutations() {
       }
       return data.data as Tree;
     },
-    onMutate: async () => {
-      // Cancel outgoing refetches
+    onMutate: async (formData) => {
+      // Cancel outgoing refetches to prevent race conditions
       await queryClient.cancelQueries({ queryKey: ['admin', 'trees'] });
+      // Save previous state for rollback
+      const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
+      
+      // INSTANT OPTIMISTIC UPDATE: Create temporary tree in cache immediately
+      const tempId = `temp-${Date.now()}`;
+      const name = formData.get('name') as string;
+      const priceStr = formData.get('price') as string;
+      const info = formData.get('info') as string;
+      const oxygenKgsStr = formData.get('oxygenKgs') as string;
+      
+      const optimisticTree: Tree = {
+        _id: tempId,
+        name: name || 'New Tree',
+        price: parseFloat(priceStr) || 0,
+        info: info || '',
+        oxygenKgs: parseFloat(oxygenKgsStr) || 0,
+        imageUrl: '/placeholder-tree.jpg',
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Add optimistic tree to cache immediately - UI updates instantly!
+      queryClient.setQueryData<Tree[]>(['admin', 'trees'], (old = []) => [optimisticTree, ...old]);
+      
+      return { previousTrees, tempId };
     },
-    onSuccess: (newTree) => {
-      // Update cache with new tree
-      queryClient.setQueryData<Tree[]>(['admin', 'trees'], (old = []) => [newTree, ...old]);
-      // Invalidate to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+    onSuccess: (newTree, _variables, context) => {
+      // INSTANT UPDATE: Replace optimistic tree with real data from server
+      queryClient.setQueryData<Tree[]>(['admin', 'trees'], (old = []) => {
+        // Remove optimistic tree and add real one
+        const filtered = old.filter((tree) => tree._id !== context?.tempId);
+        return [newTree, ...filtered];
+      });
+      // NO INVALIDATION - data is already updated, no need to refetch
       toast.success('Tree created successfully!');
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error - remove optimistic tree
+      if (context?.previousTrees) {
+        queryClient.setQueryData(['admin', 'trees'], context.previousTrees);
+      } else {
+        // Fallback: remove optimistic tree if no previous state
+        queryClient.setQueryData<Tree[]>(['admin', 'trees'], (old = []) =>
+          old.filter((tree) => tree._id !== context?.tempId)
+        );
+      }
       toast.error(error.message || 'Failed to create tree');
     },
   });
@@ -48,17 +84,40 @@ export function useTreeMutations() {
       }
       return data.data as Tree;
     },
-    onMutate: async ({ id: _id }) => {
+    onMutate: async ({ id, formData }) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'trees'] });
       const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
+      
+      // INSTANT OPTIMISTIC UPDATE: Update cache immediately with form data
+      const name = formData.get('name') as string;
+      const priceStr = formData.get('price') as string;
+      const info = formData.get('info') as string;
+      const oxygenKgsStr = formData.get('oxygenKgs') as string;
+      
+      queryClient.setQueryData<Tree[]>(['admin', 'trees'], (old = []) =>
+        old.map((tree) => {
+          if (tree._id === id) {
+            // Return optimistic update with form data - UI updates instantly!
+            return {
+              ...tree,
+              name: name || tree.name,
+              price: parseFloat(priceStr) || tree.price,
+              info: info || tree.info,
+              oxygenKgs: parseFloat(oxygenKgsStr) || tree.oxygenKgs,
+            } as Tree;
+          }
+          return tree;
+        })
+      );
+      
       return { previousTrees };
     },
     onSuccess: (updatedTree) => {
-      // Optimistically update cache
+      // INSTANT UPDATE: Replace optimistic update with real data from server
       queryClient.setQueryData<Tree[]>(['admin', 'trees'], (old = []) =>
         old.map((tree) => (tree._id === updatedTree._id ? updatedTree : tree))
       );
-      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+      // NO INVALIDATION - data is already updated, no need to refetch
       toast.success('Tree updated successfully!');
     },
     onError: (error, variables, context) => {
@@ -83,14 +142,14 @@ export function useTreeMutations() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'trees'] });
       const previousTrees = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
-      // Optimistically remove from cache
+      // INSTANT UPDATE: Optimistically remove from cache immediately
       queryClient.setQueryData<Tree[]>(['admin', 'trees'], (old = []) =>
         old.filter((tree) => tree._id !== id)
       );
       return { previousTrees };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+      // NO INVALIDATION - data already removed optimistically, no need to refetch
       toast.success('Tree deleted successfully!');
     },
     onError: (error, id, context) => {

@@ -125,10 +125,10 @@ export default function TreesManagement() {
       }
     });
 
-    // React Query mutations handle optimistic updates automatically
-    // Close form immediately for instant UX
+    // Close form immediately for instant UX (before server response)
     setShowForm(false);
     const editingTreeCopy = editingTree;
+    const formDataCopy = { ...formData };
     setEditingTree(null);
     setFormData({
       name: '',
@@ -150,35 +150,27 @@ export default function TreesManagement() {
       smallImages: [null, null, null, null]
     });
 
-    // Use React Query mutations for instant UI updates
-    try {
-      if (editingTreeCopy) {
-        await updateTree.mutateAsync({ id: editingTreeCopy._id, formData: formDataToSend });
-      } else {
-        await createTree.mutateAsync(formDataToSend);
-      }
-    } catch (_error) {
-      // Reopen form on error
-      setShowForm(true);
-      setEditingTree(editingTreeCopy);
-      setFormData({
-        name: formData.name,
-        price: formData.price,
-        info: formData.info,
-        oxygenKgs: formData.oxygenKgs,
-        treeType: formData.treeType,
-        packageQuantity: formData.packageQuantity,
-        packagePrice: formData.packagePrice,
-        scientificSpecies: formData.scientificSpecies,
-        speciesInfoAvailable: formData.speciesInfoAvailable,
-        co2: formData.co2,
-        foodSecurity: formData.foodSecurity,
-        economicDevelopment: formData.economicDevelopment,
-        co2Absorption: formData.co2Absorption,
-        environmentalProtection: formData.environmentalProtection,
-        localUses: formData.localUses,
-        image: formData.image,
-        smallImages: formData.smallImages
+    // Use React Query mutations - fire and forget for instant UI
+    // Errors are handled in mutation callbacks
+    if (editingTreeCopy) {
+      updateTree.mutate(
+        { id: editingTreeCopy._id, formData: formDataToSend },
+        {
+          onError: () => {
+            // Reopen form on error
+            setShowForm(true);
+            setEditingTree(editingTreeCopy);
+            setFormData(formDataCopy);
+          }
+        }
+      );
+    } else {
+      createTree.mutate(formDataToSend, {
+        onError: () => {
+          // Reopen form on error
+          setShowForm(true);
+          setFormData(formDataCopy);
+        }
       });
     }
   };
