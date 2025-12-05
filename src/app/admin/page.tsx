@@ -5,12 +5,29 @@ import { UserIcon, BuildingOfficeIcon, CurrencyRupeeIcon, HeartIcon } from '@her
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { useAdminStats, type AdminStats } from '@/hooks/useAdminData';
+import { useState, useEffect } from 'react';
+import { fetchAdminStats, type AdminStats } from '@/hooks/useAdminData';
 
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
-  const { data: stats, isLoading: loading } = useAdminStats();
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchAdminStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Error loading admin stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStats();
+  }, []);
   
   // Type assertion to help TypeScript understand the type
   const typedStats = stats as AdminStats | undefined;

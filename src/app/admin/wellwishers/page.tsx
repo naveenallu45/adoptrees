@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   HeartIcon, 
@@ -9,13 +9,11 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { AdminDataTable } from '@/components/Admin/AdminDataTable';
-import { useWellWishers, type WellWisher } from '@/hooks/useAdminData';
-import { useQueryClient } from '@tanstack/react-query';
+import { fetchWellWishers, type WellWisher } from '@/hooks/useAdminData';
 
 export default function AdminWellWishersPage() {
-  const queryClient = useQueryClient();
-  const { data: wellWishersData, isLoading: loading } = useWellWishers();
-  const wellWishers = (wellWishersData || []) as WellWisher[];
+  const [wellWishers, setWellWishers] = useState<WellWisher[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingWellWisher, setEditingWellWisher] = useState<WellWisher | null>(null);
@@ -38,11 +36,41 @@ export default function AdminWellWishersPage() {
     password: '',
   });
 
+  useEffect(() => {
+    const loadWellWishers = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchWellWishers();
+        setWellWishers(data);
+      } catch (error) {
+        console.error('Error loading well-wishers:', error);
+        toast.error('Failed to load well-wishers');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadWellWishers();
+  }, []);
 
   const handleRegisterWellWisher = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // No cache manipulation - always fetch fresh from server
+    // Optimistic UI: Add new well-wisher immediately
+    const previousWellWishers = [...wellWishers];
+    const tempId = `temp-${Date.now()}`;
+    const optimisticWellWisher: WellWisher = {
+      _id: tempId,
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || undefined,
+      createdAt: new Date().toISOString(),
+      upcomingTasks: 0,
+      ongoingTasks: 0,
+      completedTasks: 0,
+      updatingTasks: 0,
+      hasPassword: true,
+    };
+    setWellWishers(prev => [optimisticWellWisher, ...prev]);
 
     // Close form immediately for better UX
     setShowRegisterForm(false);
@@ -64,7 +92,8 @@ export default function AdminWellWishersPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // Reopen form on error
+        // Rollback on error
+        setWellWishers(previousWellWishers);
         setShowRegisterForm(true);
         setFormData(formDataCopy);
         toast.error(data.message || data.errors?.[0]?.message || 'Failed to register well-wisher');
@@ -73,15 +102,12 @@ export default function AdminWellWishersPage() {
 
       toast.success('Well-wisher registered successfully!');
       
-      // Invalidate and immediately refetch to show instant updates
-      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
-      ]);
+      // Refetch well-wishers to get server data (with proper ID, etc.)
+      const refreshedData = await fetchWellWishers();
+      setWellWishers(refreshedData);
     } catch (error) {
-      // Reopen form on error
+      // Rollback on error
+      setWellWishers(previousWellWishers);
       setShowRegisterForm(true);
       setFormData(formDataCopy);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
@@ -127,25 +153,16 @@ export default function AdminWellWishersPage() {
     
     if (!editingWellWisher) return;
 
-    // No cache manipulation - always fetch fresh from server
+    // Optimistic UI: Update well-wisher immediately
+    const previousWellWishers = [...wellWishers];
     const wellWisherId = String(editingWellWisher._id);
-
-    // Optimistic update for UPDATE operation
-    queryClient.setQueryData(['admin', 'wellwishers'], (old: WellWisher[] | undefined) => {
-      if (!old) return old;
-      return old.map(wellWisher => {
-        if (wellWisher._id === wellWisherId) {
-          return {
-            ...wellWisher,
-            name: editFormData.name,
-            email: editFormData.email,
-            phone: editFormData.phone || undefined,
-            hasPassword: editFormData.password ? true : wellWisher.hasPassword,
-          };
-        }
-        return wellWisher;
-      });
-    });
+    const optimisticWellWisher: WellWisher = {
+      ...editingWellWisher,
+      name: editFormData.name,
+      email: editFormData.email,
+      phone: editFormData.phone || undefined,
+    };
+    setWellWishers(prev => prev.map(ww => ww._id === wellWisherId ? optimisticWellWisher : ww));
 
     // Close form immediately for better UX
     setShowEditForm(false);
@@ -169,7 +186,8 @@ export default function AdminWellWishersPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // Reopen form on error
+        // Rollback on error
+        setWellWishers(previousWellWishers);
         setShowEditForm(true);
         setEditingWellWisher(editingWellWisherCopy);
         setEditFormData(editFormDataCopy);
@@ -186,15 +204,12 @@ export default function AdminWellWishersPage() {
       
       toast.success('Well-wisher updated successfully!');
       
-      // Invalidate and immediately refetch to show instant updates
-      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
-      ]);
+      // Refetch well-wishers to get server data
+      const refreshedData = await fetchWellWishers();
+      setWellWishers(refreshedData);
     } catch (error) {
-      // Reopen form on error
+      // Rollback on error
+      setWellWishers(previousWellWishers);
       setShowEditForm(true);
       setEditingWellWisher(editingWellWisherCopy);
       setEditFormData(editFormDataCopy);
@@ -214,7 +229,9 @@ export default function AdminWellWishersPage() {
     // Ensure ID is a string
     const wellWisherId = String(deletingWellWisher._id);
     
-    // No cache manipulation - wait for server response
+    // Optimistic UI: Remove well-wisher immediately
+    const previousWellWishers = [...wellWishers];
+    setWellWishers(prev => prev.filter(ww => ww._id !== wellWisherId));
 
     // Close confirmation modal immediately for better UX
     setShowDeleteConfirm(false);
@@ -233,6 +250,8 @@ export default function AdminWellWishersPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        // Rollback on error
+        setWellWishers(previousWellWishers);
         // Show specific error message based on status code
         if (response.status === 400) {
           toast.error(data.message || 'Invalid well-wisher ID. Please refresh the page and try again.');
@@ -243,14 +262,12 @@ export default function AdminWellWishersPage() {
       }
       
       toast.success('Well-wisher deleted successfully!');
-      // Invalidate and immediately refetch to show instant updates
-      queryClient.invalidateQueries({ queryKey: ['admin', 'wellwishers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['admin', 'wellwishers'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
-      ]);
+      // Refetch well-wishers to ensure consistency
+      const refreshedData = await fetchWellWishers();
+      setWellWishers(refreshedData);
     } catch (error) {
+      // Rollback on error
+      setWellWishers(previousWellWishers);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(`Error deleting well-wisher: ${errorMessage}`);
     }

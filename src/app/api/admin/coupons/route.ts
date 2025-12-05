@@ -4,7 +4,7 @@ import Coupon from '@/models/Coupon';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
 
 // GET - Fetch all coupons
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -24,12 +24,42 @@ export async function GET(_request: NextRequest) {
 
     await connectDB();
 
-    const coupons = await Coupon.find({}).sort({ createdAt: -1 }).lean();
+    // Parse pagination params (optional)
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '1000'); // Default to 1000 for admin
+    const skip = (page - 1) * limit;
+    const usePagination = searchParams.get('paginate') === 'true';
 
-    return NextResponse.json({
-      success: true,
-      data: coupons
-    });
+    if (usePagination) {
+      // Paginated query
+      const totalCount = await Coupon.countDocuments({});
+      
+      const coupons = await Coupon.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      return NextResponse.json({
+        success: true,
+        data: coupons,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit)
+        }
+      });
+    } else {
+      // Non-paginated query (for admin dashboard)
+      const coupons = await Coupon.find({}).sort({ createdAt: -1 }).lean();
+
+      return NextResponse.json({
+        success: true,
+        data: coupons
+      });
+    }
   } catch (error) {
     console.error('Error fetching coupons:', error);
     return NextResponse.json(

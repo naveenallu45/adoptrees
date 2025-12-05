@@ -141,6 +141,39 @@ export default function DemoRequestsPage() {
     });
 
     if (result.isConfirmed) {
+      // Optimistic UI: Remove request immediately
+      const previousData = queryClient.getQueryData<{
+        success: boolean;
+        data: DemoRequest[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          pages: number;
+        };
+      }>(['demo-requests', statusFilter]);
+
+      queryClient.setQueryData<{
+        success: boolean;
+        data: DemoRequest[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          pages: number;
+        };
+      }>(['demo-requests', statusFilter], (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          data: oldData.data.filter((request: DemoRequest) => request._id !== id),
+          pagination: {
+            ...oldData.pagination,
+            total: oldData.pagination.total - 1,
+          },
+        };
+      });
+
       try {
         const response = await fetch(`/api/demo-requests/${id}?t=${Date.now()}`, {
           method: 'DELETE',
@@ -154,14 +187,22 @@ export default function DemoRequestsPage() {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
+          // Rollback on error
+          if (previousData) {
+            queryClient.setQueryData(['demo-requests', statusFilter], previousData);
+          }
           throw new Error(result.error || 'Failed to delete request');
         }
 
         toast.success('Demo request deleted successfully');
-        // Invalidate and immediately refetch queries for instant updates
+        // Refetch to ensure consistency
         queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
         await queryClient.refetchQueries({ queryKey: ['demo-requests'], type: 'active' });
       } catch (error) {
+        // Rollback on error
+        if (previousData) {
+          queryClient.setQueryData(['demo-requests', statusFilter], previousData);
+        }
         toast.error(error instanceof Error ? error.message : 'Failed to delete request');
       }
     }
@@ -169,6 +210,40 @@ export default function DemoRequestsPage() {
 
   const handleUpdateNotes = async () => {
     if (!selectedRequest) return;
+
+    // Optimistic UI: Update notes immediately
+    const previousData = queryClient.getQueryData<{
+      success: boolean;
+      data: DemoRequest[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+      };
+    }>(['demo-requests', statusFilter]);
+
+    queryClient.setQueryData<{
+      success: boolean;
+      data: DemoRequest[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+      };
+    }>(['demo-requests', statusFilter], (oldData) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        data: oldData.data.map((request: DemoRequest) =>
+          request._id === selectedRequest._id ? { ...request, notes } : request
+        ),
+      };
+    });
+
+    // Update selected request optimistically
+    setSelectedRequest({ ...selectedRequest, notes });
 
     setIsUpdating(true);
     try {
@@ -186,16 +261,26 @@ export default function DemoRequestsPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
+        // Rollback on error
+        if (previousData) {
+          queryClient.setQueryData(['demo-requests', statusFilter], previousData);
+        }
+        setSelectedRequest(selectedRequest);
         throw new Error(result.error || 'Failed to update notes');
       }
 
       toast.success('Notes updated successfully');
       setSelectedRequest(null);
       setNotes('');
-      // Invalidate and immediately refetch queries for instant updates
+      // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['demo-requests'] });
       await queryClient.refetchQueries({ queryKey: ['demo-requests'], type: 'active' });
     } catch (error) {
+      // Rollback on error
+      if (previousData) {
+        queryClient.setQueryData(['demo-requests', statusFilter], previousData);
+      }
+      setSelectedRequest(selectedRequest);
       toast.error(error instanceof Error ? error.message : 'Failed to update notes');
     } finally {
       setIsUpdating(false);

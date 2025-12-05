@@ -7,7 +7,6 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface Coupon {
   _id: string;
@@ -24,7 +23,6 @@ interface Coupon {
 }
 
 export default function CouponsManagement() {
-  const queryClient = useQueryClient();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -74,35 +72,76 @@ export default function CouponsManagement() {
     e.preventDefault();
     setSubmitting(true);
 
-    try {
-      const payload: {
-        code: string;
-        category: 'individual' | 'company';
-        discountPercentage: number;
-        usageLimitType: 'unlimited' | 'custom';
-        perUserUsageLimit: number;
-        isActive: boolean;
-        totalUsageLimit?: number;
-      } = {
-        code: formData.code,
-        category: formData.category,
-        discountPercentage: parseFloat(formData.discountPercentage),
-        usageLimitType: formData.usageLimitType,
-        perUserUsageLimit: parseInt(formData.perUserUsageLimit),
-        isActive: formData.isActive
-      };
+    const payload: {
+      code: string;
+      category: 'individual' | 'company';
+      discountPercentage: number;
+      usageLimitType: 'unlimited' | 'custom';
+      perUserUsageLimit: number;
+      isActive: boolean;
+      totalUsageLimit?: number;
+    } = {
+      code: formData.code,
+      category: formData.category,
+      discountPercentage: parseFloat(formData.discountPercentage),
+      usageLimitType: formData.usageLimitType,
+      perUserUsageLimit: parseInt(formData.perUserUsageLimit),
+      isActive: formData.isActive
+    };
 
-      if (formData.usageLimitType === 'custom') {
-        if (!formData.totalUsageLimit || parseInt(formData.totalUsageLimit) < 1) {
-          toast.error('Total usage limit is required when usage limit type is custom');
-          setSubmitting(false);
-          return;
-        }
-        payload.totalUsageLimit = parseInt(formData.totalUsageLimit);
+    if (formData.usageLimitType === 'custom') {
+      if (!formData.totalUsageLimit || parseInt(formData.totalUsageLimit) < 1) {
+        toast.error('Total usage limit is required when usage limit type is custom');
+        setSubmitting(false);
+        return;
       }
+      payload.totalUsageLimit = parseInt(formData.totalUsageLimit);
+    }
 
-      const url = editingCoupon ? `/api/admin/coupons/${editingCoupon._id}` : '/api/admin/coupons';
-      const method = editingCoupon ? 'PUT' : 'POST';
+    // Optimistic UI: Update immediately before server response
+    const previousCoupons = [...coupons];
+    let optimisticCoupon: Coupon | null = null;
+
+    if (editingCoupon) {
+      // Optimistic update: Update existing coupon in UI immediately
+      optimisticCoupon = {
+        ...editingCoupon,
+        code: payload.code,
+        category: payload.category,
+        discountPercentage: payload.discountPercentage,
+        usageLimitType: payload.usageLimitType,
+        perUserUsageLimit: payload.perUserUsageLimit,
+        isActive: payload.isActive,
+        totalUsageLimit: payload.totalUsageLimit,
+        updatedAt: new Date().toISOString(),
+      };
+      setCoupons(prev => prev.map(coupon => coupon._id === editingCoupon._id ? optimisticCoupon! : coupon));
+    } else {
+      // Optimistic create: Add new coupon to UI immediately with temporary ID
+      const tempId = `temp-${Date.now()}`;
+      optimisticCoupon = {
+        _id: tempId,
+        code: payload.code,
+        category: payload.category,
+        discountPercentage: payload.discountPercentage,
+        usageLimitType: payload.usageLimitType,
+        perUserUsageLimit: payload.perUserUsageLimit,
+        isActive: payload.isActive,
+        totalUsageLimit: payload.totalUsageLimit,
+        usedCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setCoupons(prev => [optimisticCoupon!, ...prev]);
+    }
+
+    // Close form immediately for better UX
+    const editingCouponCopy = editingCoupon;
+    handleCancel();
+
+    try {
+      const url = editingCouponCopy ? `/api/admin/coupons/${editingCouponCopy._id}` : '/api/admin/coupons';
+      const method = editingCouponCopy ? 'PUT' : 'POST';
 
       const response = await fetch(`${url}?t=${Date.now()}`, {
         method,
@@ -118,16 +157,63 @@ export default function CouponsManagement() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success(editingCoupon ? 'Coupon updated successfully' : 'Coupon created successfully');
-        handleCancel();
-        // Invalidate and immediately refetch to show instant updates
-        queryClient.invalidateQueries({ queryKey: ['coupons'] });
+        toast.success(editingCouponCopy ? 'Coupon updated successfully' : 'Coupon created successfully');
+        // Refetch to get server data (with proper ID, etc.)
         await fetchCoupons();
-        await queryClient.refetchQueries({ queryKey: ['coupons'], type: 'active' });
       } else {
+        // Rollback on error
+        setCoupons(previousCoupons);
+        setShowForm(true);
+        if (editingCouponCopy) {
+          setEditingCoupon(editingCouponCopy);
+          setFormData({
+            code: editingCouponCopy.code,
+            category: editingCouponCopy.category,
+            discountPercentage: editingCouponCopy.discountPercentage.toString(),
+            usageLimitType: editingCouponCopy.usageLimitType,
+            totalUsageLimit: editingCouponCopy.totalUsageLimit?.toString() || '',
+            perUserUsageLimit: editingCouponCopy.perUserUsageLimit.toString(),
+            isActive: editingCouponCopy.isActive
+          });
+        } else {
+          setFormData({
+            code: payload.code,
+            category: payload.category,
+            discountPercentage: payload.discountPercentage.toString(),
+            usageLimitType: payload.usageLimitType,
+            totalUsageLimit: payload.totalUsageLimit?.toString() || '',
+            perUserUsageLimit: payload.perUserUsageLimit.toString(),
+            isActive: payload.isActive
+          });
+        }
         toast.error(result.error || 'Failed to save coupon');
       }
     } catch (error) {
+      // Rollback on error
+      setCoupons(previousCoupons);
+      setShowForm(true);
+      if (editingCouponCopy) {
+        setEditingCoupon(editingCouponCopy);
+        setFormData({
+          code: editingCouponCopy.code,
+          category: editingCouponCopy.category,
+          discountPercentage: editingCouponCopy.discountPercentage.toString(),
+          usageLimitType: editingCouponCopy.usageLimitType,
+          totalUsageLimit: editingCouponCopy.totalUsageLimit?.toString() || '',
+          perUserUsageLimit: editingCouponCopy.perUserUsageLimit.toString(),
+          isActive: editingCouponCopy.isActive
+        });
+      } else {
+        setFormData({
+          code: payload.code,
+          category: payload.category,
+          discountPercentage: payload.discountPercentage.toString(),
+          usageLimitType: payload.usageLimitType,
+          totalUsageLimit: payload.totalUsageLimit?.toString() || '',
+          perUserUsageLimit: payload.perUserUsageLimit.toString(),
+          isActive: payload.isActive
+        });
+      }
       console.error('Error saving coupon:', error);
       toast.error('Failed to save coupon');
     } finally {
@@ -176,6 +262,10 @@ export default function CouponsManagement() {
     });
 
     if (result.isConfirmed) {
+      // Optimistic UI: Remove coupon immediately
+      const previousCoupons = [...coupons];
+      setCoupons(prev => prev.filter(c => c._id !== coupon._id));
+
       try {
         const response = await fetch(`/api/admin/coupons/${coupon._id}?t=${Date.now()}`, {
           method: 'DELETE',
@@ -190,19 +280,21 @@ export default function CouponsManagement() {
 
         if (deleteResult.success) {
           toast.success('Coupon deleted successfully');
-          // Invalidate and immediately refetch to show instant updates
-          queryClient.invalidateQueries({ queryKey: ['coupons'] });
+          // Refetch to ensure consistency
           await fetchCoupons();
-          await queryClient.refetchQueries({ queryKey: ['coupons'], type: 'active' });
         } else {
+          // Rollback on error
+          setCoupons(previousCoupons);
           toast.error(deleteResult.error || 'Failed to delete coupon');
         }
       } catch (error) {
+        // Rollback on error
+        setCoupons(previousCoupons);
         console.error('Error deleting coupon:', error);
         toast.error('Failed to delete coupon');
       }
     }
-  }, [fetchCoupons, queryClient]);
+  }, [coupons, fetchCoupons]);
 
   const columns = useMemo<ColumnDef<Coupon>[]>(
     () => [

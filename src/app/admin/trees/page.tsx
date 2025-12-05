@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
@@ -8,14 +8,31 @@ import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useTrees, type Tree } from '@/hooks/useAdminData';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { fetchTrees, type Tree } from '@/hooks/useAdminData';
 import { VALID_LOCAL_USES } from '@/lib/validations/tree';
 
 export default function TreesManagement() {
-  const queryClient = useQueryClient();
-  const { data: treesData, isLoading: loading, error, isError } = useTrees();
-  const trees = (treesData || []) as Tree[];
+  const [trees, setTrees] = useState<Tree[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadTrees = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchTrees();
+        setTrees(data);
+      } catch (err) {
+        console.error('Error loading trees:', err);
+        setError(err instanceof Error ? err : new Error('Failed to load trees'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTrees();
+  }, []);
   const [showForm, setShowForm] = useState(false);
   const [editingTree, setEditingTree] = useState<Tree | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -123,14 +140,89 @@ export default function TreesManagement() {
       }
     });
 
-    // No cache manipulation - always fetch fresh from server
+    // Optimistic UI: Update immediately before server response
+    const previousTrees = [...trees];
+    let optimisticTree: Tree | null = null;
+
+    if (editingTree) {
+      // Optimistic update: Update existing tree in UI immediately
+      optimisticTree = {
+        ...editingTree,
+        name: formData.name,
+        price: parseFloat(priceToSend),
+        info: formData.info,
+        oxygenKgs: parseFloat(formData.oxygenKgs),
+        treeType: formData.treeType as 'individual' | 'company' | 'forest',
+        packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : undefined,
+        packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : undefined,
+        scientificSpecies: formData.scientificSpecies || undefined,
+        speciesInfoAvailable: formData.speciesInfoAvailable,
+        co2: formData.co2 ? parseFloat(formData.co2) : undefined,
+        foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : undefined,
+        economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : undefined,
+        co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : undefined,
+        environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : undefined,
+        localUses: formData.localUses,
+      };
+      setTrees(prev => prev.map(tree => tree._id === editingTree._id ? optimisticTree! : tree));
+    } else {
+      // Optimistic create: Add new tree to UI immediately with temporary ID
+      const tempId = `temp-${Date.now()}`;
+      optimisticTree = {
+        _id: tempId,
+        name: formData.name,
+        price: parseFloat(priceToSend),
+        info: formData.info,
+        oxygenKgs: parseFloat(formData.oxygenKgs),
+        imageUrl: formData.image ? URL.createObjectURL(formData.image) : '/placeholder-tree.jpg',
+        treeType: formData.treeType as 'individual' | 'company' | 'forest',
+        packageQuantity: formData.packageQuantity ? parseInt(formData.packageQuantity) : undefined,
+        packagePrice: formData.packagePrice ? parseFloat(formData.packagePrice) : undefined,
+        scientificSpecies: formData.scientificSpecies || undefined,
+        speciesInfoAvailable: formData.speciesInfoAvailable,
+        co2: formData.co2 ? parseFloat(formData.co2) : undefined,
+        foodSecurity: formData.foodSecurity ? parseFloat(formData.foodSecurity) : undefined,
+        economicDevelopment: formData.economicDevelopment ? parseFloat(formData.economicDevelopment) : undefined,
+        co2Absorption: formData.co2Absorption ? parseFloat(formData.co2Absorption) : undefined,
+        environmentalProtection: formData.environmentalProtection ? parseFloat(formData.environmentalProtection) : undefined,
+        localUses: formData.localUses,
+        smallImageUrls: formData.smallImages.filter(img => img !== null).map(img => URL.createObjectURL(img!)),
+        createdAt: new Date().toISOString(),
+      };
+      setTrees(prev => [optimisticTree!, ...prev]);
+    }
+
+    // Close form immediately for better UX
+    setShowForm(false);
+    const editingTreeCopy = editingTree;
+    const formDataCopy = { ...formData };
+    setEditingTree(null);
+    setFormData({
+      name: '',
+      price: '',
+      info: '',
+      oxygenKgs: '',
+      treeType: 'individual',
+      packageQuantity: '',
+      packagePrice: '',
+      scientificSpecies: '',
+      speciesInfoAvailable: false,
+      co2: '',
+      foodSecurity: '',
+      economicDevelopment: '',
+      co2Absorption: '',
+      environmentalProtection: '',
+      localUses: [],
+      image: null,
+      smallImages: [null, null, null, null]
+    });
 
     try {
-      const url = editingTree 
-        ? `/api/admin/trees/${editingTree._id}?t=${Date.now()}` 
+      const url = editingTreeCopy 
+        ? `/api/admin/trees/${editingTreeCopy._id}?t=${Date.now()}` 
         : `/api/admin/trees?t=${Date.now()}`;
       
-      const method = editingTree ? 'PUT' : 'POST';
+      const method = editingTreeCopy ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
         method,
@@ -145,6 +237,12 @@ export default function TreesManagement() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Rollback on error
+        setTrees(previousTrees);
+        setShowForm(true);
+        setEditingTree(editingTreeCopy);
+        setFormData(formDataCopy);
+        
         // Handle validation errors with details
         if (data.details && Array.isArray(data.details)) {
           const errorMessages = data.details.map((detail: { field: string; message: string }) => 
@@ -152,50 +250,35 @@ export default function TreesManagement() {
           ).join('\n');
           toast.error(`Validation failed:\n${errorMessages}`, { duration: 5000 });
         } else {
-          toast.error(data.error || `Failed to ${editingTree ? 'update' : 'create'} tree`);
+          toast.error(data.error || `Failed to ${editingTreeCopy ? 'update' : 'create'} tree`);
         }
+        setSubmitting(false);
         return;
       }
       
       if (data.success) {
-        toast.success(editingTree ? 'Tree updated successfully!' : 'Tree added successfully!');
+        toast.success(editingTreeCopy ? 'Tree updated successfully!' : 'Tree added successfully!');
         
-        // Invalidate and immediately refetch queries to show instant updates
-        queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-        await Promise.all([
-          queryClient.refetchQueries({ queryKey: ['admin', 'trees'], type: 'active' }),
-          queryClient.refetchQueries({ queryKey: ['admin', 'stats'], type: 'active' })
-        ]);
-
-        setShowForm(false);
-        setEditingTree(null);
-        setFormData({
-          name: '',
-          price: '',
-          info: '',
-          oxygenKgs: '',
-          treeType: 'individual',
-          packageQuantity: '',
-          packagePrice: '',
-          scientificSpecies: '',
-          speciesInfoAvailable: false,
-          co2: '',
-          foodSecurity: '',
-          economicDevelopment: '',
-          co2Absorption: '',
-          environmentalProtection: '',
-          localUses: [],
-          image: null,
-          smallImages: [null, null, null, null]
-        });
+        // Refetch trees to get server data (with proper IDs, images, etc.)
+        const refreshedData = await fetchTrees();
+        setTrees(refreshedData);
       } else {
+        // Rollback on error
+        setTrees(previousTrees);
+        setShowForm(true);
+        setEditingTree(editingTreeCopy);
+        setFormData(formDataCopy);
         const errorMsg = data.error || 'Failed to save tree';
         toast.error(errorMsg);
       }
     } catch (error) {
+      // Rollback on error
+      setTrees(previousTrees);
+      setShowForm(true);
+      setEditingTree(editingTreeCopy);
+      setFormData(formDataCopy);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast.error(`Failed to ${editingTree ? 'update' : 'create'} tree: ${errorMessage}`);
+      toast.error(`Failed to ${editingTreeCopy ? 'update' : 'create'} tree: ${errorMessage}`);
     } finally {
       setSubmitting(false);
     }
@@ -226,56 +309,6 @@ export default function TreesManagement() {
     setShowForm(true);
   };
 
-  // OPTIMISTIC DELETE: Update UI instantly before server responds
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/admin/trees/${id}?t=${Date.now()}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to delete tree');
-      }
-      return data;
-    },
-    // OPTIMISTIC UPDATE: Remove tree from cache immediately (UI updates instantly)
-    onMutate: async (id: string) => {
-      await queryClient.cancelQueries({ queryKey: ['admin', 'trees'] });
-      
-      const previousData = queryClient.getQueryData<Tree[]>(['admin', 'trees']);
-      
-      // Update cache immediately - tree disappears from table instantly
-      if (previousData) {
-        queryClient.setQueryData(['admin', 'trees'], 
-          previousData.filter(tree => tree._id !== id)
-        );
-      }
-      
-      return { previousData };
-    },
-    onError: (error, id, context) => {
-      // Rollback on error
-      if (context?.previousData) {
-        queryClient.setQueryData(['admin', 'trees'], context.previousData);
-      }
-      toast.error(error.message || 'Failed to delete tree');
-    },
-    onSuccess: () => {
-      toast.success('Tree deleted successfully!');
-    },
-    onSettled: () => {
-      // Background sync
-      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-    },
-  });
-
   const handleDelete = useCallback(async (id: string) => {
     const result = await Swal.fire({
       title: 'Delete Tree?',
@@ -295,10 +328,37 @@ export default function TreesManagement() {
     });
 
     if (result.isConfirmed) {
-      // UI updates instantly via optimistic update
-      deleteMutation.mutate(id);
+      try {
+        setDeleting(id);
+        // Optimistically remove from UI
+        setTrees(prev => prev.filter(tree => tree._id !== id));
+        
+        const response = await fetch(`/api/admin/trees/${id}?t=${Date.now()}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+        });
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          // Rollback on error
+          const refreshedData = await fetchTrees();
+          setTrees(refreshedData);
+          throw new Error(data.error || 'Failed to delete tree');
+        }
+        
+        toast.success('Tree deleted successfully!');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to delete tree');
+      } finally {
+        setDeleting(null);
+      }
     }
-  }, [deleteMutation]);
+  }, []);
 
   const handleCancel = () => {
     setShowForm(false);
@@ -431,7 +491,7 @@ export default function TreesManagement() {
             </button>
             <button
               onClick={() => handleDelete(row.original._id)}
-              disabled={deleteMutation.isPending}
+              disabled={deleting === row.original._id}
               className="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Delete"
             >
@@ -442,7 +502,7 @@ export default function TreesManagement() {
         enableSorting: false,
       },
     ],
-    [handleDelete, deleteMutation.isPending]
+    [handleDelete, deleting]
   );
 
   if (loading && trees.length === 0) {
@@ -453,7 +513,7 @@ export default function TreesManagement() {
     );
   }
 
-  if (isError) {
+  if (error && trees.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="mx-auto max-w-7xl">
@@ -468,7 +528,18 @@ export default function TreesManagement() {
               {error instanceof Error ? error.message : 'Failed to load trees. Please try again.'}
             </p>
             <button
-              onClick={() => queryClient.refetchQueries({ queryKey: ['admin', 'trees'] })}
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  setError(null);
+                  const data = await fetchTrees();
+                  setTrees(data);
+                } catch (err) {
+                  setError(err instanceof Error ? err : new Error('Failed to load trees'));
+                } finally {
+                  setLoading(false);
+                }
+              }}
               className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 transition-colors"
             >
               Try Again

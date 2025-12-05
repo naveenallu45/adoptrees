@@ -51,91 +51,72 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
-    // Calculate real task counts for each well-wisher
-    const wellWishersWithStats = await Promise.all(
-      wellWishers.map(async (wellWisher) => {
-        const wellWisherId = String(wellWisher._id);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    // OPTIMIZED: Calculate all task counts in a single aggregation pipeline
+    // This replaces N*4 queries with a single query
+    const wellWisherIds = wellWishers.map(ww => String(ww._id));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-        // Calculate task counts using aggregation
-        const [upcomingResult, ongoingResult, completedResult, updatingResult] = await Promise.all([
-          // Upcoming tasks (pending)
-          Order.aggregate([
-            {
-              $match: {
-                assignedWellwisher: wellWisherId,
-                wellwisherTasks: { $exists: true, $ne: [] }
-              }
-            },
-            { $unwind: '$wellwisherTasks' },
-            {
-              $match: {
-                'wellwisherTasks.status': 'pending'
-              }
-            },
-            { $count: 'total' }
-          ]),
-          // Ongoing tasks (in_progress)
-          Order.aggregate([
-            {
-              $match: {
-                assignedWellwisher: wellWisherId,
-                wellwisherTasks: { $exists: true, $ne: [] }
-              }
-            },
-            { $unwind: '$wellwisherTasks' },
-            {
-              $match: {
-                'wellwisherTasks.status': 'in_progress'
-              }
-            },
-            { $count: 'total' }
-          ]),
-          // Completed tasks
-          Order.aggregate([
-            {
-              $match: {
-                assignedWellwisher: wellWisherId,
-                wellwisherTasks: { $exists: true, $ne: [] }
-              }
-            },
-            { $unwind: '$wellwisherTasks' },
-            {
-              $match: {
-                'wellwisherTasks.status': 'completed'
-              }
-            },
-            { $count: 'total' }
-          ]),
-          // Updating tasks (completed tasks needing growth update)
-          Order.aggregate([
-            {
-              $match: {
-                assignedWellwisher: wellWisherId,
-                wellwisherTasks: { $exists: true, $ne: [] }
-              }
-            },
-            { $unwind: '$wellwisherTasks' },
-            {
-              $match: {
-                'wellwisherTasks.status': 'completed',
-                'wellwisherTasks.nextGrowthUpdateDue': { $exists: true, $lte: today }
-              }
-            },
-            { $count: 'total' }
-          ])
-        ]);
+    // Single aggregation pipeline that calculates all counts for all well-wishers at once
+    const taskStats = await Order.aggregate([
+      {
+        $match: {
+          assignedWellwisher: { $in: wellWisherIds },
+          wellwisherTasks: { $exists: true, $ne: [] }
+        }
+      },
+      { $unwind: '$wellwisherTasks' },
+      {
+        $group: {
+          _id: '$assignedWellwisher',
+          upcomingTasks: {
+            $sum: { $cond: [{ $eq: ['$wellwisherTasks.status', 'pending'] }, 1, 0] }
+          },
+          ongoingTasks: {
+            $sum: { $cond: [{ $eq: ['$wellwisherTasks.status', 'in_progress'] }, 1, 0] }
+          },
+          completedTasks: {
+            $sum: { $cond: [{ $eq: ['$wellwisherTasks.status', 'completed'] }, 1, 0] }
+          },
+          updatingTasks: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$wellwisherTasks.status', 'completed'] },
+                    { $ifNull: ['$wellwisherTasks.nextGrowthUpdateDue', false] },
+                    { $lte: ['$wellwisherTasks.nextGrowthUpdateDue', today] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
 
-        return {
-          ...wellWisher,
-          upcomingTasks: upcomingResult[0]?.total || 0,
-          ongoingTasks: ongoingResult[0]?.total || 0,
-          completedTasks: completedResult[0]?.total || 0,
-          updatingTasks: updatingResult[0]?.total || 0,
-        };
-      })
+    // Create a map for quick lookup
+    const statsMap = new Map(
+      taskStats.map(stat => [stat._id, {
+        upcomingTasks: stat.upcomingTasks || 0,
+        ongoingTasks: stat.ongoingTasks || 0,
+        completedTasks: stat.completedTasks || 0,
+        updatingTasks: stat.updatingTasks || 0,
+      }])
     );
+
+    // Merge stats with well-wishers
+    const wellWishersWithStats = wellWishers.map(wellWisher => ({
+      ...wellWisher,
+      ...(statsMap.get(String(wellWisher._id)) || {
+        upcomingTasks: 0,
+        ongoingTasks: 0,
+        completedTasks: 0,
+        updatingTasks: 0,
+      })
+    }));
 
     const response = NextResponse.json({
       success: true,

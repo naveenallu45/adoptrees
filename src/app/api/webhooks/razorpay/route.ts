@@ -108,57 +108,66 @@ async function handlePaymentCaptured(payment: { id: string; [key: string]: unkno
       return;
     }
 
-    // Update order status
+    // Update order status immediately
     order.paymentStatus = 'paid';
     order.status = 'confirmed';
-
-    // Create wellwisher tasks - assign using equal distribution
-    // Only assign if not already assigned
-    if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
-      const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
-      const wellwisherId = await assignWellWisherEqually();
-    
-      if (wellwisherId) {
-      const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
-        taskId: `${order.orderId}-${index}`,
-        task: `Plant and care for ${item.treeName}`,
-        description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-        scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-        priority: 'medium' as const,
-        status: 'pending' as const,
-        location: 'To be determined'
-      }));
-
-        order.assignedWellwisher = wellwisherId;
-      order.wellwisherTasks = wellwisherTasks;
-      
-      // Send task assignment email to well-wisher (don't fail if email fails)
-      try {
-        const wellWisher = await User.findById(wellwisherId).select('email name');
-        if (wellWisher) {
-          const totalTrees = order.items.reduce((sum: number, item: { quantity: number; [key: string]: unknown }) => sum + item.quantity, 0);
-          await sendWellWisherTaskAssignmentEmail(
-            wellWisher.email,
-            wellWisher.name || '',
-            order.orderId,
-            wellwisherTasks,
-            {
-              totalTrees,
-              customerName: order.userName,
-              isGift: order.isGift || false
-            }
-          );
-        }
-      } catch (emailError) {
-        console.error('Error sending task assignment email:', emailError);
-      }
-      }
-    }
-
     await order.save();
+
     logPaymentEvent('payment_captured_webhook_processed', { 
       orderId: order.orderId,
       paymentId: payment.id 
+    });
+
+    // OPTIMIZED: Process well-wisher assignment and emails in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        // Create wellwisher tasks - assign using equal distribution
+        // Only assign if not already assigned
+        if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
+          const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
+          const wellwisherId = await assignWellWisherEqually();
+        
+          if (wellwisherId) {
+            const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
+              taskId: `${order.orderId}-${index}`,
+              task: `Plant and care for ${item.treeName}`,
+              description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+              scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
+              priority: 'medium' as const,
+              status: 'pending' as const,
+              location: 'To be determined'
+            }));
+
+            order.assignedWellwisher = wellwisherId;
+            order.wellwisherTasks = wellwisherTasks;
+            await order.save();
+            
+            // Send task assignment email to well-wisher (non-blocking)
+            User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
+              if (wellWisher) {
+                try {
+                  const totalTrees = order.items.reduce((sum: number, item: { quantity: number; [key: string]: unknown }) => sum + item.quantity, 0);
+                  await sendWellWisherTaskAssignmentEmail(
+                    wellWisher.email,
+                    wellWisher.name || '',
+                    order.orderId,
+                    wellwisherTasks,
+                    {
+                      totalTrees,
+                      customerName: order.userName,
+                      isGift: order.isGift || false
+                    }
+                  );
+                } catch (emailError) {
+                  console.error('Error sending task assignment email:', emailError);
+                }
+              }
+            }).catch(() => {}); // Ignore errors
+          }
+        }
+      } catch (backgroundError) {
+        logError('Error in background webhook processing', backgroundError as Error);
+      }
     });
 
   } catch (_error) {

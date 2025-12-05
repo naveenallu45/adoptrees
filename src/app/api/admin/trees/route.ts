@@ -6,18 +6,57 @@ import { requireAdmin } from '@/lib/api-auth';
 import { treeSchema, validateImageFile, MAX_FILE_SIZE } from '@/lib/validations/tree';
 import { logError, logInfo, logWarning } from '@/lib/logger';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAdmin();
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
+
     await connectDB();
-    const trees = await Tree.find({ isActive: true })
-      .sort({ createdAt: -1 })
-      .lean()
-      .exec();
     
-    logInfo('Trees fetched successfully', { count: trees.length });
-    return NextResponse.json(
-      { success: true, data: trees }
-    );
+    // Parse pagination params (optional - for admin dashboard, we might want all)
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '1000'); // Default to 1000 for admin
+    const skip = (page - 1) * limit;
+    const usePagination = searchParams.get('paginate') === 'true';
+
+    if (usePagination) {
+      // Paginated query
+      const query = { isActive: true };
+      const totalCount = await Tree.countDocuments(query);
+      
+      const trees = await Tree.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec();
+      
+      logInfo('Trees fetched successfully', { count: trees.length, total: totalCount });
+      return NextResponse.json({
+        success: true,
+        data: trees,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit)
+        }
+      });
+    } else {
+      // Non-paginated query (for admin dashboard stats)
+      const trees = await Tree.find({ isActive: true })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec();
+      
+      logInfo('Trees fetched successfully', { count: trees.length });
+      return NextResponse.json(
+        { success: true, data: trees }
+      );
+    }
   } catch (error) {
     logError('Failed to fetch trees', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(

@@ -200,154 +200,25 @@ export async function POST(request: NextRequest) {
     order.paymentId = razorpay_payment_id;
     order.status = 'confirmed';
 
-    // Increment coupon usage count if coupon was used
-    if (order.couponCode) {
-      try {
-        await Coupon.findOneAndUpdate(
-          { code: order.couponCode },
-          { $inc: { usedCount: 1 } }
-        );
-      } catch (couponError) {
-        logError('Error incrementing coupon usage count', couponError as Error);
-        // Don't fail the payment if coupon update fails
-      }
+    // OPTIMIZED: Run parallel operations for faster processing
+    const [couponUpdateResult] = await Promise.allSettled([
+      // Increment coupon usage count if coupon was used (non-blocking)
+      order.couponCode ? Coupon.findOneAndUpdate(
+        { code: order.couponCode },
+        { $inc: { usedCount: 1 } }
+      ) : Promise.resolve(null)
+    ]);
+
+    if (couponUpdateResult.status === 'rejected') {
+      logError('Error incrementing coupon usage count', couponUpdateResult.reason as Error);
     }
 
-    // Create wellwisher tasks for all orders - assign using equal distribution
-    // Only assign if not already assigned
-    if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
-      const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
-      const wellwisherId = await assignWellWisherEqually();
-    
-      if (wellwisherId) {
-      const wellwisherTasks = order.items.map((item, index) => ({
-        taskId: `${order.orderId}-${index}`,
-        task: `Plant and care for ${item.treeName}`,
-        description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-        scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-        priority: 'medium' as const,
-        status: 'pending' as const,
-        location: 'To be determined'
-      }));
-
-        order.assignedWellwisher = wellwisherId;
-      order.wellwisherTasks = wellwisherTasks;
-      
-      // Send task assignment email to well-wisher (don't fail if email fails)
-      try {
-        const wellWisher = await User.findById(wellwisherId).select('email name');
-        if (wellWisher) {
-          const totalTrees = order.items.reduce((sum, item) => sum + item.quantity, 0);
-          await sendWellWisherTaskAssignmentEmail(
-            wellWisher.email,
-            wellWisher.name || '',
-            order.orderId,
-            wellwisherTasks,
-            {
-              totalTrees,
-              customerName: order.userName,
-              isGift: order.isGift || false
-            }
-          );
-        }
-      } catch (emailError) {
-        console.error('Error sending task assignment email:', emailError);
-      }
-      }
-    }
-
-    // Calculate total trees count, oxygen, and CO2 for this order (needed for certificate and email)
-    const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-
-    // Generate and store certificate
-    try {
-      // Get user details including publicId and qrCode
-      const user = await User.findById(order.userId).select('publicId qrCode');
-      if (!user || !user.publicId) {
-        throw new Error('User publicId not found');
-      }
-      const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
-      // Calculate CO2 from order items - use actual tree CO2 value (can be negative), only fallback if not provided
-      const co2Kgs = order.items.reduce((sum, item) => {
-        // Use item.co2Kgs if it's defined (including 0 or negative values), otherwise calculate from oxygen
-        const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
-          ? item.co2Kgs * item.quantity
-          : (item.oxygenKgs * 0.715) * item.quantity;
-        return sum + itemCo2;
-      }, 0);
-      
-      // Collect unique tree names from order items
-      const treeNames: string[] = [];
-      order.items.forEach(item => {
-        // Add tree name if not already in the list
-        if (!treeNames.includes(item.treeName)) {
-          treeNames.push(item.treeName);
-        }
-      });
-
-      // For gift orders, use gift recipient name; otherwise use order user name
-      const certificateUserName = order.isGift && order.giftRecipientName 
-        ? order.giftRecipientName 
-        : order.userName;
-
-      // Generate certificate
-      const certificateBuffer = await generateCertificate({
-        userName: certificateUserName,
-        profilePicUrl: undefined, // Profile pic can be added later if available
-        treesCount,
-        oxygenKgs,
-        co2Kgs: co2Kgs, // Always pass CO2 (calculated from items or oxygen)
-        treeNames: treeNames.length > 0 ? treeNames : undefined,
-        publicId: user.publicId,
-        orderId: order.orderId,
-        qrCode: user.qrCode, // Use stored QR code from user
-      });
-
-      // Store certificate in order
-      order.certificate = certificateBuffer;
-    } catch (certError) {
-      // Log error but don't fail the payment verification
-      logError('Error generating certificate', certError as Error);
-      // Continue with order save even if certificate generation fails
-    }
-
+    // Save order immediately (before heavy operations)
     await order.save();
 
-    // Send thank you email with certificate (don't fail if email fails)
-    try {
-      const recipientEmail = order.isGift && order.giftRecipientEmail 
-        ? order.giftRecipientEmail 
-        : order.userEmail;
-      const recipientName = order.isGift && order.giftRecipientName 
-        ? order.giftRecipientName 
-        : order.userName;
-      
-      if (order.certificate) {
-        await sendThankYouEmailWithCertificate(
-          recipientEmail,
-          recipientName,
-          order.orderId,
-          treesCount,
-          order.certificate
-        );
-        logPaymentEvent('thank_you_email_sent', {
-          orderId: order.orderId,
-          recipientEmail
-        });
-      }
-    } catch (emailError) {
-      // Log error but don't fail the payment verification
-      logError('Error sending thank you email', emailError as Error);
-    }
-
-    logPaymentEvent('payment_verification_successful', {
-      orderId: order.orderId,
-      paymentId: razorpay_payment_id,
-      totalAmount: order.totalAmount,
-      itemsCount: order.items.length
-    });
-
-    return NextResponse.json({
+    // OPTIMIZED: Return response immediately, process heavy operations in background
+    // This dramatically reduces payment processing delay
+    const response = NextResponse.json({
       success: true,
       message: 'Payment verified successfully',
       data: {
@@ -363,6 +234,147 @@ export async function POST(request: NextRequest) {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
+
+    // Process heavy operations in background (non-blocking)
+    // This includes: certificate generation, well-wisher assignment, and email sending
+    setImmediate(async () => {
+      try {
+        // Calculate values needed for certificate and emails
+        const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+        
+        // Get user details for certificate generation
+        const userResult = await Promise.allSettled([
+          User.findById(order.userId).select('publicId qrCode')
+        ]);
+        const user = userResult[0];
+
+        // Create wellwisher tasks - assign using equal distribution (non-blocking)
+        if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
+          (async () => {
+            try {
+              const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
+              const wellwisherId = await assignWellWisherEqually();
+            
+              if (wellwisherId) {
+                const wellwisherTasks = order.items.map((item, index) => ({
+                  taskId: `${order.orderId}-${index}`,
+                  task: `Plant and care for ${item.treeName}`,
+                  description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+                  scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
+                  priority: 'medium' as const,
+                  status: 'pending' as const,
+                  location: 'To be determined'
+                }));
+
+                order.assignedWellwisher = wellwisherId;
+                order.wellwisherTasks = wellwisherTasks;
+                await order.save();
+
+                // Send task assignment email to well-wisher (non-blocking)
+                User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
+                  if (wellWisher) {
+                    try {
+                      await sendWellWisherTaskAssignmentEmail(
+                        wellWisher.email,
+                        wellWisher.name || '',
+                        order.orderId,
+                        wellwisherTasks,
+                        {
+                          totalTrees: treesCount,
+                          customerName: order.userName,
+                          isGift: order.isGift || false
+                        }
+                      );
+                    } catch (emailError) {
+                      console.error('Error sending task assignment email:', emailError);
+                    }
+                  }
+                }).catch(() => {}); // Ignore errors
+              }
+            } catch (assignmentError) {
+              logError('Error assigning well-wisher', assignmentError as Error);
+            }
+          })();
+        }
+
+        // Generate certificate if user found
+        if (user.status === 'fulfilled' && user.value && user.value.publicId) {
+          try {
+            const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
+            const co2Kgs = order.items.reduce((sum, item) => {
+              const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
+                ? item.co2Kgs * item.quantity
+                : (item.oxygenKgs * 0.715) * item.quantity;
+              return sum + itemCo2;
+            }, 0);
+            
+            const treeNames: string[] = [];
+            order.items.forEach(item => {
+              if (!treeNames.includes(item.treeName)) {
+                treeNames.push(item.treeName);
+              }
+            });
+
+            const certificateUserName = order.isGift && order.giftRecipientName 
+              ? order.giftRecipientName 
+              : order.userName;
+
+            // Generate certificate (this is the slowest operation)
+            const certificateBuffer = await generateCertificate({
+              userName: certificateUserName,
+              profilePicUrl: undefined,
+              treesCount,
+              oxygenKgs,
+              co2Kgs,
+              treeNames: treeNames.length > 0 ? treeNames : undefined,
+              publicId: user.value.publicId,
+              orderId: order.orderId,
+              qrCode: user.value.qrCode,
+            });
+
+            // Update order with certificate
+            order.certificate = certificateBuffer;
+            await order.save();
+
+            // Send thank you email with certificate (non-blocking)
+            const recipientEmail = order.isGift && order.giftRecipientEmail 
+              ? order.giftRecipientEmail 
+              : order.userEmail;
+            const recipientName = order.isGift && order.giftRecipientName 
+              ? order.giftRecipientName 
+              : order.userName;
+            
+            sendThankYouEmailWithCertificate(
+              recipientEmail,
+              recipientName,
+              order.orderId,
+              treesCount,
+              certificateBuffer
+            ).then(() => {
+              logPaymentEvent('thank_you_email_sent', {
+                orderId: order.orderId,
+                recipientEmail
+              });
+            }).catch((emailError) => {
+              logError('Error sending thank you email', emailError as Error);
+            });
+          } catch (certError) {
+            logError('Error generating certificate', certError as Error);
+          }
+        }
+      } catch (backgroundError) {
+        logError('Error in background payment processing', backgroundError as Error);
+      }
+    });
+
+    logPaymentEvent('payment_verification_successful', {
+      orderId: order.orderId,
+      paymentId: razorpay_payment_id,
+      totalAmount: order.totalAmount,
+      itemsCount: order.items.length
+    });
+
+    return response;
 
   } catch (_error) {
     logError('Error verifying payment', _error as Error);
