@@ -518,15 +518,13 @@ export async function DELETE(
       );
     }
 
-    // OPTIMIZED: Use findByIdAndUpdate to get tree data and soft delete in one operation
+    // OPTIMIZED: Get tree data first, then delete immediately from database
     // Select only fields needed for Cloudinary deletion
-    const updatedTree = await Tree.findByIdAndUpdate(
-      id, 
-      { isActive: false },
-      { new: false } // Return original document to get imagePublicId
-    ).select('imagePublicId smallImagePublicIds name').lean();
+    const treeToDelete = await Tree.findById(id)
+      .select('imagePublicId smallImagePublicIds name')
+      .lean();
 
-    if (!updatedTree) {
+    if (!treeToDelete) {
       logWarning('Tree delete failed: tree not found', { treeId: id });
       return NextResponse.json(
         { success: false, error: 'Tree not found' },
@@ -534,18 +532,21 @@ export async function DELETE(
       );
     }
 
-    logInfo('Deleting tree', { treeId: id, name: updatedTree.name });
+    logInfo('Deleting tree', { treeId: id, name: treeToDelete.name });
+
+    // INSTANT DELETE: Delete from database immediately (hard delete)
+    await Tree.findByIdAndDelete(id);
 
     // OPTIMIZED: Delete images from Cloudinary asynchronously (non-blocking)
     // Don't wait for Cloudinary deletion - return response immediately
     const cloudinaryDeletions: Promise<void>[] = [];
     
-    if (updatedTree.imagePublicId) {
+    if (treeToDelete.imagePublicId) {
       cloudinaryDeletions.push(
-        deleteFromCloudinary(updatedTree.imagePublicId).catch((imgError) => {
+        deleteFromCloudinary(treeToDelete.imagePublicId).catch((imgError) => {
           logWarning('Failed to delete image from Cloudinary', { 
             treeId: id, 
-            publicId: updatedTree.imagePublicId,
+            publicId: treeToDelete.imagePublicId,
             error: imgError instanceof Error ? imgError.message : String(imgError)
           });
         })
@@ -553,8 +554,8 @@ export async function DELETE(
     }
 
     // Delete small images if they exist
-    if (updatedTree.smallImagePublicIds && Array.isArray(updatedTree.smallImagePublicIds)) {
-      for (const publicId of updatedTree.smallImagePublicIds) {
+    if (treeToDelete.smallImagePublicIds && Array.isArray(treeToDelete.smallImagePublicIds)) {
+      for (const publicId of treeToDelete.smallImagePublicIds) {
         if (publicId) {
           cloudinaryDeletions.push(
             deleteFromCloudinary(publicId).catch((imgError) => {
@@ -576,7 +577,7 @@ export async function DELETE(
       // Already logged individual errors above
     });
 
-    logInfo('Tree deleted successfully', { treeId: id, name: updatedTree.name });
+    logInfo('Tree deleted successfully from database', { treeId: id, name: treeToDelete.name });
 
     return NextResponse.json({
       success: true,

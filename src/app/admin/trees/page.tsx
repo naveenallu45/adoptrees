@@ -219,15 +219,15 @@ export default function TreesManagement() {
     });
 
     if (result.isConfirmed) {
-      try {
-        setDeleting(id);
-        // Mutation handles optimistic update automatically
-        await deleteTree.mutateAsync(id);
-      } catch (_error) {
-        // Error handling is done in the mutation hook
-      } finally {
-        setDeleting(null);
-      }
+      setDeleting(id);
+      // INSTANT DELETE: Fire mutation without await - UI updates immediately
+      // Tree is removed from UI instantly via optimistic update
+      // Backend deletes from database in background
+      deleteTree.mutate(id, {
+        onSettled: () => {
+          setDeleting(null);
+        }
+      });
     }
   }, [deleteTree]);
 
