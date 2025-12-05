@@ -325,9 +325,10 @@ export default function AdminAdoptionsPage() {
 
     if (!result.isConfirmed) return;
 
-    // Optimistically remove adoption from UI IMMEDIATELY (before API call)
-    const previousData = queryClient.getQueryData<{ data: Adoption[] }>(['admin-adoptions-all']);
-    queryClient.setQueryData(['admin-adoptions-all'], (old: { data: Adoption[] } | undefined) => {
+    // OPTIMIZED: Optimistically remove adoption from UI IMMEDIATELY (before API call)
+    const previousData = queryClient.getQueryData<{ data: Adoption[]; metrics?: unknown }>(['admin-adoptions-all']);
+    
+    queryClient.setQueryData(['admin-adoptions-all'], (old: { data: Adoption[]; metrics?: unknown } | undefined) => {
       if (!old) return old;
       return {
         ...old,
@@ -336,8 +337,13 @@ export default function AdminAdoptionsPage() {
     });
 
     try {
-      const response = await fetch(`/api/admin/adoptions/${id}`, {
+      const response = await fetch(`/api/admin/adoptions/${id}?t=${Date.now()}`, {
         method: 'DELETE',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
 
       const data = await response.json();
@@ -346,7 +352,7 @@ export default function AdminAdoptionsPage() {
         // If 404, adoption doesn't exist in DB - keep it removed from UI (already deleted)
         if (response.status === 404) {
           toast.success('Adoption was already deleted from database.');
-          // Force immediate refetch to sync with server - invalidate cache first
+          // Refetch to ensure consistency
           queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
           await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
           return;
@@ -366,7 +372,7 @@ export default function AdminAdoptionsPage() {
       }
       
       toast.success('Adoption deleted successfully!');
-      // Immediately invalidate cache and refetch to show instant updates
+      // Refetch to ensure consistency with server (metrics might have changed)
       queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
       await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
     } catch (error) {
@@ -374,7 +380,7 @@ export default function AdminAdoptionsPage() {
       if (previousData) {
         queryClient.setQueryData(['admin-adoptions-all'], previousData);
       }
-      // Still try to refetch to ensure UI is in sync
+      // Refetch to ensure UI is in sync
       queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
       await queryClient.refetchQueries({ queryKey: ['admin-adoptions-all'], type: 'active' });
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
