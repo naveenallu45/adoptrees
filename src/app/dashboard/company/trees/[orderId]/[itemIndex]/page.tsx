@@ -479,8 +479,8 @@ export default function TreeDetailPage() {
               </div>
             )}
 
-            {/* Download Certificate Button */}
-            {order.paymentStatus === 'paid' && order.orderId && (
+            {/* Download Certificate Button - Hidden for public users */}
+            {!publicId && order.paymentStatus === 'paid' && order.orderId && (
               <div>
                 <button
                   onClick={() => handleDownloadCertificate(order.orderId!)}

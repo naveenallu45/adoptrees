@@ -707,7 +707,7 @@ useEffect(() => {
                                 View More
                                 <ArrowRightIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                               </button>
-                              {!isTransactionsPage && getStatusText(primaryOrder) === 'Certificate' && primaryOrder.orderId && (
+                              {!isTransactionsPage && !publicId && getStatusText(primaryOrder) === 'Certificate' && primaryOrder.orderId && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -839,7 +839,7 @@ useEffect(() => {
                             {order.paymentStatus !== 'paid' && order.paymentStatus !== 'failed' && order.paymentStatus !== 'refunded' && order.paymentStatus}
                           </span>
                         )}
-                        {!isTransactionsPage && getStatusText(order) === 'Certificate' && order.orderId && (
+                        {!isTransactionsPage && !publicId && getStatusText(order) === 'Certificate' && order.orderId && (
                           <button
                             onClick={() => handleDownloadCertificate(order.orderId!)}
                             disabled={downloadingCertificate === order.orderId}

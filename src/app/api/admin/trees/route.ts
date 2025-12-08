@@ -129,18 +129,27 @@ export async function POST(request: NextRequest) {
     const packageQuantity = packageQuantityStr ? parseInt(packageQuantityStr) : 1;
     const packagePrice = packagePriceStr ? parseFloat(packagePriceStr) : undefined;
     
-    // For company/forest trees, calculate price from package if not provided
+    // For company/forest trees, calculate price from package if not provided or invalid
     let price: number;
-    if ((treeType === 'company' || treeType === 'forest') && (!priceStr || priceStr.trim() === '')) {
-      // Calculate from package
-      if (packageQuantity > 0 && packagePrice && packagePrice > 0) {
-        price = packagePrice / packageQuantity;
+    if (treeType === 'company' || treeType === 'forest') {
+      // Try to parse the provided price string first
+      const parsedPrice = priceStr && priceStr.trim() !== '' ? parseFloat(priceStr) : NaN;
+      
+      // If price is valid, use it; otherwise calculate from package
+      if (!isNaN(parsedPrice) && parsedPrice > 0) {
+        price = parsedPrice;
       } else {
-        price = 0; // Will be caught by validation
+        // Calculate from package
+        if (packageQuantity > 0 && packagePrice && packagePrice > 0) {
+          price = packagePrice / packageQuantity;
+        } else {
+          price = NaN; // Will be caught by validation
+        }
       }
     } else {
-      // Use provided price for individual trees or if price is explicitly provided
-      price = Number(priceStr);
+      // For individual trees, parse the price string
+      const parsedPrice = priceStr && priceStr.trim() !== '' ? parseFloat(priceStr) : NaN;
+      price = parsedPrice;
     }
     const speciesInfoAvailable = speciesInfoAvailableStr === 'true';
     // Parse numeric fields - handle empty strings properly
@@ -174,8 +183,12 @@ export async function POST(request: NextRequest) {
 
     // Validate price - ensure it's valid for all tree types
     if (isNaN(price) || price <= 0) {
+      const errorMessage = (treeType === 'company' || treeType === 'forest')
+        ? `Price must be a valid positive number. For ${treeType} trees, ensure package price and package quantity are valid.`
+        : 'Price must be a valid positive number';
+      logWarning('Tree creation failed: invalid price', { price, treeType, packagePrice, packageQuantity });
       return NextResponse.json(
-        { success: false, error: 'Price must be a valid positive number' },
+        { success: false, error: errorMessage },
         { status: 400 }
       );
     }
