@@ -163,10 +163,11 @@ export async function POST(request: NextRequest) {
     // Validate input with schema
     const validationResult = wellWisherRegistrationSchema.safeParse(body);
     if (!validationResult.success) {
+      const errorMessages = validationResult.error.issues.map(err => err.message).join(', ');
       return NextResponse.json(
         { 
           success: false, 
-          message: 'Validation failed',
+          error: `Validation failed: ${errorMessages}`,
           errors: validationResult.error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
-        { success: false, message: 'Well-wisher with this email already exists' },
+        { success: false, error: 'Well-wisher with this email already exists' },
         { status: 400 }
       );
     }
@@ -244,7 +245,7 @@ export async function POST(request: NextRequest) {
     const ip = getClientIp(request);
     logSecurityEvent('WELLWISHER_CREATION_ERROR', { error: _error instanceof Error ? _error.message : 'Unknown error' }, ip);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

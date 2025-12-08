@@ -190,7 +190,8 @@ export function useCouponMutations() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create coupon');
+        const errorMessage = data.error || data.message || 'Failed to create coupon';
+        throw new Error(errorMessage);
       }
       return data.data as Coupon;
     },
@@ -198,7 +199,12 @@ export function useCouponMutations() {
       await queryClient.cancelQueries({ queryKey: ['admin', 'coupons'] });
     },
     onSuccess: (newCoupon) => {
-      queryClient.setQueryData<Coupon[]>(['admin', 'coupons'], (old = []) => [newCoupon, ...old]);
+      queryClient.setQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons'], (old) => {
+        if (!old || !old.data) {
+          return { success: true, data: [newCoupon] };
+        }
+        return { ...old, data: [newCoupon, ...old.data] };
+      });
       queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] });
       toast.success('Coupon created successfully!');
     },
@@ -216,25 +222,38 @@ export function useCouponMutations() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to update coupon');
+        const errorMessage = data.error || data.message || 'Failed to update coupon';
+        throw new Error(errorMessage);
       }
       return data.data as Coupon;
     },
     onMutate: async ({ id, payload }) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'coupons'] });
-      const previousCoupons = queryClient.getQueryData<Coupon[]>(['admin', 'coupons']);
+      const previousCoupons = queryClient.getQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons']);
       // Optimistically update
-      queryClient.setQueryData<Coupon[]>(['admin', 'coupons'], (old = []) =>
-        old.map((coupon) =>
-          coupon._id === id ? { ...coupon, ...payload, updatedAt: new Date().toISOString() } : coupon
-        )
-      );
+      queryClient.setQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons'], (old) => {
+        if (!old || !old.data) {
+          return old || { success: true, data: [] };
+        }
+        return {
+          ...old,
+          data: old.data.map((coupon) =>
+            coupon._id === id ? { ...coupon, ...payload, updatedAt: new Date().toISOString() } : coupon
+          )
+        };
+      });
       return { previousCoupons };
     },
     onSuccess: (updatedCoupon) => {
-      queryClient.setQueryData<Coupon[]>(['admin', 'coupons'], (old = []) =>
-        old.map((coupon) => (coupon._id === updatedCoupon._id ? updatedCoupon : coupon))
-      );
+      queryClient.setQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons'], (old) => {
+        if (!old || !old.data) {
+          return old || { success: true, data: [] };
+        }
+        return {
+          ...old,
+          data: old.data.map((coupon) => (coupon._id === updatedCoupon._id ? updatedCoupon : coupon))
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] });
       toast.success('Coupon updated successfully!');
     },
@@ -259,10 +278,16 @@ export function useCouponMutations() {
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'coupons'] });
-      const previousCoupons = queryClient.getQueryData<Coupon[]>(['admin', 'coupons']);
-      queryClient.setQueryData<Coupon[]>(['admin', 'coupons'], (old = []) =>
-        old.filter((coupon) => coupon._id !== id)
-      );
+      const previousCoupons = queryClient.getQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons']);
+      queryClient.setQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons'], (old) => {
+        if (!old || !old.data) {
+          return old || { success: true, data: [] };
+        }
+        return {
+          ...old,
+          data: old.data.filter((coupon) => coupon._id !== id)
+        };
+      });
       return { previousCoupons };
     },
     onSuccess: () => {
@@ -352,7 +377,8 @@ export function useWellWisherMutations() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create well-wisher');
+        const errorMessage = data.error || data.message || 'Failed to create well-wisher';
+        throw new Error(errorMessage);
       }
       return data.data as WellWisher;
     },
@@ -381,7 +407,8 @@ export function useWellWisherMutations() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to update well-wisher');
+        const errorMessage = data.error || data.message || 'Failed to update well-wisher';
+        throw new Error(errorMessage);
       }
       return data.data as WellWisher;
     },

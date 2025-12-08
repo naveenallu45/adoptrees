@@ -26,7 +26,7 @@ export async function GET(
     // Validate MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid well-wisher ID format' },
+        { success: false, error: 'Invalid well-wisher ID format' },
         { status: 400 }
       );
     }
@@ -49,7 +49,7 @@ export async function GET(
 
     if (!wellWisher || wellWisher.role !== 'wellwisher') {
       return NextResponse.json(
-        { success: false, message: 'Well-wisher not found' },
+        { success: false, error: 'Well-wisher not found' },
         { status: 404 }
       );
     }
@@ -96,7 +96,7 @@ export async function PUT(
     // Validate MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid well-wisher ID format' },
+        { success: false, error: 'Invalid well-wisher ID format' },
         { status: 400 }
       );
     }
@@ -107,7 +107,7 @@ export async function PUT(
     // Validate required fields
     if (!name || !email) {
       return NextResponse.json(
-        { success: false, message: 'Name and email are required' },
+        { success: false, error: 'Name and email are required' },
         { status: 400 }
       );
     }
@@ -120,7 +120,7 @@ export async function PUT(
     
     if (!existingWellWisher || existingWellWisher.role !== 'wellwisher') {
       return NextResponse.json(
-        { success: false, message: 'Well-wisher not found' },
+        { success: false, error: 'Well-wisher not found' },
         { status: 404 }
       );
     }
@@ -135,7 +135,7 @@ export async function PUT(
       
       if (emailExists) {
         return NextResponse.json(
-          { success: false, message: 'Email already exists' },
+          { success: false, error: 'Email already exists' },
           { status: 400 }
         );
       }
@@ -195,7 +195,7 @@ export async function PUT(
     });
   } catch (_error) {
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -220,7 +220,7 @@ export async function DELETE(
     // Validate MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid well-wisher ID format' },
+        { success: false, error: 'Invalid well-wisher ID format' },
         { status: 400 }
       );
     }
@@ -238,7 +238,7 @@ export async function DELETE(
 
     if (!existingWellWisher || existingWellWisher.role !== 'wellwisher') {
       return NextResponse.json(
-        { success: false, message: 'Well-wisher not found' },
+        { success: false, error: 'Well-wisher not found' },
         { status: 404 }
       );
     }
@@ -299,7 +299,7 @@ export async function DELETE(
     });
   } catch (_error) {
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
