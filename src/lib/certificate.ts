@@ -429,7 +429,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     }
     
     // Column 2: Trees count only
-    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.025); // Shift 2.5% to the left (moved left by 1%)
+    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015); // Shift 1.5% to the left (moved right by 1%)
     const treesLabelY = statsStartY;
     
     // Center trees count number
@@ -445,7 +445,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     });
     
     // Column 3: O2 total value
-    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.025); // Shift 2.5% to the left (moved left by 1%)
+    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.015); // Shift 1.5% to the left (moved right by 1%)
     const o2ValueY = statsStartY;
     const o2ValueText = `${data.oxygenKgs.toFixed(1)} /year`;
     
@@ -460,7 +460,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     });
     
     // Column 4: CO2 total value
-    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.035); // Shift 3.5% to the left (moved left by 1%)
+    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.025); // Shift 2.5% to the left (moved right by 1%)
     const co2ValueY = statsStartY;
     const co2ValueText = `${co2Value.toFixed(1)} /year`;
     
