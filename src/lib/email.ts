@@ -1274,3 +1274,289 @@ export async function sendWellWisherTaskAssignmentEmail(
   });
 }
 
+/**
+ * Get occasion-specific email template content
+ */
+function getOccasionTemplate(
+  occasion: string | undefined,
+  displayName: string,
+  senderName: string,
+  treeName: string,
+  quantity: number,
+  giftMessage?: string
+) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
+  const treeText = `${quantity} ${treeName} tree${quantity > 1 ? 's' : ''}`;
+  
+  const templates: Record<string, {
+    title: string;
+    headerEmoji: string;
+    greeting: string;
+    mainMessage: string;
+    highlightBox: { title: string; subtitle: string };
+    closingMessage: string;
+    subject: string;
+  }> = {
+    birthday: {
+      title: '🎂 Happy Birthday! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🎂🎁',
+      greeting: `Happy Birthday, ${displayName}! 🎉`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a special birthday gift - ${treeText} that will be planted in your name! What better way to celebrate another year than with a gift that grows and gives back to our planet?`,
+      highlightBox: {
+        title: '🌱 A Birthday Tree in Your Name! 🌱',
+        subtitle: 'This tree will grow year after year, just like you! A living gift that celebrates your special day and helps our planet.'
+      },
+      closingMessage: 'May your special day be as wonderful as the positive impact this tree will make! Happy Birthday!',
+      subject: `🎂 ${senderName} Sent You a Birthday Gift Tree! 🌳`
+    },
+    anniversary: {
+      title: '💕 Happy Anniversary! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '💕🌳',
+      greeting: `Happy Anniversary, ${displayName}! 💖`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a beautiful anniversary gift - ${treeText} planted in your name! A symbol of love that grows stronger with time, just like your relationship.`,
+      highlightBox: {
+        title: '🌱 An Anniversary Tree in Your Name! 🌱',
+        subtitle: 'This tree represents love that grows and endures, creating lasting memories and a greener future.'
+      },
+      closingMessage: 'Wishing you many more years of happiness together, and a beautiful tree that will grow alongside your love!',
+      subject: `💕 ${senderName} Sent You an Anniversary Gift Tree! 🌳`
+    },
+    wedding: {
+      title: '💒 Congratulations! You\'ve Received a Wedding Gift Tree! 🌳',
+      headerEmoji: '💒🌳',
+      greeting: `Congratulations, ${displayName}! 💐`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a wonderful wedding gift - ${treeText} that will be planted in your name! A beautiful way to celebrate your new beginning with a gift that grows and flourishes.`,
+      highlightBox: {
+        title: '🌱 A Wedding Tree in Your Name! 🌱',
+        subtitle: 'Just like your marriage, this tree will grow strong roots and flourish for years to come, creating a lasting legacy.'
+      },
+      closingMessage: 'May your marriage be as strong and beautiful as this tree, growing stronger with each passing year! Congratulations!',
+      subject: `💒 ${senderName} Sent You a Wedding Gift Tree! 🌳`
+    },
+    graduation: {
+      title: '🎓 Congratulations! You\'ve Received a Graduation Gift Tree! 🌳',
+      headerEmoji: '🎓🌳',
+      greeting: `Congratulations on Your Graduation, ${displayName}! 🎉`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a special graduation gift - ${treeText} planted in your name! A perfect way to celebrate your achievements with a gift that grows and makes a difference.`,
+      highlightBox: {
+        title: '🌱 A Graduation Tree in Your Name! 🌱',
+        subtitle: 'Just like you\'ve grown and achieved great things, this tree will grow and contribute to a better future for all.'
+      },
+      closingMessage: 'Congratulations on this milestone! May your future be as bright and promising as the positive impact this tree will make!',
+      subject: `🎓 ${senderName} Sent You a Graduation Gift Tree! 🌳`
+    },
+    festival: {
+      title: '🎊 Festival Greetings! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🎊🌳',
+      greeting: `Festival Greetings, ${displayName}! 🎉`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a festive gift - ${treeText} that will be planted in your name! A meaningful way to celebrate the festival season with a gift that brings joy and helps our planet.`,
+      highlightBox: {
+        title: '🌱 A Festival Tree in Your Name! 🌱',
+        subtitle: 'This tree celebrates the spirit of the festival - growth, prosperity, and blessings for a greener future.'
+      },
+      closingMessage: 'Wishing you a joyous festival season filled with happiness, and a beautiful tree that will grow and flourish!',
+      subject: `🎊 ${senderName} Sent You a Festival Gift Tree! 🌳`
+    },
+    'thank-you': {
+      title: '🙏 Thank You! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🙏🌳',
+      greeting: `Hello ${displayName}! 👋`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a thoughtful thank you gift - ${treeText} planted in your name! A beautiful way to express gratitude with a gift that grows and gives back.`,
+      highlightBox: {
+        title: '🌱 A Thank You Tree in Your Name! 🌱',
+        subtitle: 'This tree represents appreciation and gratitude, growing stronger each day and making a positive impact.'
+      },
+      closingMessage: 'Thank you for being wonderful! This tree will continue to grow as a symbol of appreciation and care for our planet.',
+      subject: `🙏 ${senderName} Sent You a Thank You Gift Tree! 🌳`
+    },
+    congratulations: {
+      title: '🎉 Congratulations! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🎉🌳',
+      greeting: `Congratulations, ${displayName}! 🎊`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a congratulatory gift - ${treeText} that will be planted in your name! A wonderful way to celebrate your success with a gift that grows and makes a difference.`,
+      highlightBox: {
+        title: '🌱 A Congratulations Tree in Your Name! 🌱',
+        subtitle: 'This tree celebrates your achievements and will continue to grow, just like your success story!'
+      },
+      closingMessage: 'Congratulations on your achievement! May your success continue to grow, just like this beautiful tree!',
+      subject: `🎉 ${senderName} Sent You a Congratulations Gift Tree! 🌳`
+    },
+    'get-well': {
+      title: '💚 Get Well Soon! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '💚🌳',
+      greeting: `Get Well Soon, ${displayName}! 💚`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a healing gift - ${treeText} planted in your name! A thoughtful way to wish you a speedy recovery with a gift that grows and brings fresh air.`,
+      highlightBox: {
+        title: '🌱 A Get Well Tree in Your Name! 🌱',
+        subtitle: 'This tree represents healing and growth, bringing fresh air and positive energy to help you feel better soon.'
+      },
+      closingMessage: 'Wishing you a speedy recovery! May this tree bring you fresh air and positive energy as you heal!',
+      subject: `💚 ${senderName} Sent You a Get Well Gift Tree! 🌳`
+    },
+    'new-baby': {
+      title: '👶 Congratulations! You\'ve Received a Baby Gift Tree! 🌳',
+      headerEmoji: '👶🌳',
+      greeting: `Congratulations on Your New Baby, ${displayName}! 🎉`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a special baby gift - ${treeText} that will be planted in your name! A beautiful way to welcome your little one with a gift that grows alongside them.`,
+      highlightBox: {
+        title: '🌱 A Baby Gift Tree in Your Name! 🌱',
+        subtitle: 'This tree will grow alongside your baby, creating a beautiful connection between new life and nature\'s gift.'
+      },
+      closingMessage: 'Congratulations on your new bundle of joy! May this tree grow strong and healthy, just like your little one!',
+      subject: `👶 ${senderName} Sent You a Baby Gift Tree! 🌳`
+    },
+    retirement: {
+      title: '🎊 Congratulations on Your Retirement! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🎊🌳',
+      greeting: `Congratulations on Your Retirement, ${displayName}! 🎉`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a retirement gift - ${treeText} planted in your name! A meaningful way to celebrate this milestone with a gift that grows and creates a lasting legacy.`,
+      highlightBox: {
+        title: '🌱 A Retirement Tree in Your Name! 🌱',
+        subtitle: 'This tree represents your legacy and the new chapter ahead, growing strong and creating a lasting impact.'
+      },
+      closingMessage: 'Congratulations on your retirement! May this tree grow and flourish, just like the wonderful new chapter ahead of you!',
+      subject: `🎊 ${senderName} Sent You a Retirement Gift Tree! 🌳`
+    },
+    christmas: {
+      title: '🎄 Merry Christmas! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🎄🌳',
+      greeting: `Merry Christmas, ${displayName}! 🎅`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a Christmas gift - ${treeText} that will be planted in your name! A wonderful way to celebrate the season of giving with a gift that grows and helps our planet.`,
+      highlightBox: {
+        title: '🌱 A Christmas Tree in Your Name! 🌱',
+        subtitle: 'This tree celebrates the spirit of Christmas - giving, growth, and creating a better world for all.'
+      },
+      closingMessage: 'Merry Christmas! May this tree bring you joy and peace, and help create a greener future for generations to come!',
+      subject: `🎄 ${senderName} Sent You a Christmas Gift Tree! 🌳`
+    },
+    diwali: {
+      title: '🪔 Happy Diwali! You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🪔🌳',
+      greeting: `Happy Diwali, ${displayName}! 🪔`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a Diwali gift - ${treeText} that will be planted in your name! A beautiful way to celebrate the festival of lights with a gift that brings light and life to our planet.`,
+      highlightBox: {
+        title: '🌱 A Diwali Tree in Your Name! 🌱',
+        subtitle: 'This tree celebrates the festival of lights, bringing prosperity, growth, and blessings for a brighter future.'
+      },
+      closingMessage: 'Happy Diwali! May this tree bring you prosperity, happiness, and a greener, brighter future!',
+      subject: `🪔 ${senderName} Sent You a Diwali Gift Tree! 🌳`
+    },
+    other: {
+      title: '🎁 You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🎁🌳',
+      greeting: `Hello ${displayName}! 👋`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a thoughtful gift - ${treeText} that will be planted in your name! A beautiful way to show you care with a gift that grows and makes a positive impact.`,
+      highlightBox: {
+        title: '🌱 A Gift Tree in Your Name! 🌱',
+        subtitle: 'This tree represents thoughtfulness and care, growing stronger each day and making a positive impact on our planet.'
+      },
+      closingMessage: 'This is a thoughtful gift that will make a lasting impact. Thank you for being part of our mission to create a greener future!',
+      subject: `🎁 ${senderName} Sent You a Gift Tree! 🌳`
+    },
+    default: {
+      title: '🎁 You\'ve Received a Gift Tree! 🌳',
+      headerEmoji: '🎁🌳',
+      greeting: `Hello ${displayName}! 👋`,
+      mainMessage: `<strong>${senderName}</strong> has sent you a beautiful gift - ${treeText} that will be planted in your name!`,
+      highlightBox: {
+        title: '🌱 A Tree Has Been Adopted in Your Name! 🌱',
+        subtitle: 'This is a gift that will grow and make a positive impact on our planet.'
+      },
+      closingMessage: 'This is a thoughtful gift that will make a lasting impact. Thank you for being part of our mission to create a greener future!',
+      subject: `🎁 ${senderName} Sent You a Gift Tree! 🌳`
+    }
+  };
+
+  const template = templates[occasion || ''] || templates.default;
+  
+  return {
+    ...template,
+    giftMessage,
+    appUrl,
+    treeText
+  };
+}
+
+/**
+ * Send greeting email to gift recipient after adoption
+ */
+export async function sendGiftRecipientGreetingEmail(
+  recipientEmail: string,
+  recipientName: string,
+  senderName: string,
+  treeName: string,
+  quantity: number,
+  giftMessage?: string,
+  occasion?: string
+): Promise<boolean> {
+  const displayName = recipientName || 'Friend';
+  const template = getOccasionTemplate(occasion, displayName, senderName, treeName, quantity, giftMessage);
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${template.title}</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">${template.headerEmoji} ${template.title}</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1f2937; margin-top: 0;">${template.greeting}</h2>
+          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
+            ${template.mainMessage}
+            ${giftMessage ? ` Along with this gift, ${senderName} has included a personal message for you below.` : ''}
+          </p>
+          
+          ${giftMessage ? `
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span style="font-size: 24px;">💌</span>
+                <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 16px;">Personal Message from ${senderName}</p>
+              </div>
+              <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #1f2937; font-size: 15px; line-height: 1.6; font-style: italic;">"${giftMessage}"</p>
+              </div>
+            </div>
+          ` : ''}
+          
+          <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 25px; margin: 20px 0; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 700;">${template.highlightBox.title}</p>
+            <p style="margin: 10px 0 0 0; color: #047857; font-size: 14px;">${template.highlightBox.subtitle}</p>
+          </div>
+          
+          <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1f2937; font-weight: 500;">🌿 What happens next?</p>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li>Your ${template.treeText} will be planted by our team of well-wishers</li>
+              <li>You'll receive updates as your tree${quantity > 1 ? 's' : ''} grow${quantity > 1 ? '' : 's'}</li>
+              <li>Your ${template.treeText} will contribute to cleaner air and a greener environment</li>
+              <li>You can track the progress and see where your tree${quantity > 1 ? 's' : ''} ${quantity > 1 ? 'are' : 'is'} planted</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${template.appUrl}" 
+               style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 0;">
+              Learn More About Adoptrees
+            </a>
+          </div>
+          
+          <p style="color: #374151; font-size: 16px; margin-top: 25px;">${template.closingMessage}</p>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">Best regards,<br>The Adoptrees Team 🌿</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: recipientEmail,
+    subject: template.subject,
+    html,
+  });
+}
+

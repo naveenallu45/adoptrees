@@ -287,6 +287,39 @@ export default function CartContent() {
       }
     }
 
+    // Validate gifted trees have recipient email
+    for (const item of cartItems) {
+      if (item.adoptionType === 'gift') {
+        if (!item.recipientEmail || !item.recipientEmail.trim()) {
+          toast.error(`Recipient email is required for "${item.name}" as it's a gift`);
+          // Find and scroll to the item
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(item.recipientEmail.trim())) {
+          toast.error(`Please enter a valid recipient email for "${item.name}"`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        if (!item.recipientName || !item.recipientName.trim()) {
+          toast.error(`Recipient name is required for "${item.name}" as it's a gift`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+      }
+    }
+
     if (!razorpayLoaded) {
       retryRazorpayLoad();
       // Wait a moment and try again

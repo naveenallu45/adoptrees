@@ -8,7 +8,7 @@ import Coupon from '@/models/Coupon';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { generateCertificate } from '@/lib/certificate';
-import { sendThankYouEmailWithCertificate, sendWellWisherTaskAssignmentEmail } from '@/lib/email';
+import { sendThankYouEmailWithCertificate, sendWellWisherTaskAssignmentEmail, sendGiftRecipientGreetingEmail } from '@/lib/email';
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
@@ -358,6 +358,31 @@ export async function POST(request: NextRequest) {
             }).catch((emailError) => {
               logError('Error sending thank you email', emailError as Error);
             });
+
+            // Send greeting email to gift recipients (non-blocking)
+            if (order.isGift && order.giftRecipientEmail) {
+              // Send greeting email for each gift item
+              order.items.forEach((item) => {
+                if (item.adoptionType === 'gift' && item.recipientEmail) {
+                  sendGiftRecipientGreetingEmail(
+                    item.recipientEmail,
+                    item.recipientName || order.giftRecipientName || 'Friend',
+                    order.userName,
+                    item.treeName,
+                    item.quantity,
+                    item.giftMessage || order.giftMessage,
+                    item.occasion
+                  ).then(() => {
+                    logPaymentEvent('gift_recipient_greeting_email_sent', {
+                      orderId: order.orderId,
+                      recipientEmail: item.recipientEmail
+                    });
+                  }).catch((emailError) => {
+                    logError('Error sending gift recipient greeting email', emailError as Error);
+                  });
+                }
+              });
+            }
           } catch (certError) {
             logError('Error generating certificate', certError as Error);
           }

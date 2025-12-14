@@ -109,6 +109,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
   }, []);
 
   const handleAddToCart = useCallback((tree: Tree, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation(); // Prevent event from bubbling to parent card
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
     const startPos = {
@@ -215,7 +216,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
                     <p className="text-xs text-gray-600 mb-1 font-medium">Price</p>
                     <span className="text-xl sm:text-2xl font-bold text-gray-900">₹{tree.price.toLocaleString()}</span>
                   </div>
-                  <div className="text-right sm:bg-white/80 sm:backdrop-blur-sm sm:rounded-lg px-2.5 py-1.5 sm:shadow-sm sm:border sm:border-green-200/50">
+                  <div className="text-right sm:bg-white/80 sm:backdrop-blur-sm sm:rounded-lg px-2.5 py-1.5 sm:shadow-sm sm:border sm:border-green-200/50 ml-[2%]">
                     <p className="text-xs text-gray-600 mb-0.5 font-medium">Oxygen</p>
                     <p className="text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                   </div>

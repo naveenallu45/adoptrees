@@ -163,6 +163,7 @@ export default function MomentsThatDeserve() {
   }, []);
 
   const handleAddToCart = useCallback((tree: Tree, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation(); // Prevent event from bubbling to parent card
     if (status === 'loading') {
       toast.error('Hold on while we verify your account. Please try again in a moment.');
       return;

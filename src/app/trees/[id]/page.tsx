@@ -183,6 +183,9 @@ export default function TreeInfoPage() {
   );
 
   const handleAddToCart = (event?: React.MouseEvent<HTMLButtonElement>) => {
+    if (event) {
+      event.stopPropagation(); // Prevent event from bubbling to parent elements
+    }
     if (!tree) return;
 
     // Check user type only if logged in

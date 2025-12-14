@@ -462,7 +462,9 @@ export default function TreeDetailPage() {
             {order.userName && (
               <div>
                 <div className="bg-amber-50 rounded-2xl p-5 border-2 border-amber-200 shadow-lg">
-                  <p className="text-green-800 font-semibold mb-2">Adopted by</p>
+                  <p className="text-green-800 font-semibold mb-2">
+                    {order.isGift && order.giftRecipientName ? 'Recipient Name *' : 'Adopted by'}
+                  </p>
                   <div className="flex items-center">
                     <div className="bg-white rounded-xl p-3 mr-4 shadow-md">
                       <CheckCircleIcon className="h-7 w-7 text-green-600" />
