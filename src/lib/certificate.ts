@@ -376,7 +376,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     
     const estimatedCharWidth = 20; // Approximate character width for font size 40
     const nameTextWidth = capitalizedUserName.length * estimatedCharWidth;
-    const nameX = profileX + profileSize / 2 - nameTextWidth / 2 - (pageWidth * 0.02); // Center relative to profile picture, shifted 2% to the left
+    const nameX = profileX + profileSize / 2 - nameTextWidth / 2 - (pageWidth * 0.01); // Center relative to profile picture, shifted 1% to the left
     // nameY is already calculated above to ensure 36% bottom padding
     
     page.drawText(capitalizedUserName, {

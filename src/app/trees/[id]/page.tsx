@@ -184,6 +184,7 @@ export default function TreeInfoPage() {
 
   const handleAddToCart = (event?: React.MouseEvent<HTMLButtonElement>) => {
     if (event) {
+      event.preventDefault(); // Prevent default behavior
       event.stopPropagation(); // Prevent event from bubbling to parent elements
     }
     if (!tree) return;

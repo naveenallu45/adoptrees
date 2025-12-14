@@ -362,10 +362,15 @@ export async function POST(request: NextRequest) {
             // Send greeting email to gift recipients (non-blocking)
             if (order.isGift && order.giftRecipientEmail) {
               // Send greeting email for each gift item
+              // Use item recipientEmail if available, otherwise fall back to order-level giftRecipientEmail
               order.items.forEach((item) => {
-                if (item.adoptionType === 'gift' && item.recipientEmail) {
+                // If order is a gift, treat all items as gifts (or check item.adoptionType === 'gift')
+                const isGiftItem = item.adoptionType === 'gift' || order.isGift;
+                const recipientEmail = item.recipientEmail || order.giftRecipientEmail;
+                
+                if (isGiftItem && recipientEmail) {
                   sendGiftRecipientGreetingEmail(
-                    item.recipientEmail,
+                    recipientEmail,
                     item.recipientName || order.giftRecipientName || 'Friend',
                     order.userName,
                     item.treeName,
@@ -375,7 +380,7 @@ export async function POST(request: NextRequest) {
                   ).then(() => {
                     logPaymentEvent('gift_recipient_greeting_email_sent', {
                       orderId: order.orderId,
-                      recipientEmail: item.recipientEmail
+                      recipientEmail: recipientEmail
                     });
                   }).catch((emailError) => {
                     logError('Error sending gift recipient greeting email', emailError as Error);

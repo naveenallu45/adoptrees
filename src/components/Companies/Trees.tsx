@@ -111,6 +111,7 @@ export default function Trees({ initialTrees = [] }: TreesProps) {
   }, []);
 
   const handleAddToCart = (tree: Tree, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault(); // Prevent default behavior
     event.stopPropagation(); // Prevent event from bubbling to parent card
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
