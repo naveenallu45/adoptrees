@@ -173,6 +173,28 @@ export default function UserTreesList({ userType, publicId, showForestOnly = fal
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
+  const getOccasionText = (occasion: string) => {
+    if (!occasion) return '';
+    
+    const occasionMap: Record<string, string> = {
+      'birthday': 'For Birthday',
+      'anniversary': 'For Anniversary',
+      'wedding': 'For Wedding',
+      'graduation': 'For Graduation',
+      'festival': 'For Festival',
+      'thank-you': 'As a Thank You',
+      'congratulations': 'For Congratulations',
+      'get-well': 'Get Well Soon',
+      'new-baby': 'For New Baby',
+      'retirement': 'For Retirement',
+      'christmas': 'For Christmas',
+      'diwali': 'For Diwali',
+      'other': 'For Special Occasion'
+    };
+    
+    return occasionMap[occasion.toLowerCase()] || `For ${capitalizeFirstLetter(occasion)}`;
+  };
+
   useEffect(() => {
     fetchUserOrders();
   }, [publicId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -681,7 +703,7 @@ useEffect(() => {
                               {/* Occasion */}
                               {item.occasion && (
                                 <p className="text-sm text-emerald-700 mb-2">
-                                  Occasion of {capitalizeFirstLetter(item.occasion)}
+                                  {getOccasionText(item.occasion)}
                                 </p>
                               )}
                               
@@ -919,7 +941,7 @@ useEffect(() => {
                             {/* Occasion */}
                             {item.occasion && (
                               <p className="text-xs text-emerald-700 mb-1">
-                                Occasion of {capitalizeFirstLetter(item.occasion)}
+                                {getOccasionText(item.occasion)}
                               </p>
                             )}
                             
