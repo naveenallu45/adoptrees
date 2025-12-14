@@ -349,7 +349,7 @@ useEffect(() => {
           const currentUserId = String(session.user.id).trim();
           const currentUserEmail = session.user.email?.toLowerCase().trim();
           
-          // Filter orders to only include those belonging to the current user
+          // Filter orders to only include those belonging to the current user OR where user is a gift recipient
           ordersData = ordersData.filter((order: Order) => {
             const orderUserId = String(order.userId || '').trim();
             const orderUserEmail = (order.userEmail || '').toLowerCase().trim();
@@ -358,7 +358,16 @@ useEffect(() => {
             // Secondary check: if userId doesn't exist on order, fall back to email match
             const userIdMatches = orderUserId && orderUserId === currentUserId;
             const emailMatches = !orderUserId && currentUserEmail && orderUserEmail && orderUserEmail === currentUserEmail;
-            const matches = userIdMatches || emailMatches;
+            
+            // Also check if user is a gift recipient (order-level or item-level)
+            const isGiftRecipient = currentUserEmail && (
+              (order.isGift && order.giftRecipientEmail?.toLowerCase().trim() === currentUserEmail) ||
+              order.items.some((item: OrderItem) => 
+                item.recipientEmail?.toLowerCase().trim() === currentUserEmail
+              )
+            );
+            
+            const matches = userIdMatches || emailMatches || isGiftRecipient;
             
             if (!matches) {
               console.warn('[UserTreesList] Filtered out order not belonging to current user:', {
@@ -367,7 +376,8 @@ useEffect(() => {
                 orderUserEmail,
                 currentUserEmail,
                 userIdMatches,
-                emailMatches
+                emailMatches,
+                isGiftRecipient
               });
             }
             
@@ -680,12 +690,19 @@ useEffect(() => {
                                   <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                                   {item.oxygenKgs} kg/year O₂
                                 </span>
-                                {item.adoptionType === 'gift' && (
-                                  <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
-                                    <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                    Gift for {item.recipientName}
-                                  </span>
-                                )}
+                                {item.adoptionType === 'gift' && (() => {
+                                  // Check if current user is the recipient
+                                  const currentUserEmail = session?.user?.email?.toLowerCase().trim();
+                                  const recipientEmail = (item.recipientEmail || primaryOrder.giftRecipientEmail)?.toLowerCase().trim();
+                                  const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
+                                  
+                                  return (
+                                    <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
+                                      <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                      {isRecipient ? `Gifted by ${primaryOrder.userName || 'Someone'}` : `Gift for ${item.recipientName || primaryOrder.giftRecipientName}`}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                               {/* Adoption Date */}
                                 <div className="flex items-center justify-start gap-1.5 text-xs text-gray-500">
@@ -913,11 +930,18 @@ useEffect(() => {
                             <p className="text-xs text-green-600">
                               {item.oxygenKgs} kg/year O₂
                             </p>
-                            {item.adoptionType === 'gift' && (
-                              <p className="text-xs text-purple-600 truncate">
-                                Gift for: {item.recipientName}
-                              </p>
-                            )}
+                            {item.adoptionType === 'gift' && (() => {
+                              // Check if current user is the recipient
+                              const currentUserEmail = session?.user?.email?.toLowerCase().trim();
+                              const recipientEmail = (item.recipientEmail || order.giftRecipientEmail)?.toLowerCase().trim();
+                              const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
+                              
+                              return (
+                                <p className="text-xs text-purple-600 truncate">
+                                  {isRecipient ? `Gifted by: ${order.userName || 'Someone'}` : `Gift for: ${item.recipientName || order.giftRecipientName}`}
+                                </p>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}

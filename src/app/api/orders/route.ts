@@ -270,15 +270,38 @@ export async function GET(request: NextRequest) {
     const userId = String(session.user.id).trim();
     const userEmail = session.user.email?.toLowerCase().trim();
     
-    // Build query - use userId as primary filter
+    // Build query - include orders where user is the buyer OR the gift recipient
     // MongoDB string fields must match exactly, so ensure proper string conversion
-    const query: { userId: string; status?: string } = {
-      userId: userId
-    };
+    const queryConditions: Array<Record<string, unknown>> = [
+      { userId: userId }
+    ];
     
-    if (status) {
-      query.status = status;
+    // Also include gift orders where this user is the recipient (order-level and item-level)
+    if (userEmail) {
+      // Case-insensitive email matching using regex
+      const emailRegex = new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      
+      queryConditions.push({
+        giftRecipientEmail: emailRegex,
+        isGift: true
+      });
+      
+      // Also include orders where any item has this user as recipient (item-level)
+      queryConditions.push({
+        'items.recipientEmail': emailRegex
+      });
     }
+    
+    // Add status filter to all conditions if provided
+    if (status) {
+      queryConditions.forEach(condition => {
+        condition.status = status;
+      });
+    }
+    
+    const query = queryConditions.length > 1 
+      ? { $or: queryConditions }
+      : queryConditions[0];
 
     // Debug: Log the query being used
     console.log('[Orders API] Fetching orders for userId:', userId, 'userEmail:', userEmail);

@@ -47,11 +47,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50'); // Default to 50, max 100
     
+    // Include orders where user is the buyer OR the gift recipient
+    const userEmail = user.email?.toLowerCase().trim();
+    const queryConditions: Array<Record<string, unknown>> = [
+      { userId: String(user._id) }
+    ];
+    
+    if (userEmail) {
+      // Case-insensitive email matching
+      const emailRegex = new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      
+      queryConditions.push({ userEmail: emailRegex });
+      queryConditions.push({
+        giftRecipientEmail: emailRegex,
+        isGift: true
+      });
+      queryConditions.push({
+        'items.recipientEmail': emailRegex
+      });
+    }
+    
     const orders = await Order.find({
-      $or: [
-        { userId: String(user._id) },
-        { userEmail: user.email }
-      ]
+      $or: queryConditions
     })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
