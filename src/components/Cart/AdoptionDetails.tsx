@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { CartItem } from '@/contexts/CartContext';
 
 interface AdoptionDetailsProps {
@@ -8,8 +8,51 @@ interface AdoptionDetailsProps {
   onUpdate: (updates: Partial<CartItem>) => void;
 }
 
+// Occasion options for gifted trees
+const OCCASION_OPTIONS = [
+  { value: '', label: 'Select Occasion' },
+  { value: 'birthday', label: 'Birthday' },
+  { value: 'anniversary', label: 'Anniversary' },
+  { value: 'wedding', label: 'Wedding' },
+  { value: 'graduation', label: 'Graduation' },
+  { value: 'festival', label: 'Festival' },
+  { value: 'thank-you', label: 'Thank You' },
+  { value: 'congratulations', label: 'Congratulations' },
+  { value: 'get-well', label: 'Get Well Soon' },
+  { value: 'new-baby', label: 'New Baby' },
+  { value: 'retirement', label: 'Retirement' },
+  { value: 'christmas', label: 'Christmas' },
+  { value: 'diwali', label: 'Diwali' },
+  { value: 'other', label: 'Other' },
+];
+
 export default function AdoptionDetails({ item, onUpdate }: AdoptionDetailsProps) {
   const [showGiftDetails, setShowGiftDetails] = useState(false);
+  const [isOccasionDropdownOpen, setIsOccasionDropdownOpen] = useState(false);
+  const occasionDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close occasion dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (occasionDropdownRef.current && !occasionDropdownRef.current.contains(event.target as Node)) {
+        setIsOccasionDropdownOpen(false);
+      }
+    }
+    if (isOccasionDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOccasionDropdownOpen]);
+
+  const handleOccasionSelect = (value: string) => {
+    onUpdate({ occasion: value });
+    setIsOccasionDropdownOpen(false);
+  };
+
+  const getSelectedOccasionLabel = () => {
+    const selected = OCCASION_OPTIONS.find(opt => opt.value === item.occasion);
+    return selected ? selected.label : 'Select Occasion';
+  };
 
   const handleGiftButtonClick = () => {
     if (!item.adoptionType || item.adoptionType === 'self') {
@@ -138,15 +181,61 @@ export default function AdoptionDetails({ item, onUpdate }: AdoptionDetailsProps
               
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
-                  Recipient Email
+                  Recipient Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   value={item.recipientEmail || ''}
                   onChange={(e) => onUpdate({ recipientEmail: e.target.value })}
-                  placeholder="Enter recipient's email (optional)"
+                  placeholder="Enter recipient's email"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  required
                 />
+                <p className="text-xs text-gray-500 mt-1">We&apos;ll send a greeting email to the recipient</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Occasion
+                </label>
+                <div className="relative" ref={occasionDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsOccasionDropdownOpen(!isOccasionDropdownOpen)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors bg-white text-left flex items-center justify-between hover:border-green-400"
+                  >
+                    <span className={!item.occasion ? 'text-gray-500' : 'text-gray-900'}>
+                      {getSelectedOccasionLabel()}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOccasionDropdownOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {isOccasionDropdownOpen && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                      {OCCASION_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleOccasionSelect(option.value)}
+                          className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+                            option.value === item.occasion
+                              ? 'bg-green-50 text-green-700 font-medium'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          } ${option.value === '' ? 'text-gray-400 border-b border-gray-200' : ''}`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div>
