@@ -14,7 +14,23 @@ export function useTreeMutations() {
         method: 'POST',
         body: formData,
       });
-      const data = await response.json();
+      
+      // Clone response to read it multiple times if needed
+      const responseClone = response.clone();
+      
+      // Try to parse as JSON first
+      let data;
+      try {
+        data = await response.json();
+      } catch (_jsonError) {
+        // If JSON parsing fails, get text response for error message
+        const textResponse = await responseClone.text();
+        const errorMessage = textResponse.length > 0 
+          ? `Server error: ${textResponse.substring(0, 200)}`
+          : `Failed to parse server response (Status: ${response.status})`;
+        throw new Error(errorMessage);
+      }
+      
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to create tree');
       }
