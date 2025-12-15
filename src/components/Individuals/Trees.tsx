@@ -187,7 +187,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
                   router.push(`/trees/${tree._id}`);
                 }
               }}
-              className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400 md:cursor-pointer"
+              className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-green-400 md:cursor-pointer flex flex-col h-full"
             >
               {/* Tree Image */}
               <div className="relative aspect-[4/4] overflow-hidden bg-white">
@@ -205,30 +205,30 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
               </div>
 
               {/* Product Information */}
-              <div className="p-3 sm:p-4 bg-gradient-to-b from-green-50 to-green-100">
+              <div className="p-3 sm:p-4 bg-gradient-to-b from-green-50 to-green-100 flex flex-col flex-grow">
                 {/* Tree Name */}
                 <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 line-clamp-2 min-h-[3rem]">
                   {tree.name}
                 </h3>
 
                 {/* Price and Oxygen Contribution */}
-                <div className="flex justify-between items-start mb-3">
-                  <div>
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-600 mb-1 font-medium">Price</p>
-                    <span className="text-xl sm:text-2xl font-bold text-gray-900">₹{tree.price.toLocaleString()}</span>
+                    <span className="text-xl sm:text-2xl font-bold text-gray-900 block">₹{tree.price.toLocaleString()}</span>
                   </div>
-                  <div className="text-right sm:bg-white/80 sm:backdrop-blur-sm sm:rounded-lg px-2.5 py-1.5 sm:shadow-sm sm:border sm:border-green-200/50 ml-[2%]">
+                  <div className="text-right bg-white/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 shadow-sm border border-green-200/50 flex-shrink-0">
                     <p className="text-xs text-gray-600 mb-0.5 font-medium">Oxygen</p>
                     <p className="text-xs font-bold text-gray-900">{tree.oxygenKgs} kg/year</p>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-stretch">
                   {/* Info Button */}
                   <TreeInfoButton
                     treeId={tree._id}
-                    className="px-3 py-2.5"
+                    className="px-3 py-2.5 min-h-[2.5rem] sm:min-h-[2.75rem]"
                     labelClassName="text-xs font-semibold"
                   />
 
@@ -236,7 +236,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
                   {session && session.user.userType !== 'individual' ? (
                     <button
                       disabled
-                      className="flex-1 bg-gray-300 text-gray-500 px-3 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed flex items-center justify-center"
+                      className="flex-1 bg-gray-300 text-gray-500 px-3 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed flex items-center justify-center min-h-[2.5rem] sm:min-h-[2.75rem]"
                     >
                       Individual Only
                     </button>
@@ -245,7 +245,7 @@ const Trees = memo(function Trees({ initialTrees = [] }: TreesProps) {
                       ref={(el) => { buttonRefs.current[tree._id] = el; }}
                       onClick={(e) => handleAddToCart(tree, e)}
                       disabled={addingTreeId === tree._id}
-                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden min-h-[2.5rem] sm:min-h-[2.75rem]"
                     >
                       {addingTreeId === tree._id ? (
                         <span className="flex items-center gap-1.5">
