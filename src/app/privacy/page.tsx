@@ -1,12 +1,25 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "Read Adoptrees Privacy Policy. Learn how we collect, use, store, and protect your personal information and data.",
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 sm:pt-24 md:pt-28">
+    <main className="min-h-screen bg-gray-50 pt-20 sm:pt-24 md:pt-28">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 md:p-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-            Privacy Policy – Adoptrees
-          </h1>
-          <p className="text-sm text-gray-600 mb-8">Last Updated: November 2025</p>
+        <article className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 md:p-12">
+          <header>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2">
+              Privacy Policy – Adoptrees
+            </h1>
+            <p className="text-sm text-gray-600 mb-8">Last Updated: November 2025</p>
+          </header>
 
           <div className="prose prose-lg max-w-none space-y-6 text-gray-700">
             <p>
@@ -128,9 +141,9 @@ export default function PrivacyPage() {
               </p>
             </section>
           </div>
-        </div>
+        </article>
       </div>
-    </div>
+    </main>
   );
 }
 

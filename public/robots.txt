@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /refund
+Allow: /terms
+Allow: /shipping
+Allow: /privacy
+Allow: /contact
+Allow: /cancellation-refund
+
+# Disallow admin and dashboard routes
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /api/
+
+Sitemap: https://www.adoptrees.com/sitemap.xml
+

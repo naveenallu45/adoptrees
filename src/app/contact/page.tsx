@@ -1,16 +1,27 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Contact Us",
+  description: "Get in touch with Adoptrees customer support team. Find our contact information including email, phone, address, and support hours.",
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/30 to-gray-50 pt-20 sm:pt-24 md:pt-28">
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/30 to-gray-50 pt-20 sm:pt-24 md:pt-28">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="max-w-5xl mx-auto">
           {/* Header Section */}
-          <div className="text-center mb-8 sm:mb-12">
+          <header className="text-center mb-8 sm:mb-12">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-3">
               Contact Us
             </h1>
             <p className="text-lg sm:text-xl text-gray-600">Customer Support Team – Adoptrees</p>
             <div className="mt-4 h-1 w-24 bg-gradient-to-r from-green-500 to-emerald-600 mx-auto rounded-full"></div>
-          </div>
+          </header>
 
           {/* Contact Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -104,7 +115,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -1,12 +1,25 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Refund & Cancellation Policy",
+  description: "Learn about Adoptrees refund and cancellation policy. Understand our terms for cancellations, refund timelines, and how to request refunds.",
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 export default function RefundPage() {
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 sm:pt-24 md:pt-28">
+    <main className="min-h-screen bg-gray-50 pt-20 sm:pt-24 md:pt-28">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 md:p-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-            Refund & Cancellation Policy – Adoptrees
-          </h1>
-          <p className="text-sm text-gray-600 mb-8">Last Updated: November 2025</p>
+        <article className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 md:p-12">
+          <header>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2">
+              Refund & Cancellation Policy – Adoptrees
+            </h1>
+            <p className="text-sm text-gray-600 mb-8">Last Updated: November 2025</p>
+          </header>
 
           <div className="prose prose-lg max-w-none space-y-6 text-gray-700">
             <p>
@@ -97,9 +110,9 @@ export default function RefundPage() {
               </p>
             </section>
           </div>
-        </div>
+        </article>
       </div>
-    </div>
+    </main>
   );
 }
 
