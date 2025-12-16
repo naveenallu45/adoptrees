@@ -351,7 +351,11 @@ useEffect(() => {
   const fetchUserOrders = async () => {
     try {
       setLoading(true);
-      const endpoint = publicId ? `/api/public/users/${publicId}/orders` : '/api/orders';
+      // URL-encode the publicId to ensure special characters are handled correctly
+      const encodedPublicId = publicId ? encodeURIComponent(publicId) : null;
+      const endpoint = encodedPublicId ? `/api/public/users/${encodedPublicId}/orders` : '/api/orders';
+      
+      console.log('[UserTreesList] Fetching orders with publicId:', publicId, 'encoded:', encodedPublicId);
       
       // Add cache-busting and ensure fresh data
       const response = await fetch(endpoint, {

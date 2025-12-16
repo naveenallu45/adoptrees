@@ -17,18 +17,41 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     await connectDB();
 
     const { publicId: publicIdParam } = await params;
-    const rawPublicId = (publicIdParam || '').trim();
+    
+    // Decode URL-encoded publicId and trim whitespace
+    let rawPublicId = '';
+    try {
+      rawPublicId = decodeURIComponent(publicIdParam || '').trim();
+    } catch {
+      // If decodeURIComponent fails, just use the original value
+      rawPublicId = (publicIdParam || '').trim();
+    }
     
     if (!rawPublicId) {
       return NextResponse.json({ success: false, error: 'Invalid public ID' }, { status: 400 });
     }
     
-    // Query user by publicId (case-insensitive to support legacy mixed-case IDs)
+    // Try multiple lookup strategies
+    let userDoc = null;
+    
+    // Strategy 1: Case-insensitive regex match (handles mixed case)
     const publicIdRegex = new RegExp(`^${escapeRegExp(rawPublicId)}$`, 'i');
-    const userDoc = await User.findOne({ publicId: publicIdRegex }).lean();
+    userDoc = await User.findOne({ publicId: publicIdRegex }).lean();
+    
+    // Strategy 2: If not found, try exact match (case-sensitive)
+    if (!userDoc || !('_id' in userDoc)) {
+      userDoc = await User.findOne({ publicId: rawPublicId }).lean();
+    }
+    
+    // Strategy 3: If still not found, try lowercase match
+    if (!userDoc || !('_id' in userDoc)) {
+      userDoc = await User.findOne({ publicId: rawPublicId.toLowerCase() }).lean();
+    }
     
     if (!userDoc || !('_id' in userDoc)) {
       console.error(`[PublicAPI] User not found for publicId: ${rawPublicId}`);
+      console.error(`[PublicAPI] Attempted searches: regex (case-insensitive), exact match, lowercase`);
+      
       // Try to find any user with similar publicId for debugging
       const similarUsers = await User.find({ 
         publicId: { $exists: true, $ne: null } 

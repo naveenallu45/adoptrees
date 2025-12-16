@@ -296,7 +296,11 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
     const fetchUserOrders = async () => {
       try {
         setLoading(true);
-        const endpoint = publicId ? `/api/public/users/${publicId}/orders` : '/api/orders';
+        // URL-encode the publicId to ensure special characters are handled correctly
+        const encodedPublicId = publicId ? encodeURIComponent(publicId) : null;
+        const endpoint = encodedPublicId ? `/api/public/users/${encodedPublicId}/orders` : '/api/orders';
+        
+        console.log('[ForestProfileCard] Fetching orders with publicId:', publicId, 'encoded:', encodedPublicId);
         
         // Add cache-busting and ensure fresh data for each user
         const response = await fetch(endpoint, {
@@ -332,10 +336,12 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
           }
         } else {
           console.error('[ForestProfileCard] Failed to fetch orders:', result.error);
+          console.error('[ForestProfileCard] PublicId used:', publicId);
           // If viewing public profile and user not found, set empty state
           if (publicId && result.error === 'User not found') {
             setOrdersData([]);
             calculateStats([]);
+            // Don't show error in ForestProfileCard - let UserTreesList handle it
           }
         }
       } catch (_error) {
