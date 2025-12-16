@@ -160,7 +160,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Action Buttons */}
-          <div className="md:hidden flex items-center justify-end gap-2">
+          <div className="md:hidden flex items-center justify-end gap-3">
             {/* Mobile Cart Button */}
             <Link href="/cart" className={`relative flex items-center justify-center w-10 h-10 shrink-0 text-white border border-white rounded-lg transition-all duration-200 ${
               isMobile || shouldUseGreenBg 
@@ -179,8 +179,8 @@ export default function Navbar() {
               type="button"
               className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-lg transition-colors duration-300 ${
                 isMobile || shouldUseWhiteBg 
-                  ? 'text-gray-800 hover:bg-gray-100' 
-                  : 'text-white hover:bg-white/20'
+                  ? 'text-gray-800 bg-gray-100 hover:bg-gray-200' 
+                  : 'text-white bg-white/20 hover:bg-white/30'
               }`}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
@@ -199,64 +199,106 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        <div className={`md:hidden overflow-hidden mt-2 transition-all duration-300 ${
-          isMobile || shouldUseWhiteBg 
-            ? 'bg-white border-t border-gray-100' 
-            : 'bg-transparent border-t border-white/20'
-        } ${isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="pt-4 pb-4 space-y-3">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`block transition-colors duration-300 py-2 font-bold text-lg border-b last:border-b-0 ${
-                  shouldUseWhiteBg 
-                    ? 'text-gray-900 hover:text-green-600 border-gray-200' 
-                    : 'text-white hover:text-green-200 border-white/20'
-                }`}
-                style={{ fontFamily: 'var(--font-work-sans), sans-serif' }}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-            <div className="flex flex-col gap-3 mt-4">
-              {/* Mobile Auth Buttons */}
-              {session ? (
-                <Link
-                  href={session.user.userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees'}
-                  className={`flex items-center justify-center gap-2 text-white border border-white px-3 py-2 rounded-xl font-black text-[18.5px] transition-all duration-200 ${
-                    isMobile || shouldUseGreenBg 
-                      ? 'bg-green-500 hover:bg-green-600' 
-                      : 'bg-transparent hover:text-green-200'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Profile
-                </Link>
-              ) : (
-                <Link
-                  href="/login"
-                  className={`flex items-center justify-center gap-2 text-white border border-white px-3 py-2 rounded-xl font-black text-[18.5px] transition-all duration-200 ${
-                    isMobile || shouldUseGreenBg 
-                      ? 'bg-green-500 hover:bg-green-600' 
-                      : 'bg-transparent hover:text-green-200'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Login
-                </Link>
-              )}
+        {/* Mobile Menu Overlay */}
+        {isMenuOpen && (
+          <div className="md:hidden fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setIsMenuOpen(false)}
+            />
+            
+            {/* Menu Panel */}
+            <div className="absolute inset-y-0 right-0 w-2/3 bg-white shadow-2xl">
+              <div className="flex flex-col h-full">
+                {/* Header with Logo, Cart, and Close Button */}
+                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+                  {/* Logo */}
+                  <Link 
+                    href="/"
+                    className="flex items-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="relative w-[90px] h-[90px] flex-shrink-0">
+                      <Image
+                        src="https://res.cloudinary.com/dmhdhzr6y/image/upload/v1762682129/WhatsApp_Image_2025-10-17_at_7.25.07_PM_vqytis.png"
+                        alt="Adoptrees Logo"
+                        fill
+                        className="object-contain object-center"
+                        sizes="90px"
+                        priority
+                      />
+                    </div>
+                  </Link>
+
+                  {/* Close Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-center w-12 h-12 text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="Close menu"
+                  >
+                    <svg 
+                      className="w-7 h-7" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        d="M6 18L18 6M6 6l12 12" 
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Navigation Links */}
+                <div className="flex-1 px-4 py-4 space-y-0">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="block py-3 font-bold text-lg text-gray-900 hover:text-green-600 border-b border-gray-200 last:border-b-0 transition-colors"
+                      style={{ fontFamily: 'var(--font-work-sans), sans-serif' }}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Login Button */}
+                <div className="px-4 pb-4">
+                  {session ? (
+                    <Link
+                      href={session.user.userType === 'individual' ? '/dashboard/individual/trees' : '/dashboard/company/trees'}
+                      className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white border border-white px-3 py-2 rounded-xl font-black text-[18.5px] transition-all duration-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Profile
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white border border-white px-3 py-2 rounded-xl font-black text-[18.5px] transition-all duration-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Login
+                    </Link>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </nav>
   );
