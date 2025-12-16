@@ -152,6 +152,7 @@ export default function UserTreesList({ userType, publicId, showForestOnly = fal
   const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
   const [locationVisibility, setLocationVisibility] = useState<Record<string, boolean>>({});
   const [userImages, setUserImages] = useState<Record<string, string | null>>({});
+  const [publicUserData, setPublicUserData] = useState<{ name?: string; image?: string | null } | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const isTransactionsPage = pathname.includes('/transactions');
@@ -368,6 +369,33 @@ useEffect(() => {
       
       if (result.success) {
         let ordersData = publicId ? result.data.orders : result.data;
+        
+        // For public users, extract user data from API response
+        if (publicId && result.data.user) {
+          const userData = result.data.user;
+          const displayName = userData.name || 'User';
+          const userImage = userData.image || null;
+          
+          console.log('[UserTreesList] Public user data from API:', {
+            name: displayName,
+            hasImage: !!userImage,
+            userType: userData.userType
+          });
+          
+          setPublicUserData({
+            name: displayName,
+            image: userImage
+          });
+          
+          // Also update all orders with the correct userName for consistency
+          ordersData = ordersData.map((order: Order) => ({
+            ...order,
+            userName: displayName
+          }));
+        } else {
+          // Clear public user data if not viewing public profile
+          setPublicUserData(null);
+        }
         
         // Safety filter: If not viewing public profile, ensure we only show current user's orders
         if (!publicId && session?.user?.id) {
@@ -798,6 +826,22 @@ useEffect(() => {
                               ? locationVisibility[locationKey] 
                               : !hasInitializedMaps.current;
                             
+                            // For public users, use publicUserData; otherwise use order data
+                            const mapUserName = publicId && publicUserData?.name
+                              ? publicUserData.name
+                              : (primaryOrder.userName || 'User');
+                            const mapUserImage = publicId && publicUserData
+                              ? publicUserData.image
+                              : (primaryOrder.userId ? userImages[String(primaryOrder.userId)] : null);
+                            
+                            console.log('[UserTreesList] Rendering map with props:', {
+                              userName: mapUserName,
+                              hasImage: !!mapUserImage,
+                              isPublic: !!publicId,
+                              publicUserData: publicUserData ? 'present' : 'null',
+                              orderUserName: primaryOrder.userName
+                            });
+                            
                             return (
                               <div className="mt-1 pt-1.5 border-t border-green-100/50" key={locationKey}>
                                 <LocationToggle
@@ -805,8 +849,8 @@ useEffect(() => {
                                   latitude={coords[1]}
                                   longitude={coords[0]}
                                   treeName={item.treeName}
-                                  userName={primaryOrder.userName}
-                                  userImage={primaryOrder.userId ? userImages[String(primaryOrder.userId)] : null}
+                                  userName={mapUserName}
+                                  userImage={mapUserImage}
                                   isVisible={isVisible}
                                   onToggle={() => {
                                     setLocationVisibility(prev => ({
