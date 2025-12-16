@@ -415,7 +415,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     
     // Column 1: Tree name (first field)
     if (data.treeNames && data.treeNames.length > 0) {
-      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.01); // Aligned with stats center, shifted 1% left
+      const col1X = statsCenterX - gapBetweenStats * 1.5 + (pageWidth * 0.005); // Aligned with stats center, shifted 0.5% right
       const treeNameY = statsStartY;
       const treeNameText = data.treeNames[0]; // Show first tree name
       const treeNameFontSize = 27; // Increased by 35% from 20
