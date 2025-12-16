@@ -157,7 +157,13 @@ export default function PlantingLocationMap({
       const userInitials = getUserInitials(userName);
       const hasUserImage = userImage && typeof userImage === 'string' && userImage.trim() !== '';
       const escapedUserName = escapeHtml(userDisplayName);
-      const escapedTreeName = escapeHtml(treeName || 'Tree Planting Location');
+      const baseTreeName = treeName || 'Tree';
+      
+      // Format tree name as "{userName}'s {treeName}" if userName exists and is not 'User'
+      const displayTreeName = userDisplayName && userDisplayName !== 'User' 
+        ? `${userDisplayName}'s ${baseTreeName}`
+        : baseTreeName;
+      const escapedTreeName = escapeHtml(displayTreeName);
       const escapedUserImage = hasUserImage ? escapeHtml(userImage.trim()) : '';
       
       // Debug logging for map popup content
@@ -166,7 +172,8 @@ export default function PlantingLocationMap({
         hasImage: hasUserImage,
         imageUrl: hasUserImage ? escapedUserImage.substring(0, 50) + '...' : 'none',
         initials: userInitials,
-        treeName: escapedTreeName
+        treeName: escapedTreeName,
+        displayTreeName: displayTreeName
       });
       
       const infoWindowContent = `
@@ -267,7 +274,7 @@ export default function PlantingLocationMap({
       markerRef.current = new maps.Marker({
         position: location,
         map: mapInstanceRef.current,
-        title: `${userDisplayName} - ${treeName || 'Tree Planting Location'}`,
+        title: displayTreeName,
         animation: maps.Animation.DROP,
         icon: {
           url: 'data:image/svg+xml;base64,' + btoa(`
