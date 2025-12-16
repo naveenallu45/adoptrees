@@ -218,10 +218,33 @@ export default function PlantingLocationMap({
         </div>
       `;
 
+      // Hide close button after InfoWindow opens
+      const hideCloseButton = () => {
+        // Try multiple times with increasing delays to catch the button
+        [50, 100, 200, 300].forEach((delay) => {
+          setTimeout(() => {
+            // Find and hide the close button in the InfoWindow
+            const closeButtons = document.querySelectorAll(
+              '.gm-style-iw-d button[aria-label*="Close"], ' +
+              '.gm-style-iw-d button[title*="Close"], ' +
+              '.gm-style-iw-d .gm-ui-hover-effect, ' +
+              'button[aria-label*="Close"][title*="Info"], ' +
+              '.gm-style-iw button'
+            );
+            closeButtons.forEach((button) => {
+              (button as HTMLElement).style.display = 'none';
+              (button as HTMLElement).style.visibility = 'hidden';
+            });
+          }, delay);
+        });
+      };
+
       // Create or update info window with latest content
       // Always recreate to ensure it shows the latest user data
+      const wasOpen = infoWindowRef.current?.getMap() !== null;
       if (infoWindowRef.current) {
         // Close existing info window if open
+        infoWindowRef.current.close();
         infoWindowRef.current.setContent('');
       }
       
@@ -267,36 +290,20 @@ export default function PlantingLocationMap({
         }
       } as never);
 
-        // Hide close button after InfoWindow opens
-        const hideCloseButton = () => {
-          // Try multiple times with increasing delays to catch the button
-          [50, 100, 200, 300].forEach((delay) => {
-            setTimeout(() => {
-              // Find and hide the close button in the InfoWindow
-              const closeButtons = document.querySelectorAll(
-                '.gm-style-iw-d button[aria-label*="Close"], ' +
-                '.gm-style-iw-d button[title*="Close"], ' +
-                '.gm-style-iw-d .gm-ui-hover-effect, ' +
-                'button[aria-label*="Close"][title*="Info"], ' +
-                '.gm-style-iw button'
-              );
-              closeButtons.forEach((button) => {
-                (button as HTMLElement).style.display = 'none';
-                (button as HTMLElement).style.visibility = 'hidden';
-              });
-            }, delay);
-          });
-        };
-
         // Open info window automatically when marker is created
         // This ensures the popup is visible immediately for both public and authenticated users
+        // If info window was previously open, reopen it with new content
         setTimeout(() => {
           if (mapInstanceRef.current && markerRef.current && infoWindow) {
-            console.log('[PlantingLocationMap] Opening info window automatically');
+            console.log('[PlantingLocationMap] Opening info window automatically with:', {
+              userName: userDisplayName,
+              hasImage: hasUserImage,
+              wasOpen
+            });
             infoWindow.open(mapInstanceRef.current, markerRef.current);
             hideCloseButton();
           }
-        }, 200);
+        }, wasOpen ? 100 : 200);
 
         markerRef.current.addListener('click', () => {
           if (mapInstanceRef.current && markerRef.current && infoWindow) {

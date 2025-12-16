@@ -141,8 +141,6 @@ export default function TreeDetailPage() {
         if (result.success && result.data) {
           const order = result.data;
           if (order.items[itemIndex] && order.paymentStatus === 'paid') {
-            foundOrder = order;
-            
             // Log what we received from API
             console.log('[TreeDetail] API response:', {
               orderUserName: order.userName,
@@ -155,7 +153,7 @@ export default function TreeDetailPage() {
               } : 'missing'
             });
             
-            // Set user image from API response (explicitly set to null if not available)
+            // Set user image from API response FIRST (before creating order object)
             // Check if image exists and is not null/empty
             const userImageValue = result.user?.image;
             if (userImageValue && typeof userImageValue === 'string' && userImageValue.trim() !== '') {
@@ -168,30 +166,43 @@ export default function TreeDetailPage() {
             
             // Ensure order has userName for display - prioritize API user data over order.userName
             // The API returns user.name which is already the correct displayName (companyName for companies, name for individuals)
+            // The API also sets order.userName = displayName, so it should already be correct
+            // But we'll use result.user.name as the source of truth for public users
             let finalUserName = order.userName;
             
-            // Always prefer user data from API response for public users
-            // For companies, prefer companyName, fallback to name
-            if (result.user?.companyName && result.user.companyName !== 'User' && result.user.companyName !== 'Company') {
-              finalUserName = result.user.companyName;
-              console.log('[TreeDetail] Using userName from API user.companyName:', finalUserName);
-            } else if (result.user?.name && result.user.name !== 'User' && result.user.name !== 'Company') {
+            // For public users, ALWAYS use the user data from API response as it's the latest
+            // The API sets order.userName, but result.user.name is the source of truth
+            if (result.user?.name) {
+              // API already calculated the correct displayName and set it in order.userName
+              // But result.user.name is the actual value, so use it
               finalUserName = result.user.name;
-              console.log('[TreeDetail] Using userName from API user.name:', finalUserName);
+              console.log('[TreeDetail] Using userName from API user.name (public):', finalUserName);
             } else if (order.userName && order.userName !== 'User' && order.userName !== 'Company') {
+              // Fallback to order.userName if result.user.name is not available
               finalUserName = order.userName;
-              console.log('[TreeDetail] Using userName from order:', finalUserName);
+              console.log('[TreeDetail] Using userName from order (fallback):', finalUserName);
             } else {
               finalUserName = 'Company';
               console.warn('[TreeDetail] No valid userName found, using default');
             }
             
-            // Update order.userName to ensure it's set correctly
-            order.userName = finalUserName;
+            // Create a new order object with updated userName to ensure React detects the change
+            // This is critical for React to re-render with the correct userName
+            const updatedOrder = {
+              ...order,
+              userName: finalUserName
+            };
+            
+            foundOrder = updatedOrder;
+            
+            // CRITICAL: Set userImage state BEFORE setOrder to ensure it's available when map renders
+            // The state updates are async, so we need to ensure userImage is set first
             
             console.log('[TreeDetail] Final values for map:', {
               userName: finalUserName,
-              userImage: userImageValue ? 'present' : 'missing'
+              userImage: userImageValue ? 'present' : 'missing',
+              orderUserName: updatedOrder.userName,
+              orderObjectUpdated: true
             });
           } else {
             setError('Tree item not found or order not paid');
@@ -584,16 +595,33 @@ export default function TreeDetailPage() {
                 <h3 className="text-white font-semibold mb-3 text-lg">Planting Location</h3>
                 <div className="bg-white rounded-2xl p-5 border-2 border-green-200 shadow-lg">
                   <p className="text-green-800 font-semibold mb-3">Tree Location</p>
-                      <PlantingLocationMap
-                        key={`map-${order.orderId}-${itemIndex}-${order.userName || 'no-name'}-${userImage ? 'has-image' : 'no-image'}`}
-                        latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
-                        longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
-                        treeName={item.treeName}
-                        userName={order.userName || 'Company'}
-                        userImage={userImage || null}
-                        className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
-                        showOpenInMaps={true}
-                      />
+                      {(() => {
+                        // Ensure we have valid userName and userImage for the map
+                        const mapUserName = order.userName && order.userName !== 'User' && order.userName !== 'Company' 
+                          ? order.userName 
+                          : (publicId ? 'Company' : 'Company');
+                        const mapUserImage = userImage && userImage.trim() !== '' ? userImage : null;
+                        
+                        console.log('[TreeDetail] Rendering map with props:', {
+                          userName: mapUserName,
+                          hasImage: !!mapUserImage,
+                          orderUserName: order.userName,
+                          userImageState: userImage ? 'present' : 'null'
+                        });
+                        
+                        return (
+                          <PlantingLocationMap
+                            key={`map-${order.orderId}-${itemIndex}-${mapUserName}-${mapUserImage ? 'img' : 'no-img'}`}
+                            latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
+                            longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
+                            treeName={item.treeName}
+                            userName={mapUserName}
+                            userImage={mapUserImage}
+                            className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
+                            showOpenInMaps={true}
+                          />
+                        );
+                      })()}
                 </div>
               </div>
             )}
