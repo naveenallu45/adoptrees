@@ -15,9 +15,17 @@ export default async function PublicForestPage({ params }: { params: Promise<{ p
   const { publicId } = await params;
   let userType: 'individual' | 'company' = 'individual';
   
+  // Decode URL-encoded publicId and trim whitespace (do this outside try block)
+  let rawPublicId = '';
+  try {
+    rawPublicId = decodeURIComponent(publicId || '').trim();
+  } catch {
+    // If decodeURIComponent fails, just use the original value
+    rawPublicId = (publicId || '').trim();
+  }
+  
   try {
     await connectDB();
-    const rawPublicId = (publicId || '').trim();
     
     if (!rawPublicId) {
       console.error('[PublicRoute] Empty publicId provided');
@@ -41,10 +49,13 @@ export default async function PublicForestPage({ params }: { params: Promise<{ p
     // Default to individual if there's an error
   }
   
+  // URL-encode the publicId when redirecting to ensure special characters are handled correctly
+  const encodedPublicId = encodeURIComponent(rawPublicId || publicId);
+  
   // Redirect to dashboard trees with publicId, so we reuse the same page and sidebar is auto-disabled
   const dest = userType === 'company'
-    ? `/dashboard/company/trees?publicId=${publicId}`
-    : `/dashboard/individual/trees?publicId=${publicId}`;
+    ? `/dashboard/company/trees?publicId=${encodedPublicId}`
+    : `/dashboard/individual/trees?publicId=${encodedPublicId}`;
   redirect(dest);
 }
 

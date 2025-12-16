@@ -447,7 +447,12 @@ useEffect(() => {
         });
         setUserImages(imageMap);
       } else {
-        setError(result.error);
+        // Provide more helpful error message for public profiles
+        if (publicId && result.error === 'User not found') {
+          setError(`User profile not found. The QR code may be invalid or the user may have been removed.`);
+        } else {
+          setError(result.error || 'Failed to fetch orders');
+        }
       }
     } catch (_error) {
       console.error('[UserTreesList] Error fetching orders:', _error);

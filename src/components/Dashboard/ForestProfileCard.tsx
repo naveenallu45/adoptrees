@@ -332,6 +332,11 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
           }
         } else {
           console.error('[ForestProfileCard] Failed to fetch orders:', result.error);
+          // If viewing public profile and user not found, set empty state
+          if (publicId && result.error === 'User not found') {
+            setOrdersData([]);
+            calculateStats([]);
+          }
         }
       } catch (_error) {
         console.error('[ForestProfileCard] Error fetching orders:', _error);

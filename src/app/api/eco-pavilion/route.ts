@@ -45,21 +45,14 @@ export async function GET(request: NextRequest) {
     const filterType = searchParams.get('filterType') || 'all'; // 'all', 'individual', 'company', 'forest'
 
     // Build match conditions based on filterType
+    // Note: userType filter is applied after grouping by owner (to include gift recipients)
     const matchConditions: {
       paymentStatus: string;
       status: { $ne: string };
-      userType?: string;
     } = {
       paymentStatus: 'paid',
       status: { $ne: 'cancelled' }
     };
-
-    // Add userType filter for individual and company (forests can be from any user type)
-    if (filterType === 'individual') {
-      matchConditions.userType = 'individual';
-    } else if (filterType === 'company') {
-      matchConditions.userType = 'company';
-    }
     // For 'forest' filter, we'll filter items after unwinding
 
     // Aggregate users with their order statistics
@@ -162,17 +155,122 @@ export async function GET(request: NextRequest) {
                 }
               }
             }
+          },
+          // Determine the owner of this item (buyer or gift recipient)
+          // Priority: 1. items.recipientEmail (item-level gift), 2. giftRecipientEmail (order-level gift), 3. userEmail (buyer)
+          ownerEmail: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ['$items.recipientEmail', null] },
+                  { $ne: ['$items.recipientEmail', undefined] },
+                  { $ne: ['$items.recipientEmail', ''] }
+                ]
+              },
+              then: { $toLower: '$items.recipientEmail' },
+              else: {
+                $cond: {
+                  if: {
+                    $and: [
+                      { $or: ['$isGift', { $eq: ['$items.adoptionType', 'gift'] }] },
+                      { $ne: ['$giftRecipientEmail', null] },
+                      { $ne: ['$giftRecipientEmail', undefined] },
+                      { $ne: ['$giftRecipientEmail', ''] }
+                    ]
+                  },
+                  then: { $toLower: '$giftRecipientEmail' },
+                  else: { $toLower: '$userEmail' }
+                }
+              }
+            }
           }
         }
       },
-      // Group back by order to calculate order totals
+      // Lookup user by owner email to get userId and userType for gift recipients
+      {
+        $lookup: {
+          from: 'users',
+          let: { ownerEmail: '$ownerEmail' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toLower: '$email' }, '$$ownerEmail']
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 1,
+                email: 1,
+                name: 1,
+                companyName: 1,
+                userType: 1
+              }
+            }
+          ],
+          as: 'ownerUser'
+        }
+      },
+      // Add fields for the owner (buyer or gift recipient)
+      {
+        $addFields: {
+          ownerUserId: {
+            $cond: {
+              if: { $gt: [{ $size: '$ownerUser' }, 0] },
+              then: { $toString: { $arrayElemAt: ['$ownerUser._id', 0] } },
+              else: '$userId' // Fallback to buyer's userId if recipient not found
+            }
+          },
+          ownerUserName: {
+            $cond: {
+              if: { $gt: [{ $size: '$ownerUser' }, 0] },
+              then: {
+                $ifNull: [
+                  { $arrayElemAt: ['$ownerUser.name', 0] },
+                  { $arrayElemAt: ['$ownerUser.companyName', 0] },
+                  '$userName'
+                ]
+              },
+              else: '$userName'
+            }
+          },
+          ownerUserType: {
+            $cond: {
+              if: { $gt: [{ $size: '$ownerUser' }, 0] },
+              then: { $arrayElemAt: ['$ownerUser.userType', 0] },
+              else: '$userType'
+            }
+          },
+          isGiftItem: {
+            $or: [
+              { $eq: ['$items.adoptionType', 'gift'] },
+              { $and: [
+                '$isGift',
+                { $ne: ['$items.recipientEmail', null] },
+                { $ne: ['$items.recipientEmail', undefined] },
+                { $ne: ['$items.recipientEmail', ''] }
+              ]},
+              { $and: [
+                '$isGift',
+                { $ne: ['$giftRecipientEmail', null] },
+                { $ne: ['$giftRecipientEmail', undefined] },
+                { $ne: ['$giftRecipientEmail', ''] }
+              ]}
+            ]
+          }
+        }
+      },
+      // Group back by order and owner to calculate totals per owner
       {
         $group: {
-          _id: '$_id',
-          userId: { $first: '$userId' },
-          userName: { $first: '$userName' },
-          userEmail: { $first: '$userEmail' },
-          userType: { $first: '$userType' },
+          _id: {
+            orderId: '$_id',
+            ownerUserId: '$ownerUserId'
+          },
+          ownerUserName: { $first: '$ownerUserName' },
+          ownerUserEmail: { $first: '$ownerEmail' },
+          ownerUserType: { $first: '$ownerUserType' },
           orderTrees: { $sum: '$items.quantity' },
           orderOxygen: { $sum: { $multiply: ['$items.quantity', '$items.oxygenKgs'] } },
           orderCO2: { $sum: { $multiply: ['$items.quantity', '$itemCO2'] } },
@@ -180,13 +278,13 @@ export async function GET(request: NextRequest) {
           createdAt: { $first: '$createdAt' }
         }
       },
-      // Now group by user to aggregate all orders
+      // Now group by owner user to aggregate all their adoptions (both bought and received as gifts)
       {
         $group: {
-          _id: '$userId',
-          userName: { $first: '$userName' },
-          userEmail: { $first: '$userEmail' },
-          userType: { $first: '$userType' },
+          _id: '$_id.ownerUserId',
+          userName: { $first: '$ownerUserName' },
+          userEmail: { $first: '$ownerUserEmail' },
+          userType: { $first: '$ownerUserType' },
           totalTrees: { $sum: '$orderTrees' },
           totalOxygen: { $sum: '$orderOxygen' },
           totalCO2: { $sum: '$orderCO2' },
@@ -231,6 +329,17 @@ export async function GET(request: NextRequest) {
           as: 'userProfile'
         }
       },
+      // Filter by userType if needed (for individual/company filters)
+      ...(filterType === 'individual' || filterType === 'company'
+        ? [
+            {
+              $match: {
+                userType: filterType
+              }
+            }
+          ]
+        : []
+      ),
       // Unwind user profile (should be single document)
       {
         $unwind: {
