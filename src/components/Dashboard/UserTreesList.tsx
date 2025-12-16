@@ -52,6 +52,7 @@ function LocationToggle({
       {isVisible && (
         <div className="mt-3">
           <PlantingLocationMap
+            key={`map-${latitude}-${longitude}-${userName || 'no-name'}-${userImage ? 'has-img' : 'no-img'}`}
             latitude={latitude}
             longitude={longitude}
             treeName={treeName}
@@ -855,18 +856,26 @@ useEffect(() => {
                             let mapUserImage: string | null = null;
                             
                             if (publicId) {
-                              // Public user: prioritize publicUserData
-                              if (publicUserData?.name && publicUserData.name !== 'User' && publicUserData.name !== 'Company') {
-                                mapUserName = publicUserData.name;
+                              // Public user: ALWAYS prioritize publicUserData if it exists
+                              // Even if name is 'User', use it if publicUserData is set (it means API returned it)
+                              if (publicUserData) {
+                                mapUserName = publicUserData.name || 'User';
                                 mapUserImage = publicUserData.image || null;
+                                console.log('[UserTreesList] Using publicUserData for map:', {
+                                  name: mapUserName,
+                                  hasImage: !!mapUserImage,
+                                  imageUrl: mapUserImage ? mapUserImage.substring(0, 50) + '...' : 'none'
+                                });
                               } else if (primaryOrder.userName && primaryOrder.userName !== 'User' && primaryOrder.userName !== 'Company') {
+                                console.log('[UserTreesList] Using order userName (publicUserData not ready):', primaryOrder.userName);
                                 // Fallback to order userName if publicUserData not ready yet
                                 mapUserName = primaryOrder.userName;
                                 mapUserImage = primaryOrder.userId ? userImages[String(primaryOrder.userId)] : null;
                               } else {
                                 // Last resort: use 'User' but still try to get image
                                 mapUserName = 'User';
-                                mapUserImage = publicUserData?.image || null;
+                                mapUserImage = null;
+                                console.warn('[UserTreesList] No user data available, using default "User"');
                               }
                             } else {
                               // Authenticated user: use order data
