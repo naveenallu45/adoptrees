@@ -42,7 +42,6 @@ export interface IOrder extends Document {
     task: string;
     description: string;
     scheduledDate: Date;
-    priority: 'low' | 'medium' | 'high';
     status: 'pending' | 'in_progress' | 'completed' | 'updating';
     location?: string;
     plantingDetails?: {
@@ -238,11 +237,6 @@ const OrderSchema: Schema = new Schema({
     scheduledDate: {
       type: Date,
       required: [true, 'Scheduled date is required']
-    },
-    priority: {
-      type: String,
-      enum: ['low', 'medium', 'high'],
-      default: 'medium'
     },
     status: {
       type: String,

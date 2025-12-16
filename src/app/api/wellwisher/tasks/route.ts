@@ -82,7 +82,6 @@ export async function GET(request: NextRequest) {
           task: '$wellwisherTasks.task',
           description: '$wellwisherTasks.description',
           scheduledDate: '$wellwisherTasks.scheduledDate',
-          priority: '$wellwisherTasks.priority',
           status: '$wellwisherTasks.status',
           location: '$wellwisherTasks.location',
           plantingDetails: '$wellwisherTasks.plantingDetails',
@@ -115,7 +114,6 @@ export async function GET(request: NextRequest) {
       task: string;
       description: string;
       scheduledDate: Date;
-      priority: string;
       status: string;
       location?: string;
       plantingDetails?: {
@@ -160,7 +158,6 @@ export async function GET(request: NextRequest) {
       task: taskDoc.task,
       description: taskDoc.description,
       scheduledDate: taskDoc.scheduledDate,
-      priority: taskDoc.priority,
       status: taskDoc.status,
       location: taskDoc.location || 'To be determined',
       plantingDetails: taskDoc.plantingDetails ? {

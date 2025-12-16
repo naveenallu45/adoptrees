@@ -26,7 +26,6 @@ interface WellwisherTask {
   task: string;
   description: string;
   scheduledDate: string;
-  priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'in_progress' | 'completed' | 'updating';
   location: string;
   nextGrowthUpdateDue?: string;
@@ -332,18 +331,6 @@ export default function UpdatingPage() {
     return 'bg-blue-100 text-blue-800 border-blue-200';
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   if (loading) {
     return (
@@ -417,9 +404,6 @@ export default function UpdatingPage() {
                   <div className="flex flex-col items-end space-y-1.5">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(daysOverdue)}`}>
                       {daysOverdue > 0 ? `${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue` : 'Due today'}
-                </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
-                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                 </span>
               </div>
             </div>

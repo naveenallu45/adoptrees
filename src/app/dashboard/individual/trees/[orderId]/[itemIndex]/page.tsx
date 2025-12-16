@@ -32,7 +32,6 @@ interface WellwisherTask {
   task: string;
   description: string;
   scheduledDate: string;
-  priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'in_progress' | 'completed';
   location: string;
   plantingDetails?: {

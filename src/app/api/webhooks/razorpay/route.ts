@@ -128,12 +128,12 @@ async function handlePaymentCaptured(payment: { id: string; [key: string]: unkno
           const wellwisherId = await assignWellWisherEqually();
         
           if (wellwisherId) {
+            console.log(`[WEBHOOK] Assigning well-wisher ${wellwisherId} to order ${order.orderId}`);
             const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
               taskId: `${order.orderId}-${index}`,
               task: `Plant and care for ${item.treeName}`,
               description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
               scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-              priority: 'medium' as const,
               status: 'pending' as const,
               location: 'To be determined'
             }));
@@ -163,9 +163,15 @@ async function handlePaymentCaptured(payment: { id: string; [key: string]: unkno
                 }
               }
             }).catch(() => {}); // Ignore errors
+          } else {
+            console.error(`[WEBHOOK] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
+            logError('Well-wisher assignment returned null', new Error(`Order ${order.orderId} could not be assigned a well-wisher`));
           }
+        } else {
+          console.log(`[WEBHOOK] Order ${order.orderId} already has well-wisher assigned: ${order.assignedWellwisher}`);
         }
       } catch (backgroundError) {
+        console.error(`[WEBHOOK] Error in background processing for order ${order.orderId}:`, backgroundError);
         logError('Error in background webhook processing', backgroundError as Error);
       }
     });

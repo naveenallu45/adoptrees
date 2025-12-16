@@ -1139,7 +1139,6 @@ export async function sendWellWisherTaskAssignmentEmail(
     task: string;
     description: string;
     scheduledDate: Date;
-    priority: 'low' | 'medium' | 'high';
   }>,
   orderDetails?: {
     totalTrees?: number;
@@ -1165,25 +1164,10 @@ export async function sendWellWisherTaskAssignmentEmail(
       day: 'numeric' 
     });
     
-    const priorityColors = {
-      low: '#6b7280',
-      medium: '#f59e0b',
-      high: '#dc2626'
-    };
-    
-    const priorityLabels = {
-      low: 'Low',
-      medium: 'Medium',
-      high: 'High'
-    };
-    
     return `
-      <div style="background: white; border-left: 4px solid ${priorityColors[task.priority]}; padding: 15px; margin: 10px 0; border-radius: 4px;">
+      <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 10px 0; border-radius: 4px;">
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
           <p style="margin: 0; color: #1f2937; font-weight: 600; font-size: 16px;">Task ${index + 1}: ${task.task}</p>
-          <span style="background: ${priorityColors[task.priority]}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-            ${priorityLabels[task.priority]} Priority
-          </span>
         </div>
         <p style="margin: 5px 0; color: #6b7280; font-size: 14px;">${task.description}</p>
         <p style="margin: 5px 0 0 0; color: #374151; font-size: 13px;">

@@ -18,8 +18,11 @@ export async function assignWellWisherEqually(): Promise<string | null> {
     const wellWishers = await User.find({ role: 'wellwisher' }).select('_id');
     
     if (wellWishers.length === 0) {
+      console.error('[WELLWISHER_ASSIGNMENT] No well-wishers found in database. Cannot assign task.');
       return null;
     }
+    
+    console.log(`[WELLWISHER_ASSIGNMENT] Found ${wellWishers.length} well-wisher(s) available for assignment`);
 
     // Count orders assigned to each well-wisher
     const orderCounts = await Order.aggregate([
@@ -67,11 +70,18 @@ export async function assignWellWisherEqually(): Promise<string | null> {
     // If multiple well-wishers have the same minimum count, use round-robin
     // by selecting the first one found (or could use random selection)
     if (selectedWellWisher) {
+      console.log(`[WELLWISHER_ASSIGNMENT] Assigned well-wisher ${selectedWellWisher} (has ${minCount} orders)`);
       return selectedWellWisher;
     }
 
     // Fallback: return first well-wisher if something goes wrong
-    return wellWishers[0]?._id.toString() || null;
+    const fallbackId = wellWishers[0]?._id.toString() || null;
+    if (fallbackId) {
+      console.log(`[WELLWISHER_ASSIGNMENT] Using fallback well-wisher ${fallbackId}`);
+    } else {
+      console.error('[WELLWISHER_ASSIGNMENT] Failed to select well-wisher - no fallback available');
+    }
+    return fallbackId;
   } catch (error) {
     console.error('Error assigning well-wisher equally:', error);
     // Fallback: return first available well-wisher

@@ -256,12 +256,12 @@ export async function POST(request: NextRequest) {
               const wellwisherId = await assignWellWisherEqually();
             
               if (wellwisherId) {
+                console.log(`[PAYMENT_VERIFY] Assigning well-wisher ${wellwisherId} to order ${order.orderId}`);
                 const wellwisherTasks = order.items.map((item, index) => ({
                   taskId: `${order.orderId}-${index}`,
                   task: `Plant and care for ${item.treeName}`,
                   description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
                   scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-                  priority: 'medium' as const,
                   status: 'pending' as const,
                   location: 'To be determined'
                 }));
@@ -290,11 +290,17 @@ export async function POST(request: NextRequest) {
                     }
                   }
                 }).catch(() => {}); // Ignore errors
+              } else {
+                console.error(`[PAYMENT_VERIFY] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
+                logError('Well-wisher assignment returned null', new Error(`Order ${order.orderId} could not be assigned a well-wisher`));
               }
             } catch (assignmentError) {
+              console.error(`[PAYMENT_VERIFY] Error assigning well-wisher to order ${order.orderId}:`, assignmentError);
               logError('Error assigning well-wisher', assignmentError as Error);
             }
           })();
+        } else {
+          console.log(`[PAYMENT_VERIFY] Order ${order.orderId} already has well-wisher assigned: ${order.assignedWellwisher}`);
         }
 
         // Generate certificate if user found

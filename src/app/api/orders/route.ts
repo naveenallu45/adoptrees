@@ -186,12 +186,12 @@ export async function POST(request: NextRequest) {
     const wellwisherId = await assignWellWisherEqually();
     
     if (wellwisherId) {
+      console.log(`[ORDER_CREATE] Assigning well-wisher ${wellwisherId} to order ${order.orderId}`);
       const wellwisherTasks = orderItems.map((item, index) => ({
-        taskId: `${orderId}-${index}`, // Use existing order ID (like WEL60136-0, WEL60136-1)
+        taskId: `${order.orderId}-${index}`, // Use existing order ID (like WEL60136-0, WEL60136-1)
         task: `Plant and care for ${item.treeName}`,
         description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${isGift && giftMessage ? `Gift message: ${giftMessage}` : ''}`,
         scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000), // Schedule tasks over next few days
-        priority: 'medium' as const,
         status: 'pending' as const,
         location: 'To be determined'
       }));
@@ -220,6 +220,8 @@ export async function POST(request: NextRequest) {
       } catch (emailError) {
         console.error('Error sending task assignment email:', emailError);
       }
+    } else {
+      console.error(`[ORDER_CREATE] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
     }
 
     return NextResponse.json({
