@@ -143,29 +143,55 @@ export default function TreeDetailPage() {
           if (order.items[itemIndex] && order.paymentStatus === 'paid') {
             foundOrder = order;
             
+            // Log what we received from API
+            console.log('[TreeDetail] API response:', {
+              orderUserName: order.userName,
+              userData: result.user ? {
+                name: result.user.name,
+                companyName: result.user.companyName,
+                userType: result.user.userType,
+                hasImage: !!result.user.image,
+                imageUrl: result.user.image ? result.user.image.substring(0, 50) + '...' : 'none'
+              } : 'missing'
+            });
+            
             // Set user image from API response (explicitly set to null if not available)
             // Check if image exists and is not null/empty
             const userImageValue = result.user?.image;
-            if (userImageValue && userImageValue.trim() !== '') {
+            if (userImageValue && typeof userImageValue === 'string' && userImageValue.trim() !== '') {
               console.log('[TreeDetail] Setting user image from API:', userImageValue.substring(0, 50) + '...');
-              setUserImage(userImageValue);
+              setUserImage(userImageValue.trim());
             } else {
               console.log('[TreeDetail] No user image in API response (value:', userImageValue, ')');
               setUserImage(null);
             }
             
-            // Ensure order has userName for display (should be set by API, but fallback if missing)
-            if (!order.userName) {
-              if (result.user?.name) {
-                order.userName = result.user.name;
-                console.log('[TreeDetail] Setting userName from API user data:', result.user.name);
-              } else {
-                order.userName = 'User';
-                console.warn('[TreeDetail] No userName found, using default');
-              }
+            // Ensure order has userName for display - prioritize API user data over order.userName
+            // The API returns user.name which is already the correct displayName (companyName for companies, name for individuals)
+            let finalUserName = order.userName;
+            
+            // Always prefer user data from API response for public users
+            if (result.user?.name && result.user.name !== 'User' && result.user.name !== 'Company') {
+              finalUserName = result.user.name;
+              console.log('[TreeDetail] Using userName from API user.name:', finalUserName);
+            } else if (result.user?.companyName && result.user.companyName !== 'User' && result.user.companyName !== 'Company') {
+              finalUserName = result.user.companyName;
+              console.log('[TreeDetail] Using userName from API user.companyName:', finalUserName);
+            } else if (order.userName && order.userName !== 'User' && order.userName !== 'Company') {
+              finalUserName = order.userName;
+              console.log('[TreeDetail] Using userName from order:', finalUserName);
             } else {
-              console.log('[TreeDetail] Using userName from order:', order.userName);
+              finalUserName = 'User';
+              console.warn('[TreeDetail] No valid userName found, using default');
             }
+            
+            // Update order.userName to ensure it's set correctly
+            order.userName = finalUserName;
+            
+            console.log('[TreeDetail] Final values for map:', {
+              userName: finalUserName,
+              userImage: userImageValue ? 'present' : 'missing'
+            });
           } else {
             setError('Tree item not found or order not paid');
             return;
@@ -534,11 +560,12 @@ export default function TreeDetailPage() {
                 <div className="bg-white rounded-2xl p-5 border-2 border-green-200 shadow-lg">
                   <p className="text-green-800 font-semibold mb-3">Tree Location</p>
                       <PlantingLocationMap
+                        key={`map-${order.orderId}-${itemIndex}-${order.userName || 'no-name'}-${userImage ? 'has-image' : 'no-image'}`}
                         latitude={completedTask.plantingDetails.plantingLocation.coordinates[1]}
                         longitude={completedTask.plantingDetails.plantingLocation.coordinates[0]}
                         treeName={item.treeName}
-                        userName={order.userName}
-                        userImage={userImage}
+                        userName={order.userName || 'User'}
+                        userImage={userImage || null}
                         className="w-full h-64 rounded-lg border border-green-200/50 shadow-sm"
                         showOpenInMaps={true}
                       />

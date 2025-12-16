@@ -151,12 +151,22 @@ export default function PlantingLocationMap({
       };
 
       // Build info window content with user profile and tree name
-      const userDisplayName = userName || 'User';
+      // Ensure we have valid values for display
+      const userDisplayName = userName && userName.trim() !== '' ? userName.trim() : 'User';
       const userInitials = getUserInitials(userName);
-      const hasUserImage = userImage && userImage.trim() !== '';
+      const hasUserImage = userImage && typeof userImage === 'string' && userImage.trim() !== '';
       const escapedUserName = escapeHtml(userDisplayName);
       const escapedTreeName = escapeHtml(treeName || 'Tree Planting Location');
       const escapedUserImage = hasUserImage ? escapeHtml(userImage.trim()) : '';
+      
+      // Debug logging for map popup content
+      console.log('[PlantingLocationMap] Building popup with:', {
+        userName: userDisplayName,
+        hasImage: hasUserImage,
+        imageUrl: hasUserImage ? escapedUserImage.substring(0, 50) + '...' : 'none',
+        initials: userInitials,
+        treeName: escapedTreeName
+      });
       
       const infoWindowContent = `
         <style>
@@ -208,18 +218,20 @@ export default function PlantingLocationMap({
         </div>
       `;
 
-      // Create or update info window
-      if (!infoWindowRef.current) {
-        infoWindowRef.current = new maps.InfoWindow({
-          content: infoWindowContent
-        } as never);
-      } else {
-        // Update content if info window already exists
-        infoWindowRef.current.setContent(infoWindowContent);
+      // Create or update info window with latest content
+      // Always recreate to ensure it shows the latest user data
+      if (infoWindowRef.current) {
+        // Close existing info window if open
+        infoWindowRef.current.setContent('');
       }
+      
+      // Create new info window with updated content
+      infoWindowRef.current = new maps.InfoWindow({
+        content: infoWindowContent
+      } as never);
       const infoWindow = infoWindowRef.current;
 
-      // Always recreate marker to ensure it's visible
+      // Always recreate marker to ensure it's visible and has latest data
       // Remove existing marker if it exists
       if (markerRef.current) {
         markerRef.current.setMap(null);
@@ -230,7 +242,7 @@ export default function PlantingLocationMap({
       markerRef.current = new maps.Marker({
         position: location,
         map: mapInstanceRef.current,
-        title: treeName || 'Tree Planting Location',
+        title: `${userDisplayName} - ${treeName || 'Tree Planting Location'}`,
         animation: maps.Animation.DROP,
         icon: {
           url: 'data:image/svg+xml;base64,' + btoa(`
