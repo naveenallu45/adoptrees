@@ -158,7 +158,8 @@ export async function GET(
         }
       });
 
-      // Get profile image URL (from user model or session)
+      // Get latest profile image URL from user model (users frequently change their profile)
+      // Always fetch fresh from database to ensure certificate uses current profile picture
       const profilePicUrl = user.image || session.user.image || undefined;
 
       // For gift orders, use gift recipient name; otherwise use current user name

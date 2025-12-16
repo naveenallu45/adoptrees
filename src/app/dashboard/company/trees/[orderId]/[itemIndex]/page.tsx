@@ -146,6 +146,10 @@ export default function TreeDetailPage() {
             if (result.user?.image) {
               setUserImage(result.user.image);
             }
+            // Ensure order has userName for display (should be set by API, but fallback if missing)
+            if (!order.userName && result.user?.name) {
+              order.userName = result.user.name;
+            }
           } else {
             setError('Tree item not found or order not paid');
             return;

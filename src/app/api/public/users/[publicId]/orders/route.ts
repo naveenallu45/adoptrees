@@ -35,17 +35,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     let userDoc = null;
     
     // Strategy 1: Case-insensitive regex match (handles mixed case)
+    // Explicitly select name, companyName, image, and userType fields
     const publicIdRegex = new RegExp(`^${escapeRegExp(rawPublicId)}$`, 'i');
-    userDoc = await User.findOne({ publicId: publicIdRegex }).lean();
+    userDoc = await User.findOne({ publicId: publicIdRegex })
+      .select('name companyName image userType email')
+      .lean();
     
     // Strategy 2: If not found, try exact match (case-sensitive)
     if (!userDoc || !('_id' in userDoc)) {
-      userDoc = await User.findOne({ publicId: rawPublicId }).lean();
+      userDoc = await User.findOne({ publicId: rawPublicId })
+        .select('name companyName image userType email')
+        .lean();
     }
     
     // Strategy 3: If still not found, try lowercase match
     if (!userDoc || !('_id' in userDoc)) {
-      userDoc = await User.findOne({ publicId: rawPublicId.toLowerCase() }).lean();
+      userDoc = await User.findOne({ publicId: rawPublicId.toLowerCase() })
+        .select('name companyName image userType email')
+        .lean();
     }
     
     if (!userDoc || !('_id' in userDoc)) {
@@ -151,14 +158,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       ]
     });
 
+    // Get user display name - prefer name for individuals, companyName for companies
+    const displayName = user.userType === 'company' 
+      ? (user.companyName || user.name || 'Company')
+      : (user.name || user.companyName || 'User');
+    
     return NextResponse.json({
       success: true,
       data: { 
         orders: safeOrders, 
         user: { 
-          name: user.name || user.companyName, 
+          name: displayName,
+          companyName: user.companyName,
           userType: user.userType,
-          image: user.image 
+          image: user.image || undefined // Ensure image is included if it exists
         },
         pagination: {
           currentPage: page,

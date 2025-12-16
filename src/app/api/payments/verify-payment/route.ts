@@ -133,7 +133,10 @@ export async function POST(request: NextRequest) {
       // Generate certificate if it doesn't exist
       if (!order.certificate) {
         try {
-          const user = await User.findById(order.userId).select('publicId qrCode');
+          // Fetch latest user profile picture and name from database
+          // Users frequently change their profile picture, so we always fetch the latest one
+          // This ensures certificate always shows the most up-to-date profile
+          const user = await User.findById(order.userId).select('publicId qrCode image name');
           if (user && user.publicId) {
             const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
             const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
@@ -154,9 +157,18 @@ export async function POST(request: NextRequest) {
               }
             });
             
+            // Use latest user name and profile picture from database
+            // Users frequently change their profile picture, so we always fetch the latest one
+            // This ensures certificate always shows the most up-to-date profile
+            const certificateUserName = order.isGift && order.giftRecipientName 
+              ? order.giftRecipientName 
+              : (user.name || order.userName);
+            // Always fetch fresh from database to ensure certificate uses current profile picture
+            const profilePicUrl = user.image || undefined;
+            
             const certificateBuffer = await generateCertificate({
-              userName: order.userName,
-              profilePicUrl: undefined,
+              userName: certificateUserName,
+              profilePicUrl: profilePicUrl,
               treesCount,
               oxygenKgs,
               co2Kgs: co2Kgs, // Always pass CO2 (calculated from items or oxygen)
@@ -242,9 +254,10 @@ export async function POST(request: NextRequest) {
         // Calculate values needed for certificate and emails
         const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
         
-        // Get user details for certificate generation
+        // Get user details for certificate generation (including latest profile picture)
+        // Always fetch latest profile picture since users frequently change their profile
         const userResult = await Promise.allSettled([
-          User.findById(order.userId).select('publicId qrCode')
+          User.findById(order.userId).select('publicId qrCode image name')
         ]);
         const user = userResult[0];
 
@@ -321,14 +334,21 @@ export async function POST(request: NextRequest) {
               }
             });
 
+            // Use latest user name and profile picture from database (not from order)
+            // This ensures certificate always shows the most up-to-date profile
+            // Users frequently change their profile picture, so we always fetch the latest one
             const certificateUserName = order.isGift && order.giftRecipientName 
               ? order.giftRecipientName 
-              : order.userName;
+              : (user.value.name || order.userName);
+            
+            // Get latest profile picture from user model (users can change their profile frequently)
+            // Always fetch fresh from database to ensure certificate uses current profile picture
+            const profilePicUrl = user.value.image || undefined;
 
             // Generate certificate (this is the slowest operation)
             const certificateBuffer = await generateCertificate({
               userName: certificateUserName,
-              profilePicUrl: undefined,
+              profilePicUrl: profilePicUrl,
               treesCount,
               oxygenKgs,
               co2Kgs,

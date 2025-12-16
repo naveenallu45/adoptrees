@@ -32,15 +32,18 @@ export async function GET(
     }
     
     // Query user by publicId (case-insensitive to support legacy mixed-case IDs)
+    // Explicitly select name, companyName, image, and userType fields
     const publicIdRegex = new RegExp(`^${escapeRegExp(rawPublicId)}$`, 'i');
-    const userDoc = await User.findOne({ publicId: publicIdRegex }).lean();
+    const userDoc = await User.findOne({ publicId: publicIdRegex })
+      .select('name companyName image userType email')
+      .lean();
     
     if (!userDoc || !('_id' in userDoc)) {
       console.error(`[PublicAPI] User not found for publicId: ${rawPublicId} when fetching order ${orderIdParam}`);
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const user = userDoc as { _id: unknown; email?: string; name?: string; companyName?: string; image?: string };
+    const user = userDoc as { _id: unknown; email?: string; name?: string; companyName?: string; userType?: string; image?: string };
     
     // Build a safe query for the specific order
     const orConditions: Record<string, unknown>[] = [
@@ -65,6 +68,11 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
+    // Get user display name - prefer name for individuals, companyName for companies
+    const displayName = user.userType === 'company' 
+      ? (user.companyName || user.name || 'Company')
+      : (user.name || user.companyName || 'User');
+
     // Do not leak sensitive info
     const safeOrder = {
       _id: order._id,
@@ -81,14 +89,17 @@ export async function GET(
       wellwisherTasks: order.wellwisherTasks,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+      userName: displayName, // Include userName for compatibility with tree detail page
     };
 
     return NextResponse.json({
       success: true,
       data: safeOrder,
       user: {
-        name: user.name || user.companyName,
-        image: user.image
+        name: displayName,
+        companyName: user.companyName,
+        userType: user.userType,
+        image: user.image || undefined // Ensure image is included if it exists
       }
     });
   } catch (_error) {

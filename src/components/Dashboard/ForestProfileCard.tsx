@@ -327,12 +327,36 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
           
           // Store public user name and image if viewing public profile
           if (publicId && result.data?.user) {
-            if (result.data.user.name) {
-              setPublicUserName(result.data.user.name);
+            console.log('[ForestProfileCard] Public user data received:', {
+              name: result.data.user.name,
+              companyName: result.data.user.companyName,
+              userType: result.data.user.userType,
+              image: result.data.user.image ? 'present' : 'missing'
+            });
+            
+            // Get display name - prefer name, fallback to companyName
+            const displayName = result.data.user.name || result.data.user.companyName;
+            if (displayName) {
+              console.log('[ForestProfileCard] Setting public user name:', displayName);
+              setPublicUserName(displayName);
+            } else {
+              // Set default name if none available
+              const defaultName = result.data.user.userType === 'company' ? 'Company' : 'User';
+              console.log('[ForestProfileCard] No name found, using default:', defaultName);
+              setPublicUserName(defaultName);
             }
+            
+            // Set image if available
             if (result.data.user.image) {
+              console.log('[ForestProfileCard] Setting public user image:', result.data.user.image.substring(0, 50) + '...');
               setPublicUserImage(result.data.user.image);
+            } else {
+              // Clear image if not available
+              console.log('[ForestProfileCard] No image found for public user');
+              setPublicUserImage(null);
             }
+          } else if (publicId) {
+            console.warn('[ForestProfileCard] Public ID provided but no user data in response:', result.data);
           }
         } else {
           console.error('[ForestProfileCard] Failed to fetch orders:', result.error);
