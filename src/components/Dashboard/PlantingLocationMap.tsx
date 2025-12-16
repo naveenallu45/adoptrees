@@ -196,35 +196,35 @@ export default function PlantingLocationMap({
             -moz-box-shadow: none !important;
           }
         </style>
-        <div style="padding: 10px 12px; min-width: fit-content; max-width: 300px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="padding: 6px 8px; width: fit-content; max-width: 250px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; gap: 6px;">
             ${hasUserImage 
               ? `<img 
                   src="${escapedUserImage}" 
                   alt="${escapedUserName}" 
-                  style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb; flex-shrink: 0; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
+                  style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1.5px solid #e5e7eb; flex-shrink: 0; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 />`
               : ''
             }
             <div style="
               ${hasUserImage ? 'display: none;' : 'display: flex;'}
-              width: 32px; 
-              height: 32px; 
+              width: 24px; 
+              height: 24px; 
               border-radius: 50%; 
               background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
               align-items: center; 
               justify-content: center; 
               color: white; 
               font-weight: 600; 
-              font-size: 12px; 
+              font-size: 10px; 
               flex-shrink: 0;
-              border: 2px solid #e5e7eb;
+              border: 1.5px solid #e5e7eb;
             ">
               ${userInitials}
             </div>
-            <div style="flex: 1; min-width: 0; max-width: 100%;">
-              <div style="font-weight: 600; font-size: 14px; color: #22c55e; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; letter-spacing: -0.01em;">
+            <div style="flex: 1; min-width: 0; max-width: 100%; white-space: nowrap;">
+              <div style="font-weight: 600; font-size: 12px; color: #22c55e; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word; letter-spacing: -0.01em;">
                 ${escapedTreeName}
               </div>
             </div>
