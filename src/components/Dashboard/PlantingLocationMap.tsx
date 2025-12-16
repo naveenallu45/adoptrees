@@ -39,6 +39,7 @@ interface GoogleMarker {
 
 interface GoogleInfoWindow {
   open: (map: GoogleMap, marker: GoogleMarker) => void;
+  close: () => void;
   setContent: (content: string) => void;
 }
 
@@ -241,7 +242,8 @@ export default function PlantingLocationMap({
 
       // Create or update info window with latest content
       // Always recreate to ensure it shows the latest user data
-      const wasOpen = infoWindowRef.current?.getMap() !== null;
+      // Track if info window was previously created (exists)
+      const wasOpen = infoWindowRef.current !== null;
       if (infoWindowRef.current) {
         // Close existing info window if open
         infoWindowRef.current.close();

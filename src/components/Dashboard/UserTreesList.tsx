@@ -199,6 +199,17 @@ export default function UserTreesList({ userType, publicId, showForestOnly = fal
     fetchUserOrders();
   }, [publicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Debug: Log when publicUserData changes
+  useEffect(() => {
+    if (publicId) {
+      console.log('[UserTreesList] publicUserData state updated:', {
+        name: publicUserData?.name || 'not set',
+        hasImage: !!publicUserData?.image,
+        imageUrl: publicUserData?.image ? publicUserData.image.substring(0, 50) + '...' : 'none'
+      });
+    }
+  }, [publicUserData, publicId]);
+
 useEffect(() => {
   let isMounted = true;
   const fetchForestTreeIds = async () => {
@@ -373,15 +384,25 @@ useEffect(() => {
         // For public users, extract user data from API response
         if (publicId && result.data.user) {
           const userData = result.data.user;
+          // Use the name directly from API - it's already the correct displayName
+          // The API returns user.name which is already calculated as displayName
           const displayName = userData.name || 'User';
           const userImage = userData.image || null;
           
           console.log('[UserTreesList] Public user data from API:', {
             name: displayName,
             hasImage: !!userImage,
-            userType: userData.userType
+            userType: userData.userType,
+            imageUrl: userImage ? userImage.substring(0, 50) + '...' : 'none',
+            rawUserData: {
+              name: userData.name,
+              companyName: userData.companyName,
+              image: userData.image ? 'present' : 'null'
+            }
           });
           
+          // Set public user data FIRST before updating orders
+          // This ensures the state is available when components render
           setPublicUserData({
             name: displayName,
             image: userImage
@@ -392,6 +413,8 @@ useEffect(() => {
             ...order,
             userName: displayName
           }));
+          
+          console.log('[UserTreesList] Updated', ordersData.length, 'orders with userName:', displayName);
         } else {
           // Clear public user data if not viewing public profile
           setPublicUserData(null);
@@ -826,26 +849,48 @@ useEffect(() => {
                               ? locationVisibility[locationKey] 
                               : !hasInitializedMaps.current;
                             
-                            // For public users, use publicUserData; otherwise use order data
-                            const mapUserName = publicId && publicUserData?.name
-                              ? publicUserData.name
-                              : (primaryOrder.userName || 'User');
-                            const mapUserImage = publicId && publicUserData
-                              ? publicUserData.image
-                              : (primaryOrder.userId ? userImages[String(primaryOrder.userId)] : null);
+                            // For public users, ALWAYS use publicUserData if available
+                            // Fallback to order data only if publicUserData is not set yet
+                            let mapUserName = 'User';
+                            let mapUserImage: string | null = null;
+                            
+                            if (publicId) {
+                              // Public user: prioritize publicUserData
+                              if (publicUserData?.name && publicUserData.name !== 'User' && publicUserData.name !== 'Company') {
+                                mapUserName = publicUserData.name;
+                                mapUserImage = publicUserData.image || null;
+                              } else if (primaryOrder.userName && primaryOrder.userName !== 'User' && primaryOrder.userName !== 'Company') {
+                                // Fallback to order userName if publicUserData not ready yet
+                                mapUserName = primaryOrder.userName;
+                                mapUserImage = primaryOrder.userId ? userImages[String(primaryOrder.userId)] : null;
+                              } else {
+                                // Last resort: use 'User' but still try to get image
+                                mapUserName = 'User';
+                                mapUserImage = publicUserData?.image || null;
+                              }
+                            } else {
+                              // Authenticated user: use order data
+                              mapUserName = primaryOrder.userName || 'User';
+                              mapUserImage = primaryOrder.userId ? userImages[String(primaryOrder.userId)] : null;
+                            }
                             
                             console.log('[UserTreesList] Rendering map with props:', {
                               userName: mapUserName,
                               hasImage: !!mapUserImage,
+                              imageUrl: mapUserImage ? mapUserImage.substring(0, 50) + '...' : 'none',
                               isPublic: !!publicId,
-                              publicUserData: publicUserData ? 'present' : 'null',
+                              publicUserData: publicUserData ? {
+                                name: publicUserData.name,
+                                hasImage: !!publicUserData.image
+                              } : 'null',
                               orderUserName: primaryOrder.userName
                             });
                             
                             return (
                               <div className="mt-1 pt-1.5 border-t border-green-100/50" key={locationKey}>
                                 <LocationToggle
-                                  key={`location-toggle-${uniqueKey}`}
+                                  // Include publicUserData in key to force re-render when it changes
+                                  key={`location-toggle-${uniqueKey}-${publicId ? (publicUserData?.name || 'no-user') : 'auth'}-${mapUserImage ? 'img' : 'no-img'}`}
                                   latitude={coords[1]}
                                   longitude={coords[0]}
                                   treeName={item.treeName}
