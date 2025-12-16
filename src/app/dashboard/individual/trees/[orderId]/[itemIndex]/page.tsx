@@ -223,23 +223,56 @@ export default function TreeDetailPage() {
       }
       
       if (foundOrder && foundOrder.items[itemIndex] && foundOrder.paymentStatus === 'paid') {
-        setOrder(foundOrder);
-        
-        // Fetch user image (for authenticated access only, public access handled above)
+        // For authenticated users, also fetch latest user name and image to ensure consistency
         if (!publicId && foundOrder.userId) {
-          // Authenticated access - use regular API endpoint
+          // Authenticated access - fetch latest user data
           try {
             const userResponse = await fetch(`/api/users/${foundOrder.userId}`);
             if (userResponse.ok) {
               const userResult = await userResponse.json();
-              if (userResult.success && userResult.data?.image) {
-                setUserImage(userResult.data.image);
+              if (userResult.success && userResult.data) {
+                const userData = userResult.data;
+                
+                // Set user image
+                if (userData.image && typeof userData.image === 'string' && userData.image.trim() !== '') {
+                  console.log('[TreeDetail] Setting user image from API (authenticated):', userData.image.substring(0, 50) + '...');
+                  setUserImage(userData.image.trim());
+                } else {
+                  setUserImage(null);
+                }
+                
+                // Update order.userName with latest user name (same logic as public users)
+                let finalUserName = foundOrder.userName;
+                if (userData.userType === 'company') {
+                  // For companies, prefer companyName
+                  if (userData.companyName && userData.companyName !== 'User' && userData.companyName !== 'Company') {
+                    finalUserName = userData.companyName;
+                  } else if (userData.name && userData.name !== 'User' && userData.name !== 'Company') {
+                    finalUserName = userData.name;
+                  }
+                } else {
+                  // For individuals, prefer name
+                  if (userData.name && userData.name !== 'User' && userData.name !== 'Company') {
+                    finalUserName = userData.name;
+                  } else if (userData.companyName && userData.companyName !== 'User' && userData.companyName !== 'Company') {
+                    finalUserName = userData.companyName;
+                  }
+                }
+                
+                // Update order with latest userName
+                if (finalUserName && finalUserName !== foundOrder.userName) {
+                  foundOrder.userName = finalUserName;
+                  console.log('[TreeDetail] Updated userName from API (authenticated):', finalUserName);
+                }
               }
             }
           } catch (_err) {
-            // Silently fail - will use initials
+            console.error('[TreeDetail] Error fetching user data (authenticated):', _err);
+            // Silently fail - will use order data
           }
         }
+        
+        setOrder(foundOrder);
         
         // Fetch tree data using treeId
         const treeId = foundOrder.items[itemIndex].treeId;

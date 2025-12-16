@@ -288,8 +288,18 @@ export default function PlantingLocationMap({
           });
         };
 
+        // Open info window automatically when marker is created
+        // This ensures the popup is visible immediately for both public and authenticated users
+        setTimeout(() => {
+          if (mapInstanceRef.current && markerRef.current && infoWindow) {
+            console.log('[PlantingLocationMap] Opening info window automatically');
+            infoWindow.open(mapInstanceRef.current, markerRef.current);
+            hideCloseButton();
+          }
+        }, 200);
+
         markerRef.current.addListener('click', () => {
-          if (mapInstanceRef.current && markerRef.current) {
+          if (mapInstanceRef.current && markerRef.current && infoWindow) {
             infoWindow.open(mapInstanceRef.current, markerRef.current);
             hideCloseButton();
           }
