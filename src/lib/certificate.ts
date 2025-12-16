@@ -134,6 +134,8 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Debug logging
     console.log('[CERTIFICATE] Generating certificate with data:', {
       userName: data.userName,
+      hasProfilePicUrl: !!data.profilePicUrl,
+      profilePicUrl: data.profilePicUrl ? data.profilePicUrl.substring(0, 80) + '...' : 'none',
       treesCount: data.treesCount,
       oxygenKgs: data.oxygenKgs,
       co2Kgs: data.co2Kgs,
@@ -204,18 +206,31 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Process profile image in parallel with PDF setup
     const targetProfileSize = 328; // Target size for PDF (increased by 30% from 252)
     
-    const profilePicPromise = data.profilePicUrl ? (async () => {
+    // Store profilePicUrl in a variable to avoid TypeScript narrowing issues
+    const profilePicUrl = data.profilePicUrl;
+    const profilePicPromise = profilePicUrl ? (async () => {
       try {
-        const profilePicResponse = await fetch(data.profilePicUrl!);
-        if (!profilePicResponse.ok) return null;
+        console.log('[CERTIFICATE] Fetching profile image from URL:', profilePicUrl.substring(0, 80) + '...');
+        const profilePicResponse = await fetch(profilePicUrl);
+        if (!profilePicResponse.ok) {
+          console.warn('[CERTIFICATE] Profile image fetch failed:', profilePicResponse.status, profilePicResponse.statusText);
+          return null;
+        }
         
-          const profilePicBytes = await profilePicResponse.arrayBuffer();
+        const profilePicBytes = await profilePicResponse.arrayBuffer();
+        const contentType = profilePicResponse.headers.get('content-type') || '';
+        const imageSizeMB = (profilePicBytes.byteLength / (1024 * 1024)).toFixed(2);
+        console.log('[CERTIFICATE] Profile image fetched successfully, size:', imageSizeMB, 'MB, type:', contentType);
         
-        // Create circular version using canvas (optimized - resize first)
+        // Create circular version using canvas (supports all image formats: JPEG, PNG, WebP, GIF, etc.)
+        // The loadImage function from 'canvas' package supports all common image formats
+        // Images of any size are automatically resized to targetProfileSize (328x328) for optimal PDF rendering
         try {
           const img = await loadImage(Buffer.from(profilePicBytes));
+          console.log('[CERTIFICATE] Image loaded, original dimensions:', img.width, 'x', img.height, 'format:', contentType);
           
-          // Resize to target size for faster processing
+          // Resize to target size for faster processing and consistent PDF output
+          // Large images are automatically scaled down, maintaining aspect ratio
           const canvas = createCanvas(targetProfileSize, targetProfileSize);
           const ctx = canvas.getContext('2d');
           
@@ -234,18 +249,41 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
           
           ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
           
-          // Convert canvas to buffer
+          // Convert canvas to PNG buffer (PNG supports transparency and works for all image types)
           const circularBuffer = canvas.toBuffer('image/png');
+          console.log('[CERTIFICATE] Circular profile image created successfully from', contentType);
           return await pdfDoc.embedPng(circularBuffer);
-        } catch (_canvasError) {
-          // Fallback to original image
+        } catch (canvasError) {
+          console.warn('[CERTIFICATE] Canvas processing failed, trying direct embedding:', canvasError);
+          // Fallback: Try to embed the image directly in various formats
+          // Try PNG first (works for PNG, WebP converted to PNG, etc.)
           try {
             return await pdfDoc.embedPng(profilePicBytes);
-          } catch {
-            return await pdfDoc.embedJpg(profilePicBytes);
+          } catch (_pngError) {
+            console.log('[CERTIFICATE] PNG embedding failed, trying JPEG...');
+            // Try JPEG (works for JPEG, JPG)
+            try {
+              return await pdfDoc.embedJpg(profilePicBytes);
+            } catch (_jpgError) {
+              // If both fail, try converting via canvas as last resort
+              console.log('[CERTIFICATE] JPEG embedding failed, trying canvas conversion...');
+              try {
+                // Force load and convert to PNG via canvas
+                const img = await loadImage(Buffer.from(profilePicBytes));
+                const canvas = createCanvas(img.width, img.height);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const pngBuffer = canvas.toBuffer('image/png');
+                return await pdfDoc.embedPng(pngBuffer);
+              } catch (finalError) {
+                console.error('[CERTIFICATE] All embedding methods failed for image type:', contentType, finalError);
+                return null;
+              }
+            }
           }
         }
-      } catch (_error) {
+      } catch (error) {
+        console.error('[CERTIFICATE] Error fetching profile image:', error);
         return null;
       }
     })() : Promise.resolve(null);

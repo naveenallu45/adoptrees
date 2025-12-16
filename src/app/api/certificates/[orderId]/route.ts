@@ -56,8 +56,9 @@ export async function GET(
     // This ensures the QR code always works regardless of where it's accessed from
     // The QR code URL must match the current request origin (localhost in dev, production in prod)
     try {
-      // Get user details including publicId, qrCode, profile image, and current name
-      const user = await User.findById(order.userId).select('publicId qrCode image name');
+      // Get user details including publicId, qrCode, profile image, name, companyName, and userType
+      // Always fetch latest profile data to ensure certificate shows current profile
+      const user = await User.findById(order.userId).select('publicId qrCode image name companyName userType');
       if (!user || !user.publicId) {
         return NextResponse.json(
           { success: false, error: 'User publicId not found. Cannot generate certificate.' },
@@ -161,13 +162,33 @@ export async function GET(
       // Get latest profile image URL from user model (users frequently change their profile)
       // Always fetch fresh from database to ensure certificate uses current profile picture
       const profilePicUrl = user.image || session.user.image || undefined;
+      
+      console.log('[CERTIFICATE] User profile data:', {
+        userId: user._id,
+        hasImage: !!user.image,
+        imageUrl: user.image ? user.image.substring(0, 50) + '...' : 'none',
+        userName: user.name,
+        companyName: user.companyName,
+        userType: user.userType
+      });
 
       // For gift orders, use gift recipient name; otherwise use current user name
       // Use current user name from User model or session (not the old order.userName)
+      // For company users, prefer companyName; for individuals, use name
       // This ensures the certificate always shows the latest updated name
-      const currentUserName = order.isGift && order.giftRecipientName 
-        ? order.giftRecipientName 
-        : (user.name || session.user.name || order.userName || 'User');
+      let currentUserName: string;
+      if (order.isGift && order.giftRecipientName) {
+        currentUserName = order.giftRecipientName;
+      } else {
+        // Prefer userType-specific name: companyName for companies, name for individuals
+        if (user.userType === 'company') {
+          currentUserName = user.companyName || user.name || session.user.name || order.userName || 'Company';
+        } else {
+          currentUserName = user.name || session.user.name || order.userName || 'User';
+        }
+      }
+      
+      console.log('[CERTIFICATE] Using userName:', currentUserName, 'profilePicUrl:', profilePicUrl ? 'present' : 'missing');
 
       // Generate certificate - use QR code with correct origin (matches dashboard)
       const { generateCertificate } = await import('@/lib/certificate');

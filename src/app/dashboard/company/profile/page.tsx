@@ -101,9 +101,10 @@ export default function CompanyProfilePage() {
         return;
       }
       
-      // Validate file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setSaveError('Image size must be less than 5MB');
+      // Accept any image size - certificate generation will resize as needed
+      // Very large limit (50MB) as safety check only
+      if (file.size > 50 * 1024 * 1024) {
+        setSaveError('Image size must be less than 50MB');
         return;
       }
 

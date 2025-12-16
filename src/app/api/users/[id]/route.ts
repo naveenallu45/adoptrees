@@ -3,7 +3,7 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import User, { IUser } from '@/models/User';
 import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/upload';
-import { validateImageFile } from '@/lib/validations/tree';
+import { validateProfileImageFile } from '@/lib/validations/tree';
 
 export async function GET(
   request: NextRequest,
@@ -150,8 +150,8 @@ export async function PUT(
 
     // Handle image upload if provided
     if (imageFile && imageFile.size > 0) {
-      // Validate image file
-      const imageValidation = validateImageFile(imageFile);
+      // Validate profile image file (accepts larger sizes)
+      const imageValidation = validateProfileImageFile(imageFile);
       if (!imageValidation.valid) {
         return NextResponse.json(
           { success: false, message: imageValidation.error },

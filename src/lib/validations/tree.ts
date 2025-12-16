@@ -102,8 +102,21 @@ export const treeUpdateSchema = treeSchema;
 export type TreeUpdateInput = z.infer<typeof treeUpdateSchema>;
 
 // Image validation
-export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB for tree images
+export const MAX_PROFILE_IMAGE_SIZE = 50 * 1024 * 1024; // 50MB for profile images (very large limit to accept any reasonable size)
+// Accept all common image types: JPEG, PNG, WebP, GIF, BMP, SVG, etc.
+export const ACCEPTED_IMAGE_TYPES = [
+  'image/jpeg', 
+  'image/jpg', 
+  'image/png', 
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/svg+xml',
+  'image/tiff',
+  'image/x-icon',
+  'image/vnd.microsoft.icon'
+];
 
 export function validateImageFile(file: File): { valid: boolean; error?: string } {
   if (!file) {
@@ -114,8 +127,31 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
     return { valid: false, error: 'Image file size must be less than 5MB' };
   }
 
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-    return { valid: false, error: 'Only JPEG, PNG, and WebP images are allowed' };
+  // Accept any file that starts with 'image/' MIME type
+  // This allows all image formats including future formats
+  if (!file.type.startsWith('image/')) {
+    return { valid: false, error: 'Please select a valid image file' };
+  }
+
+  return { valid: true };
+}
+
+// Profile image validation - accepts any size (up to 50MB as a safety limit)
+export function validateProfileImageFile(file: File): { valid: boolean; error?: string } {
+  if (!file) {
+    return { valid: false, error: 'Image file is required' };
+  }
+
+  // Very large limit (50MB) to accept almost any image size
+  // Certificate generation will resize images anyway, so size doesn't matter
+  if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+    return { valid: false, error: 'Image file size must be less than 50MB' };
+  }
+
+  // Accept any file that starts with 'image/' MIME type
+  // This allows all image formats including future formats
+  if (!file.type.startsWith('image/')) {
+    return { valid: false, error: 'Please select a valid image file' };
   }
 
   return { valid: true };

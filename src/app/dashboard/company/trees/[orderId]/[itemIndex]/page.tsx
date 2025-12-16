@@ -142,13 +142,29 @@ export default function TreeDetailPage() {
           const order = result.data;
           if (order.items[itemIndex] && order.paymentStatus === 'paid') {
             foundOrder = order;
-            // Set user image from API response if available
-            if (result.user?.image) {
-              setUserImage(result.user.image);
+            
+            // Set user image from API response (explicitly set to null if not available)
+            // Check if image exists and is not null/empty
+            const userImageValue = result.user?.image;
+            if (userImageValue && userImageValue.trim() !== '') {
+              console.log('[TreeDetail] Setting user image from API:', userImageValue.substring(0, 50) + '...');
+              setUserImage(userImageValue);
+            } else {
+              console.log('[TreeDetail] No user image in API response (value:', userImageValue, ')');
+              setUserImage(null);
             }
+            
             // Ensure order has userName for display (should be set by API, but fallback if missing)
-            if (!order.userName && result.user?.name) {
-              order.userName = result.user.name;
+            if (!order.userName) {
+              if (result.user?.name) {
+                order.userName = result.user.name;
+                console.log('[TreeDetail] Setting userName from API user data:', result.user.name);
+              } else {
+                order.userName = 'Company';
+                console.warn('[TreeDetail] No userName found, using default');
+              }
+            } else {
+              console.log('[TreeDetail] Using userName from order:', order.userName);
             }
           } else {
             setError('Tree item not found or order not paid');

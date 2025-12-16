@@ -56,6 +56,17 @@ export default function PlantingLocationMap({
   const markerRef = useRef<GoogleMarker | null>(null);
   const infoWindowRef = useRef<GoogleInfoWindow | null>(null);
 
+  // Debug logging for public user data
+  useEffect(() => {
+    console.log('[PlantingLocationMap] Props received:', {
+      userName: userName || 'NOT PROVIDED',
+      userImage: userImage ? `${userImage.substring(0, 50)}...` : 'NOT PROVIDED',
+      treeName: treeName || 'NOT PROVIDED',
+      latitude,
+      longitude
+    });
+  }, [userName, userImage, treeName, latitude, longitude]);
+
   const openInMaps = () => {
     // Detect if iOS device
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);

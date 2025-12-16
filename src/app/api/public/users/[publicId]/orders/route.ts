@@ -169,9 +169,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         orders: safeOrders, 
         user: { 
           name: displayName,
-          companyName: user.companyName,
+          companyName: user.companyName || null,
           userType: user.userType,
-          image: user.image || undefined // Ensure image is included if it exists
+          image: user.image || null // Always include image field, even if null
         },
         pagination: {
           currentPage: page,

@@ -256,8 +256,9 @@ export async function POST(request: NextRequest) {
         
         // Get user details for certificate generation (including latest profile picture)
         // Always fetch latest profile picture since users frequently change their profile
+        // Include companyName and userType to properly handle company users
         const userResult = await Promise.allSettled([
-          User.findById(order.userId).select('publicId qrCode image name')
+          User.findById(order.userId).select('publicId qrCode image name companyName userType')
         ]);
         const user = userResult[0];
 
@@ -337,13 +338,28 @@ export async function POST(request: NextRequest) {
             // Use latest user name and profile picture from database (not from order)
             // This ensures certificate always shows the most up-to-date profile
             // Users frequently change their profile picture, so we always fetch the latest one
-            const certificateUserName = order.isGift && order.giftRecipientName 
-              ? order.giftRecipientName 
-              : (user.value.name || order.userName);
+            let certificateUserName: string;
+            if (order.isGift && order.giftRecipientName) {
+              certificateUserName = order.giftRecipientName;
+            } else {
+              // For company users, prefer companyName; for individuals, use name
+              if (user.value.userType === 'company') {
+                certificateUserName = user.value.companyName || user.value.name || order.userName || 'Company';
+              } else {
+                certificateUserName = user.value.name || order.userName || 'User';
+              }
+            }
             
             // Get latest profile picture from user model (users can change their profile frequently)
             // Always fetch fresh from database to ensure certificate uses current profile picture
             const profilePicUrl = user.value.image || undefined;
+            
+            console.log('[PAYMENT_VERIFY] Certificate generation data:', {
+              userName: certificateUserName,
+              hasImage: !!profilePicUrl,
+              imageUrl: profilePicUrl ? profilePicUrl.substring(0, 50) + '...' : 'none',
+              userType: user.value.userType
+            });
 
             // Generate certificate (this is the slowest operation)
             const certificateBuffer = await generateCertificate({

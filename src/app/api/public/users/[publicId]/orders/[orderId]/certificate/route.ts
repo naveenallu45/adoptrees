@@ -34,8 +34,9 @@ export async function GET(
     }
     
     // Query user by publicId (case-insensitive to support legacy mixed-case IDs)
+    // Always fetch latest profile data including companyName and userType
     const publicIdRegex = new RegExp(`^${escapeRegExp(rawPublicId)}$`, 'i');
-    const userDoc = await User.findOne({ publicId: publicIdRegex }).select('publicId qrCode image name email').lean();
+    const userDoc = await User.findOne({ publicId: publicIdRegex }).select('publicId qrCode image name companyName userType email').lean();
     
     if (!userDoc || !('_id' in userDoc) || !('publicId' in userDoc)) {
       console.error(`[PublicCertificate] User not found for publicId: ${rawPublicId} when fetching certificate for order ${orderIdParam}`);
@@ -48,8 +49,19 @@ export async function GET(
       qrCode: 'qrCode' in userDoc ? userDoc.qrCode as string | undefined : undefined,
       image: 'image' in userDoc ? userDoc.image as string | undefined : undefined,
       name: 'name' in userDoc ? userDoc.name as string | undefined : undefined,
+      companyName: 'companyName' in userDoc ? userDoc.companyName as string | undefined : undefined,
+      userType: 'userType' in userDoc ? userDoc.userType as string | undefined : undefined,
       email: 'email' in userDoc ? userDoc.email as string | undefined : undefined,
     };
+    
+    console.log('[PublicCertificate] User profile data:', {
+      publicId: user.publicId,
+      hasImage: !!user.image,
+      imageUrl: user.image ? user.image.substring(0, 50) + '...' : 'none',
+      userName: user.name,
+      companyName: user.companyName,
+      userType: user.userType
+    });
     
     // Build a safe query for the specific order - only paid orders
     const orConditions: Record<string, unknown>[] = [
@@ -162,9 +174,20 @@ export async function GET(
       const profilePicUrl = user.image || undefined;
 
       // For gift orders, use gift recipient name; otherwise use user name
-      const currentUserName = order.isGift && order.giftRecipientName 
-        ? order.giftRecipientName 
-        : (user.name || order.userName || 'User');
+      // For company users, prefer companyName; for individuals, use name
+      let currentUserName: string;
+      if (order.isGift && order.giftRecipientName) {
+        currentUserName = order.giftRecipientName;
+      } else {
+        // Prefer userType-specific name: companyName for companies, name for individuals
+        if (user.userType === 'company') {
+          currentUserName = user.companyName || user.name || order.userName || 'Company';
+        } else {
+          currentUserName = user.name || order.userName || 'User';
+        }
+      }
+      
+      console.log('[PublicCertificate] Using userName:', currentUserName, 'profilePicUrl:', profilePicUrl ? 'present' : 'missing');
 
       // Generate certificate
       const { generateCertificate } = await import('@/lib/certificate');

@@ -97,9 +97,9 @@ export async function GET(
       data: safeOrder,
       user: {
         name: displayName,
-        companyName: user.companyName,
+        companyName: user.companyName || null,
         userType: user.userType,
-        image: user.image || undefined // Ensure image is included if it exists
+        image: user.image || null // Always include image field, even if null
       }
     });
   } catch (_error) {
