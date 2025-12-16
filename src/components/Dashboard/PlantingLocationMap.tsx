@@ -184,43 +184,49 @@ export default function PlantingLocationMap({
           .gm-style-iw-d button {
             display: none !important;
           }
+          .gm-style-iw-c,
+          .gm-style-iw-d {
+            box-shadow: none !important;
+            -webkit-box-shadow: none !important;
+            -moz-box-shadow: none !important;
+          }
+          .gm-style-iw-t {
+            box-shadow: none !important;
+            -webkit-box-shadow: none !important;
+            -moz-box-shadow: none !important;
+          }
         </style>
-        <div style="padding: 7px 11px; min-width: fit-content; max-width: 280px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+        <div style="padding: 10px 12px; min-width: fit-content; max-width: 300px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             ${hasUserImage 
               ? `<img 
                   src="${escapedUserImage}" 
                   alt="${escapedUserName}" 
-                  style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1.5px solid #e5e7eb; flex-shrink: 0; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
+                  style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb; flex-shrink: 0; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 />`
               : ''
             }
             <div style="
               ${hasUserImage ? 'display: none;' : 'display: flex;'}
-              width: 22px; 
-              height: 22px; 
+              width: 32px; 
+              height: 32px; 
               border-radius: 50%; 
               background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); 
               align-items: center; 
               justify-content: center; 
               color: white; 
               font-weight: 600; 
-              font-size: 10px; 
+              font-size: 12px; 
               flex-shrink: 0;
-              border: 1.5px solid #e5e7eb;
+              border: 2px solid #e5e7eb;
             ">
               ${userInitials}
             </div>
             <div style="flex: 1; min-width: 0; max-width: 100%;">
-              <div style="font-weight: 600; font-size: 12px; color: #111827; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word;">
-                ${escapedUserName}
+              <div style="font-weight: 600; font-size: 14px; color: #22c55e; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; letter-spacing: -0.01em;">
+                ${escapedTreeName}
               </div>
-            </div>
-          </div>
-          <div style="border-top: 1px solid #e5e7eb; padding-top: 6px; margin-top: 0;">
-            <div style="font-weight: 600; font-size: 13px; color: #22c55e; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word;">
-              ${escapedTreeName}
             </div>
           </div>
         </div>
