@@ -228,98 +228,77 @@ export async function POST(request: NextRequest) {
     // Save order immediately (before heavy operations)
     await order.save();
 
-    // OPTIMIZED: Return response immediately, process heavy operations in background
-    // This dramatically reduces payment processing delay
-    const response = NextResponse.json({
-      success: true,
-      message: 'Payment verified successfully',
-      data: {
-        orderId: order.orderId,
-        paymentStatus: order.paymentStatus,
-        totalAmount: order.totalAmount,
-        items: order.items.length
-      }
-    }, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    });
+    // PRODUCTION-SAFE: Process certificate + thank-you email within the request lifecycle.
+    // In serverless environments, work scheduled after returning the response (setImmediate)
+    // is not guaranteed to run. Doing it here ensures users reliably receive their emails.
+    try {
+      // Calculate values needed for certificate and emails
+      const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      
+      // Get user details for certificate generation (including latest profile picture)
+      // Always fetch latest profile picture since users frequently change their profile
+      // Include companyName and userType to properly handle company users
+      const userResult = await Promise.allSettled([
+        User.findById(order.userId).select('publicId qrCode image name companyName userType')
+      ]);
+      const user = userResult[0];
 
-    // Process heavy operations in background (non-blocking)
-    // This includes: certificate generation, well-wisher assignment, and email sending
-    setImmediate(async () => {
-      try {
-        // Calculate values needed for certificate and emails
-        const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      // Create wellwisher tasks - assign using equal distribution
+      if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
+        try {
+          const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
+          const wellwisherId = await assignWellWisherEqually();
         
-        // Get user details for certificate generation (including latest profile picture)
-        // Always fetch latest profile picture since users frequently change their profile
-        // Include companyName and userType to properly handle company users
-        const userResult = await Promise.allSettled([
-          User.findById(order.userId).select('publicId qrCode image name companyName userType')
-        ]);
-        const user = userResult[0];
+          if (wellwisherId) {
+            console.log(`[PAYMENT_VERIFY] Assigning well-wisher ${wellwisherId} to order ${order.orderId}`);
+            const wellwisherTasks = order.items.map((item, index) => ({
+              taskId: `${order.orderId}-${index}`,
+              task: `Plant and care for ${item.treeName}`,
+              description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+              scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
+              status: 'pending' as const,
+              location: 'To be determined'
+            }));
 
-        // Create wellwisher tasks - assign using equal distribution (non-blocking)
-        if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
-          (async () => {
-            try {
-              const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
-              const wellwisherId = await assignWellWisherEqually();
-            
-              if (wellwisherId) {
-                console.log(`[PAYMENT_VERIFY] Assigning well-wisher ${wellwisherId} to order ${order.orderId}`);
-                const wellwisherTasks = order.items.map((item, index) => ({
-                  taskId: `${order.orderId}-${index}`,
-                  task: `Plant and care for ${item.treeName}`,
-                  description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-                  scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-                  status: 'pending' as const,
-                  location: 'To be determined'
-                }));
+            order.assignedWellwisher = wellwisherId;
+            order.wellwisherTasks = wellwisherTasks;
+            await order.save();
 
-                order.assignedWellwisher = wellwisherId;
-                order.wellwisherTasks = wellwisherTasks;
-                await order.save();
-
-                // Send task assignment email to well-wisher (non-blocking)
-                User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
-                  if (wellWisher) {
-                    try {
-                      await sendWellWisherTaskAssignmentEmail(
-                        wellWisher.email,
-                        wellWisher.name || '',
-                        order.orderId,
-                        wellwisherTasks,
-                        {
-                          totalTrees: treesCount,
-                          customerName: order.userName,
-                          isGift: order.isGift || false
-                        }
-                      );
-                    } catch (emailError) {
-                      console.error('Error sending task assignment email:', emailError);
+            // Send task assignment email to well-wisher (non-blocking)
+            User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
+              if (wellWisher) {
+                try {
+                  await sendWellWisherTaskAssignmentEmail(
+                    wellWisher.email,
+                    wellWisher.name || '',
+                    order.orderId,
+                    wellwisherTasks,
+                    {
+                      totalTrees: treesCount,
+                      customerName: order.userName,
+                      isGift: order.isGift || false
                     }
-                  }
-                }).catch(() => {}); // Ignore errors
-              } else {
-                console.error(`[PAYMENT_VERIFY] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
-                logError('Well-wisher assignment returned null', new Error(`Order ${order.orderId} could not be assigned a well-wisher`));
+                  );
+                } catch (emailError) {
+                  console.error('Error sending task assignment email:', emailError);
+                }
               }
-            } catch (assignmentError) {
-              console.error(`[PAYMENT_VERIFY] Error assigning well-wisher to order ${order.orderId}:`, assignmentError);
-              logError('Error assigning well-wisher', assignmentError as Error);
-            }
-          })();
-        } else {
-          console.log(`[PAYMENT_VERIFY] Order ${order.orderId} already has well-wisher assigned: ${order.assignedWellwisher}`);
+            }).catch(() => {}); // Ignore errors
+          } else {
+            console.error(`[PAYMENT_VERIFY] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
+            logError('Well-wisher assignment returned null', new Error(`Order ${order.orderId} could not be assigned a well-wisher`));
+          }
+        } catch (assignmentError) {
+          console.error(`[PAYMENT_VERIFY] Error assigning well-wisher to order ${order.orderId}:`, assignmentError);
+          logError('Error assigning well-wisher', assignmentError as Error);
         }
+      } else {
+        console.log(`[PAYMENT_VERIFY] Order ${order.orderId} already has well-wisher assigned: ${order.assignedWellwisher}`);
+      }
 
-        // Generate certificate if user found
-        if (user.status === 'fulfilled' && user.value && user.value.publicId) {
-          try {
+      // Generate certificate if user found
+      if (user.status === 'fulfilled' && user.value && user.value.publicId) {
+        try {
             const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
             const co2Kgs = order.items.reduce((sum, item) => {
               const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
@@ -374,11 +353,11 @@ export async function POST(request: NextRequest) {
               qrCode: user.value.qrCode,
             });
 
-            // Update order with certificate
-            order.certificate = certificateBuffer;
-            await order.save();
+          // Update order with certificate
+          order.certificate = certificateBuffer;
+          await order.save();
 
-            // Send thank you email with certificate (non-blocking)
+          // Send thank you email with certificate (await to ensure it runs)
             const recipientEmail = order.isGift && order.giftRecipientEmail 
               ? order.giftRecipientEmail 
               : order.userEmail;
@@ -430,14 +409,13 @@ export async function POST(request: NextRequest) {
                 }
               });
             }
-          } catch (certError) {
-            logError('Error generating certificate', certError as Error);
-          }
+        } catch (certError) {
+          logError('Error generating certificate', certError as Error);
         }
-      } catch (backgroundError) {
-        logError('Error in background payment processing', backgroundError as Error);
       }
-    });
+    } catch (backgroundError) {
+      logError('Error in payment post-processing (certificate/email)', backgroundError as Error);
+    }
 
     logPaymentEvent('payment_verification_successful', {
       orderId: order.orderId,
@@ -445,8 +423,24 @@ export async function POST(request: NextRequest) {
       totalAmount: order.totalAmount,
       itemsCount: order.items.length
     });
-
-    return response;
+    
+    // Now safely return success response after core post-processing
+    return NextResponse.json({
+      success: true,
+      message: 'Payment verified successfully',
+      data: {
+        orderId: order.orderId,
+        paymentStatus: order.paymentStatus,
+        totalAmount: order.totalAmount,
+        items: order.items.length
+      }
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
 
   } catch (_error) {
     logError('Error verifying payment', _error as Error);
