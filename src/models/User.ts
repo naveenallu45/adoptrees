@@ -62,6 +62,7 @@ const UserSchema = new Schema<IUser>(
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
     publicId: { 
       type: String,
+      immutable: true, // Once generated, publicId should never change
       // Note: unique sparse index created via database-optimization script, not in schema to avoid duplicate warnings
     },
     qrCode: { type: String }, // QR code data URL stored at registration
