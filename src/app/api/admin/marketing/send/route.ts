@@ -12,6 +12,9 @@ const sendMarketingEmailSchema = z.object({
   userType: z.enum(['all', 'individual', 'company']).optional().default('all'),
   adoptionStatus: z.enum(['all', 'adopted', 'nonAdopted']).optional().default('all'),
   limit: z.number().min(1).max(1000).optional().default(100),
+  couponCode: z.string().optional(),
+  discount: z.number().min(0).optional(),
+  discountType: z.enum(['percentage', 'amount']).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { templateId, userType, adoptionStatus, limit } = validationResult.data;
+    const { templateId, userType, adoptionStatus, limit, couponCode, discount, discountType } = validationResult.data;
 
     // Build base query for users
     const query: Record<string, unknown> = {
@@ -90,7 +93,10 @@ export async function POST(request: NextRequest) {
           user.email,
           displayName,
           user.userType,
-          templateId
+          templateId,
+          couponCode,
+          discount,
+          discountType
         );
 
         if (success) {

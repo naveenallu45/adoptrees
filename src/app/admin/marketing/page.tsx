@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { PaperAirplaneIcon, EnvelopeIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PaperAirplaneIcon, EnvelopeIcon, ChartBarIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 
@@ -87,6 +87,12 @@ export default function MarketingManagement() {
   const [userType, setUserType] = useState<'all' | 'individual' | 'company'>('all');
   const [adoptionStatus, setAdoptionStatus] = useState<'all' | 'adopted' | 'nonAdopted'>('all');
   const [emailLimit, setEmailLimit] = useState<number>(100);
+  const [viewingTemplate, setViewingTemplate] = useState<{ id: string; userType: 'individual' | 'company' } | null>(null);
+  const [templateData, setTemplateData] = useState<{ title: string; content: string; cta: string; ctaLink: string } | null>(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [couponCode, setCouponCode] = useState<string>('');
+  const [discount, setDiscount] = useState<string>('');
+  const [discountType, setDiscountType] = useState<'percentage' | 'amount'>('percentage');
 
   const fetchStats = async () => {
     try {
@@ -111,6 +117,38 @@ export default function MarketingManagement() {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      if (!viewingTemplate) {
+        setTemplateData(null);
+        return;
+      }
+
+      try {
+        setLoadingTemplate(true);
+        const response = await fetch(
+          `/api/admin/marketing/template?templateId=${viewingTemplate.id}&userType=${viewingTemplate.userType}&displayName=John Doe`
+        );
+        const result = await response.json();
+        
+        if (result.success) {
+          setTemplateData(result.data);
+        } else {
+          toast.error(result.error || 'Failed to load template');
+          setViewingTemplate(null);
+        }
+      } catch (error) {
+        console.error('Error fetching template:', error);
+        toast.error('Failed to load template');
+        setViewingTemplate(null);
+      } finally {
+        setLoadingTemplate(false);
+      }
+    };
+
+    fetchTemplate();
+  }, [viewingTemplate]);
+
   const handleSendEmails = async () => {
     if (!selectedTemplate) {
       toast.error('Please select an email template');
@@ -132,6 +170,8 @@ export default function MarketingManagement() {
                 : 'Non-adopted users (no paid orders)'
           }</li>
           <li><strong>Limit:</strong> Up to ${emailLimit} users</li>
+          ${couponCode ? `<li><strong>Coupon Code:</strong> ${couponCode}</li>` : ''}
+          ${discount ? `<li><strong>Discount:</strong> ${discount}${discountType === 'percentage' ? '%' : '₹'}</li>` : ''}
         </ul>
         <p style="color: #dc2626; font-weight: 600;">This action cannot be undone!</p>
       `,
@@ -160,7 +200,10 @@ export default function MarketingManagement() {
           templateId: selectedTemplate,
           userType,
           adoptionStatus,
-          limit: emailLimit
+          limit: emailLimit,
+          couponCode: couponCode || undefined,
+          discount: discount ? parseFloat(discount) : undefined,
+          discountType: discount ? discountType : undefined
         }),
       });
 
@@ -294,32 +337,46 @@ export default function MarketingManagement() {
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {emailTemplates.map((template) => (
-                <motion.button
+                <div
                   key={template.id}
-                  onClick={() => setSelectedTemplate(template.id)}
                   className={`
-                    p-4 rounded-lg border-2 text-left transition-all
+                    p-4 rounded-lg border-2 transition-all relative
                     ${selectedTemplate === template.id
                       ? 'border-green-500 bg-green-50'
                       : 'border-gray-200 bg-white hover:border-green-300'
                     }
                   `}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                    {selectedTemplate === template.id && (
-                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-600 mb-2">{template.description}</p>
-                  <p className="text-xs text-gray-500 italic">{template.preview}</p>
-                </motion.button>
+                  <motion.button
+                    onClick={() => setSelectedTemplate(template.id)}
+                    className="w-full text-left"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900">{template.name}</h3>
+                      {selectedTemplate === template.id && (
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 mb-2">{template.description}</p>
+                    <p className="text-xs text-gray-500 italic">{template.preview}</p>
+                  </motion.button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setViewingTemplate({ id: template.id, userType: 'individual' });
+                    }}
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
+                  >
+                    <EyeIcon className="h-4 w-4" />
+                    View Template
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -406,6 +463,52 @@ export default function MarketingManagement() {
             </p>
           </div>
 
+          {/* Coupon Code and Discount */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Coupon Code (Optional)
+              </label>
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="e.g., GREEN2024"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter coupon code to include in email
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Discount (Optional)
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'amount')}
+                  className="rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                >
+                  <option value="percentage">%</option>
+                  <option value="amount">₹</option>
+                </select>
+                <input
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder={discountType === 'percentage' ? 'e.g., 10' : 'e.g., 100'}
+                  min="0"
+                  max={discountType === 'percentage' ? '100' : undefined}
+                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {discountType === 'percentage' ? 'Discount percentage (0-100)' : 'Discount amount in rupees'}
+              </p>
+            </div>
+          </div>
+
           {/* Send Button */}
           <div className="flex justify-end">
             <motion.button
@@ -428,6 +531,112 @@ export default function MarketingManagement() {
           </div>
         </div>
       </div>
+
+      {/* Template View Modal */}
+      <AnimatePresence>
+        {viewingTemplate && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-white/30"
+              onClick={() => setViewingTemplate(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {emailTemplates.find(t => t.id === viewingTemplate.id)?.name}
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {viewingTemplate.userType === 'individual' ? 'Individual User Template' : 'Company User Template'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {/* Toggle between Individual and Company */}
+                    <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewingTemplate({ ...viewingTemplate, userType: 'individual' })}
+                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                          viewingTemplate.userType === 'individual'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Individual
+                      </button>
+                      <button
+                        onClick={() => setViewingTemplate({ ...viewingTemplate, userType: 'company' })}
+                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                          viewingTemplate.userType === 'company'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Company
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setViewingTemplate(null)}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <XMarkIcon className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  {loadingTemplate ? (
+                    <div className="flex items-center justify-center h-64">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+                    </div>
+                  ) : templateData ? (
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                      <div className="bg-white rounded-lg shadow-sm p-6 max-w-2xl mx-auto">
+                        {/* Email Subject */}
+                        <div className="mb-6 pb-4 border-b border-gray-200">
+                          <p className="text-xs text-gray-500 mb-1">Subject:</p>
+                          <p className="text-lg font-semibold text-gray-900">{templateData.title}</p>
+                        </div>
+
+                        {/* Email Content Preview */}
+                        <div
+                          className="email-preview"
+                          dangerouslySetInnerHTML={{ __html: templateData.content }}
+                          style={{
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                          }}
+                        />
+
+                        {/* CTA Button Preview */}
+                        <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+                          <a
+                            href={templateData.ctaLink}
+                            className="inline-block px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            {templateData.cta}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-64">
+                      <p className="text-gray-500">Failed to load template</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
