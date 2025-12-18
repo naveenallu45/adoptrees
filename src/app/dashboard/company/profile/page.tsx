@@ -96,14 +96,14 @@ export default function CompanyProfilePage() {
   };
 
   const validateImageFile = (file: File): string | null => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
       return 'Please select a valid image file';
-    }
-    
-    // Accept any image size - certificate generation will resize as needed
-    // Very large limit (50MB) as safety check only
-    if (file.size > 50 * 1024 * 1024) {
+      }
+      
+      // Accept any image size - certificate generation will resize as needed
+      // Very large limit (50MB) as safety check only
+      if (file.size > 50 * 1024 * 1024) {
       return 'Image size must be less than 50MB';
     }
     
@@ -119,18 +119,18 @@ export default function CompanyProfilePage() {
     const validationError = validateImageFile(file);
     if (validationError) {
       setSaveError(validationError);
-      return;
-    }
+        return;
+      }
 
     setIsUploadingImage(true);
-    setSaveError(null);
-    
+      setSaveError(null);
+      
     // Create preview immediately for better UX
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
 
     try {
       const formDataToSend = new FormData();
@@ -364,11 +364,11 @@ export default function CompanyProfilePage() {
   return (
     <>
       <ProfilePictureSuggestion />
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
           <p className="mt-2 text-gray-600">
             Manage your company information and corporate settings
           </p>
@@ -396,7 +396,7 @@ export default function CompanyProfilePage() {
           <div className="p-6 text-center">
             {/* Profile Image */}
             <div className="relative inline-block mb-4">
-              <div 
+              <div
                 className={`relative w-32 h-32 rounded-full overflow-hidden border-4 transition-all group ${
                   isDragging 
                     ? 'border-green-500 scale-105 shadow-lg' 
@@ -445,12 +445,12 @@ export default function CompanyProfilePage() {
                 )}
               </div>
               
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
                 disabled={isUploadingImage}
               />
               

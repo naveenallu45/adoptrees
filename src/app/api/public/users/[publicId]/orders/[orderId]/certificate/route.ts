@@ -110,17 +110,17 @@ export async function GET(
       try {
         // Always use production URL for certificates
         const origin = 'https://adoptrees.com';
-        const publicIdLower = user.publicId.toLowerCase();
-        const qrUrl = `${origin}/u/${publicIdLower}`;
-        
+          const publicIdLower = user.publicId.toLowerCase();
+          const qrUrl = `${origin}/u/${publicIdLower}`;
+          
         // Always regenerate QR code with production URL for certificates
-        const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
-          width: 320,
-          margin: 1,
-          errorCorrectionLevel: 'M'
-        });
-        
-        qrCodeToUse = qrDataUrl;
+          const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
+            width: 320,
+            margin: 1,
+            errorCorrectionLevel: 'M'
+          });
+          
+          qrCodeToUse = qrDataUrl;
         
         // Update stored QR code asynchronously if it's different (don't block certificate generation)
         // This ensures future certificates also use the correct URL

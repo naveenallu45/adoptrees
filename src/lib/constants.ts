@@ -6,7 +6,7 @@
 // Rate Limiting Configuration
 export const RATE_LIMITS = {
   REGISTRATION: {
-    maxRequests: 5,
+    maxRequests: process.env.NODE_ENV === 'development' ? 20 : 10, // More lenient in development
     windowMs: 15 * 60 * 1000, // 15 minutes
   },
   LOGIN: {

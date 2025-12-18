@@ -203,3 +203,58 @@ export async function checkRedisHealth(): Promise<boolean> {
     return false;
   }
 }
+
+// Clear rate limit for a specific IP (development only)
+export async function clearRateLimit(ip: string): Promise<boolean> {
+  // Only allow in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return false;
+  }
+  
+  try {
+    // Clear from Redis if available
+    if (redis) {
+      const key = `rate_limit:${ip}`;
+      await redis.del(key);
+    }
+    
+    // Clear from fallback store
+    fallbackStore.delete(ip);
+    
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+// Clear all rate limits (development only)
+export async function clearAllRateLimits(): Promise<number> {
+  // Only allow in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return 0;
+  }
+  
+  let cleared = 0;
+  
+  try {
+    // Clear from Redis if available
+    if (redis) {
+      const keys = await redis.keys('rate_limit:*');
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        cleared += keys.length;
+      }
+    }
+    
+    // Clear from fallback store
+    cleared += fallbackStore.size;
+    fallbackStore.clear();
+    
+    return cleared;
+  } catch (_error) {
+    // Still clear fallback store
+    cleared = fallbackStore.size;
+    fallbackStore.clear();
+    return cleared;
+  }
+}

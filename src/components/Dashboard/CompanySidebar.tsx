@@ -8,7 +8,6 @@ import {
   ArrowRightOnRectangleIcon,
   QuestionMarkCircleIcon,
   CreditCardIcon,
-  GlobeAltIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -21,7 +20,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Your Trees', href: '/dashboard/company/trees', icon: SparklesIcon },
-  { name: 'Your Forest', href: '/dashboard/company/forest', icon: GlobeAltIcon },
   { name: 'Profile', href: '/dashboard/company/profile', icon: BuildingOfficeIcon },
   { name: 'Transactions', href: '/dashboard/company/transactions', icon: CreditCardIcon },
   { name: 'Support', href: '/dashboard/company/support', icon: QuestionMarkCircleIcon },

@@ -121,7 +121,7 @@ export async function PUT(
 
     // Convert Mongoose document to plain object to ensure all fields are included
     const couponData = coupon.toObject ? coupon.toObject() : JSON.parse(JSON.stringify(coupon));
-    
+
     return NextResponse.json({
       success: true,
       data: couponData,

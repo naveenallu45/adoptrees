@@ -409,18 +409,22 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     }
 
     // Draw user name (centered below profile picture)
-    // nameFontSize, nameSpacing, and nameY already defined above
-    
+    // Use FIXED position - don't calculate based on name length to prevent position shifts
     // Capitalize first letter of user name
     const capitalizedUserName = data.userName.charAt(0).toUpperCase() + data.userName.slice(1).toLowerCase();
     
-    const estimatedCharWidth = 20; // Approximate character width for font size 40
-    const nameTextWidth = capitalizedUserName.length * estimatedCharWidth;
-    const nameX = profileX + profileSize / 2 - nameTextWidth / 2 - (pageWidth * 0.01); // Center relative to profile picture, shifted 1% to the left
+    // Fixed center position for name (profile center X) - prevents position shifts
+    const nameCenterX = profileCenterX;
+    const nameX = nameCenterX; // Will be centered using text width calculation in drawText
     // nameY is already calculated above to ensure 36% bottom padding
     
+    // Calculate actual text width for proper centering (but use fixed center point)
+    const estimatedCharWidth = nameFontSize * 0.5; // More accurate width calculation
+    const nameTextWidth = capitalizedUserName.length * estimatedCharWidth;
+    const nameDrawX = nameX - nameTextWidth / 2; // Center the text at fixed position
+    
     page.drawText(capitalizedUserName, {
-      x: nameX,
+      x: nameDrawX,
       y: nameY,
       size: nameFontSize,
       font: robotoBoldFont,
@@ -442,76 +446,72 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       treesCount: data.treesCount
     });
     
-    // Position stats below user name
-    const statsStartY = Math.max(nameY - 400, 280); // Space below user name (reduced padding)
-    const gapBetweenStats = pageWidth * 0.13; // 13% gap between stat columns (increased by 3%)
-    // Use original profileX (540) for stats center, not the shifted profileX
-    const originalProfileX = 540;
-    const centerX = originalProfileX + profileSize / 2;
-    // Slightly adjust stats center 1% to the right to better align values with template
-    const statsCenterX = centerX - (pageWidth * 0.05);
+    // Position stats - use COMPLETELY FIXED positions to prevent any shifts
+    // All positions are hardcoded and independent of dynamic values
+    const statsStartY = 280; // Fixed Y position for all stats (never changes)
+    const gapBetweenStats = pageWidth * 0.13; // 13% gap between stat columns (fixed)
     
-    // Column 1: Tree name (first field)
+    // Fixed stats center X - use FIXED profileSize value (328) for calculation to prevent shifts
+    // Don't use actual profileSize variable which can vary (328 vs 273)
+    const fixedProfileSizeForStats = 328; // Always use this fixed value
+    const originalProfileX = 540; // Fixed X position
+    const centerX = originalProfileX + fixedProfileSizeForStats / 2; // Fixed calculation
+    const statsCenterX = centerX - (pageWidth * 0.05); // Fixed stats center
+    
+    // Column 1: Tree name (first field) - FIXED position
     if (data.treeNames && data.treeNames.length > 0) {
-      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005); // Moved 1% to the right (was 0.015, now 0.005)
-      const treeNameY = statsStartY;
-      const treeNameText = data.treeNames[0]; // Show first tree name
-      const treeNameFontSize = 27; // Increased by 35% from 20
-      const treeNameWidth = treeNameText.length * (treeNameFontSize * 0.55); // Adjusted width calculation
+      // Fixed X position - doesn't depend on profileSize or any dynamic values
+      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005);
+      const treeNameText = data.treeNames[0];
+      const treeNameFontSize = 27;
+      const treeNameWidth = treeNameText.length * (treeNameFontSize * 0.55);
       
       page.drawText(treeNameText, {
-        x: col1X - treeNameWidth / 2,
-        y: treeNameY,
+        x: col1X - treeNameWidth / 2, // Center text at fixed X position
+        y: statsStartY,
         size: treeNameFontSize,
-        font: robotoBoldFont, // Bold font for tree name
-        color: rgb(0, 0, 0), // Black color
+        font: robotoBoldFont,
+        color: rgb(0, 0, 0),
       });
     }
     
-    // Column 2: Trees count only
-    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015); // Moved 1% to the right (was 0.025, now 0.015)
-    const treesLabelY = statsStartY;
-    
-    // Center trees count number
+    // Column 2: Trees count - FIXED position
+    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015);
     const treesCountText = `${data.treesCount}`;
-    const treesCountFontSize = 30; // Increased by 35% from 22
-    const treesCountWidth = treesCountText.length * (treesCountFontSize * 0.625); // Approximate width for new size
+    const treesCountFontSize = 30;
+    const treesCountWidth = treesCountText.length * (treesCountFontSize * 0.625);
     page.drawText(treesCountText, {
-      x: col2X - treesCountWidth / 2,
-      y: treesLabelY,
+      x: col2X - treesCountWidth / 2, // Center text at fixed X position
+      y: statsStartY,
       size: treesCountFontSize,
-      font: robotoBoldFont, // Bold font for trees count
-      color: rgb(0, 0, 0), // Black color
+      font: robotoBoldFont,
+      color: rgb(0, 0, 0),
     });
     
-    // Column 3: O2 total value
-    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.015); // Moved 1% to the right (was 0.025, now 0.015)
-    const o2ValueY = statsStartY;
+    // Column 3: O2 total value - FIXED position
+    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.015);
     const o2ValueText = `${data.oxygenKgs.toFixed(1)} /year`;
-    
-    const o2ValueFontSize = 30; // Increased by 35% from 22
-    const o2ValueWidth = o2ValueText.length * (o2ValueFontSize * 0.45); // Adjusted width calculation
+    const o2ValueFontSize = 30;
+    const o2ValueWidth = o2ValueText.length * (o2ValueFontSize * 0.45);
     page.drawText(o2ValueText, {
-      x: col3X - o2ValueWidth / 2,
-      y: o2ValueY,
+      x: col3X - o2ValueWidth / 2, // Center text at fixed X position
+      y: statsStartY,
       size: o2ValueFontSize,
-      font: robotoBoldFont, // Bold font for O2 value
-      color: rgb(0, 0, 0), // Black color
+      font: robotoBoldFont,
+      color: rgb(0, 0, 0),
     });
     
-    // Column 4: CO2 total value
-    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.025); // Moved 1% to the right (was 0.035, now 0.025)
-    const co2ValueY = statsStartY;
+    // Column 4: CO2 total value - FIXED position
+    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.025);
     const co2ValueText = `${co2Value.toFixed(1)} /year`;
-    
-    const co2ValueFontSize = 30; // Increased by 35% from 22
-    const co2ValueWidth = co2ValueText.length * (co2ValueFontSize * 0.45); // Adjusted width calculation
+    const co2ValueFontSize = 30;
+    const co2ValueWidth = co2ValueText.length * (co2ValueFontSize * 0.45);
     page.drawText(co2ValueText, {
-      x: col4X - co2ValueWidth / 2,
-      y: co2ValueY,
+      x: col4X - co2ValueWidth / 2, // Center text at fixed X position
+      y: statsStartY,
       size: co2ValueFontSize,
-      font: robotoBoldFont, // Bold font for CO2 value
-      color: rgb(0, 0, 0), // Black color
+      font: robotoBoldFont,
+      color: rgb(0, 0, 0),
     });
 
     // Draw QR code (bottom right area)

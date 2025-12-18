@@ -112,14 +112,14 @@ export default function IndividualProfilePage() {
   };
 
   const validateImageFile = (file: File): string | null => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
       return 'Please select a valid image file';
-    }
-    
-    // Accept any image size - certificate generation will resize as needed
-    // Very large limit (50MB) as safety check only
-    if (file.size > 50 * 1024 * 1024) {
+      }
+      
+      // Accept any image size - certificate generation will resize as needed
+      // Very large limit (50MB) as safety check only
+      if (file.size > 50 * 1024 * 1024) {
       return 'Image size must be less than 50MB';
     }
     
@@ -135,18 +135,18 @@ export default function IndividualProfilePage() {
     const validationError = validateImageFile(file);
     if (validationError) {
       setSaveError(validationError);
-      return;
-    }
+        return;
+      }
 
     setIsUploadingImage(true);
-    setSaveError(null);
-    
+      setSaveError(null);
+      
     // Create preview immediately for better UX
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
 
     try {
       const formDataToSend = new FormData();
@@ -384,9 +384,9 @@ export default function IndividualProfilePage() {
   return (
     <>
       <ProfilePictureSuggestion />
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
           <p className="mt-2 text-gray-600">

@@ -31,7 +31,9 @@ export default function ProfilePictureSuggestion() {
       return;
     }
 
-    // Check if user just registered OR if this is their first login OR if they're on profile page
+    // Check if user just registered (auto-login after registration sets newUser=true)
+    // When newUser=true, this is considered as first login for the suggestion
+    // Registration form redirects with ?newUser=true after auto-login
     const isNewUser = searchParams.get('newUser') === 'true';
     const userId = session.user.id;
     const isOnProfilePage = pathname?.includes('/dashboard/individual/profile') || 
@@ -42,6 +44,9 @@ export default function ProfilePictureSuggestion() {
     const hasSeenBefore = typeof window !== 'undefined' 
       ? localStorage.getItem(suggestionKey) === 'true'
       : false;
+    
+    // After registration with auto-login, newUser=true is set, so treat as first login
+    // This ensures the suggestion appears and "Upload Profile Picture" redirects to profile page
     
     // Check if dismissed in current session
     const dismissedInSession = typeof window !== 'undefined' 
@@ -102,9 +107,23 @@ export default function ProfilePictureSuggestion() {
     const isOnProfilePage = pathname?.includes('/dashboard/individual/profile') || 
                             pathname?.includes('/dashboard/company/profile');
     
-    if (!isOnProfilePage) {
+    // Check if this is first login
+    // After registration with auto-login, newUser=true is set, which is considered first login
+    const userId = session?.user?.id;
+    const suggestionKey = userId ? `profile-picture-suggestion-${userId}` : null;
+    const hasSeenBefore = typeof window !== 'undefined' && suggestionKey
+      ? localStorage.getItem(suggestionKey) === 'true'
+      : false;
+    const isNewUser = searchParams.get('newUser') === 'true';
+    const isFirstLogin = isNewUser || !hasSeenBefore; // newUser=true from auto-login = first login
+    
+    // After first login (including auto-login after registration), always redirect to profile page
+    // This ensures users can easily upload their profile picture after registration
+    if (isFirstLogin || !isOnProfilePage) {
       router.push(`/dashboard/${userType}/profile`);
     }
+    
+    // Dismiss the modal
     handleDismiss();
   };
 
