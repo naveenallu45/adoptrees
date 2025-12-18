@@ -77,30 +77,11 @@ export async function POST(req: NextRequest) {
     }
 
     // QR code generation is MANDATORY for every user
+    // ALWAYS use adoptrees.com for QR codes (never localhost)
     let qrDataUrl: string;
     try {
-      // Get origin from request URL (most reliable) or use production URL
-      // QR codes should always point to production, not localhost
-      let origin: string;
-      try {
-        const requestUrl = new URL(req.url);
-        // Only use request URL if it's not localhost (production/staging)
-        if (!requestUrl.hostname.includes('localhost') && !requestUrl.hostname.includes('127.0.0.1')) {
-          origin = `${requestUrl.protocol}//${requestUrl.host}`;
-        } else {
-          // In development, use production URL for QR codes (they're immutable)
-          origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://adoptrees.com';
-        }
-      } catch {
-        // Fallback to environment variable or production URL
-        origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://adoptrees.com';
-      }
-      
-      // Ensure we never use localhost in QR codes (they're immutable and should work in production)
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        origin = 'https://adoptrees.com';
-      }
-      
+      // Always use production URL for QR codes (they're immutable and must work in production)
+      const origin = 'https://adoptrees.com';
       const qrUrl = `${origin}/u/${user.publicId.toLowerCase()}`;
       // Use same settings as modal (width: 320 for better quality)
       qrDataUrl = await QRCode.toDataURL(qrUrl, { 

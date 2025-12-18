@@ -103,53 +103,38 @@ export async function GET(
         );
       }
 
-      // QR codes in certificates must always use production URL (not localhost)
-      // Even if stored QR code exists, regenerate if it contains localhost
+      // QR codes in certificates must ALWAYS use production URL (not localhost)
+      // Always regenerate QR code for certificates to ensure it uses production URL
+      // We can't reliably detect localhost in base64-encoded QR images, so always regenerate
       let qrCodeToUse: string | undefined;
       try {
-        // Determine production origin (never use localhost)
-        let origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://adoptrees.com';
+        // Always use production URL for certificates
+        const origin = 'https://adoptrees.com';
+        const publicIdLower = user.publicId.toLowerCase();
+        const qrUrl = `${origin}/u/${publicIdLower}`;
         
-        // Never use localhost in QR codes
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-          origin = 'https://adoptrees.com';
-        }
+        // Always regenerate QR code with production URL for certificates
+        const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
+          width: 320,
+          margin: 1,
+          errorCorrectionLevel: 'M'
+        });
         
-        // Check if stored QR code exists and doesn't contain localhost
-        const storedQrHasLocalhost = user.qrCode && (
-          user.qrCode.includes('localhost') || 
-          user.qrCode.includes('127.0.0.1')
-        );
+        qrCodeToUse = qrDataUrl;
         
-        // Use stored QR code only if it doesn't have localhost
-        if (user.qrCode && !storedQrHasLocalhost) {
-          qrCodeToUse = user.qrCode;
-        } else {
-          // Regenerate QR code with production URL
-          const publicIdLower = user.publicId.toLowerCase();
-          const qrUrl = `${origin}/u/${publicIdLower}`;
-          
-          const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
-            width: 320,
-            margin: 1,
-            errorCorrectionLevel: 'M'
-          });
-          
-          qrCodeToUse = qrDataUrl;
-          
-          // Update stored QR code asynchronously (don't block) - only if it had localhost
-          if (storedQrHasLocalhost && user._id) {
-            // Use findByIdAndUpdate since user is a lean document (plain object)
-            User.findByIdAndUpdate(
-              user._id,
-              { qrCode: qrDataUrl },
-              { new: false } // Don't need to return the updated document
-            ).catch((err: Error) => console.error('Error saving QR code:', err));
-          }
+        // Update stored QR code asynchronously if it's different (don't block certificate generation)
+        // This ensures future certificates also use the correct URL
+        if (user.qrCode !== qrDataUrl && user._id) {
+          // Use findByIdAndUpdate since user is a lean document (plain object)
+          User.findByIdAndUpdate(
+            user._id,
+            { qrCode: qrDataUrl },
+            { new: false } // Don't need to return the updated document
+          ).catch((err: Error) => console.error('Error saving QR code:', err));
         }
       } catch (qrError) {
         console.error('[PublicCertificate] Error generating QR code:', qrError);
-        // Fallback to stored QR code if available (even if it has localhost - better than nothing)
+        // Fallback to stored QR code if available (shouldn't happen, but safety net)
         qrCodeToUse = user.qrCode;
         if (!qrCodeToUse) {
           console.error('[PublicCertificate] No QR code available - certificate generation may fail');

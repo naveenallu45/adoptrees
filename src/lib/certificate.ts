@@ -184,8 +184,8 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       qrImage = await pdfDoc.embedPng(qrImageBytes);
     } else {
       // Generate QR code only if not provided
-      // Always use lowercase publicId for consistency
-      const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
+      // Always use adoptrees.com for QR codes (never localhost)
+      const origin = 'https://adoptrees.com';
       const publicIdLower = (data.publicId || '').toLowerCase().trim();
       const qrUrl = `${origin}/u/${publicIdLower}`;
       const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
