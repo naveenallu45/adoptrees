@@ -88,7 +88,14 @@ const userSchema = new mongoose.Schema(
 const User = mongoose.models.User || mongoose.model('User', userSchema, 'users');
 
 async function generateQRCode(publicId) {
-  const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://adoptrees.com';
+  // Always use production URL for QR codes (they're immutable and should work in production)
+  let origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://adoptrees.com';
+  
+  // Never use localhost in QR codes
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    origin = 'https://adoptrees.com';
+  }
+  
   const qrUrl = `${origin}/u/${publicId.toLowerCase()}`;
   // Use same settings as registration (width: 320 for better quality)
   const qrDataUrl = await QRCode.toDataURL(qrUrl, { 

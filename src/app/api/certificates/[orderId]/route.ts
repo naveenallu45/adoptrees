@@ -66,39 +66,50 @@ export async function GET(
         );
       }
 
-      // Get origin from request URL to ensure QR code uses correct URL (matches dashboard behavior)
-      // Extract origin from the request URL itself - most reliable method
-      const requestUrl = new URL(request.url);
-      const origin = `${requestUrl.protocol}//${requestUrl.host}`;
-      
-      // Always regenerate QR code with current origin to ensure it works correctly
-      // This ensures the QR code uses the same origin as the request (like dashboard does)
+      // QR codes in certificates must always use production URL (not localhost)
+      // Even if stored QR code exists, regenerate if it contains localhost
       let qrCodeToUse: string | undefined;
       try {
-        // Use stored QR code if available (much faster)
-        if (user.qrCode) {
+        // Determine production origin (never use localhost)
+        let origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://adoptrees.com';
+        
+        // Never use localhost in QR codes
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+          origin = 'https://adoptrees.com';
+        }
+        
+        // Check if stored QR code exists and doesn't contain localhost
+        const storedQrHasLocalhost = user.qrCode && (
+          user.qrCode.includes('localhost') || 
+          user.qrCode.includes('127.0.0.1')
+        );
+        
+        // Use stored QR code only if it doesn't have localhost
+        if (user.qrCode && !storedQrHasLocalhost) {
           qrCodeToUse = user.qrCode;
         } else {
-          // Generate QR code only if not stored
-        const publicIdLower = user.publicId.toLowerCase();
-        const qrUrl = `${origin}/u/${publicIdLower}`;
-        
-        // Use same settings as modal (width: 320 for better quality)
-        const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
-          width: 320,
-          margin: 1,
-          errorCorrectionLevel: 'M'
-        });
-        
-        qrCodeToUse = qrDataUrl;
-        
-          // Update stored QR code asynchronously (don't block)
-          user.qrCode = qrDataUrl;
-          user.save().catch((err: Error) => console.error('Error saving QR code:', err));
+          // Regenerate QR code with production URL
+          const publicIdLower = user.publicId.toLowerCase();
+          const qrUrl = `${origin}/u/${publicIdLower}`;
+          
+          // Use same settings as registration (width: 320 for better quality)
+          const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
+            width: 320,
+            margin: 1,
+            errorCorrectionLevel: 'M'
+          });
+          
+          qrCodeToUse = qrDataUrl;
+          
+          // Update stored QR code asynchronously (don't block) - only if it had localhost
+          if (storedQrHasLocalhost) {
+            user.qrCode = qrDataUrl;
+            user.save().catch((err: Error) => console.error('Error saving QR code:', err));
+          }
         }
       } catch (qrError) {
         console.error('[CERTIFICATE] Error generating QR code:', qrError);
-        // Fallback to stored QR code if available
+        // Fallback to stored QR code if available (even if it has localhost - better than nothing)
         qrCodeToUse = user.qrCode;
         if (qrCodeToUse) {
           console.log(`[CERTIFICATE] Using stored QR code as fallback`);

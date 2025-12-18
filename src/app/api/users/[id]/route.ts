@@ -145,6 +145,8 @@ export async function PUT(
       gstNumber?: string;
       dateOfBirth?: Date;
       dateOfBirthLastUpdated?: Date;
+      publicId?: string; // Immutable - will be removed if present
+      qrCode?: string; // Immutable - will be removed if present
     }
     const updateData: UpdateData = {};
 
