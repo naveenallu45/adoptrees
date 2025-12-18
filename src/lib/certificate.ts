@@ -458,12 +458,12 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     const centerX = originalProfileX + fixedProfileSizeForStats / 2; // Fixed calculation
     const statsCenterX = centerX - (pageWidth * 0.05); // Fixed stats center
     
-    // Column 1: Tree name (first field) - FIXED position (moved 4% to the left total, left-aligned)
+    // Column 1: Tree name (first field) - FIXED position (moved 4.5% to the left total, left-aligned)
     // Use absolute fixed X position - no centering to prevent position shifts
     if (data.treeNames && data.treeNames.length > 0) {
       // Fixed X position - doesn't depend on profileSize or any dynamic values
       // Left-aligned at fixed position to prevent shifts when text length changes
-      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
+      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005) - (pageWidth * 0.005);
       const treeNameText = data.treeNames[0];
       const treeNameFontSize = 27;
       
@@ -476,9 +476,9 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       });
     }
     
-    // Column 2: Trees count - FIXED position (moved 2.5% to the left total, left-aligned)
+    // Column 2: Trees count - FIXED position (moved 2% to the left total, left-aligned)
     // Use absolute fixed X position - no centering to prevent position shifts
-    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) + (pageWidth * 0.01);
+    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) + (pageWidth * 0.01) + (pageWidth * 0.005);
     const treesCountText = `${data.treesCount}`;
     const treesCountFontSize = 30;
     page.drawText(treesCountText, {
