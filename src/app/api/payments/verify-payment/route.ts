@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
             User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
               if (wellWisher) {
                 try {
-                  await sendWellWisherTaskAssignmentEmail(
+                  const emailSent = await sendWellWisherTaskAssignmentEmail(
                     wellWisher.email,
                     wellWisher.name || '',
                     order.orderId,
@@ -279,11 +279,29 @@ export async function POST(request: NextRequest) {
                       isGift: order.isGift || false
                     }
                   );
+                  
+                  if (emailSent) {
+                    logPaymentEvent('wellwisher_task_assignment_email_sent', {
+                      orderId: order.orderId,
+                      wellwisherEmail: wellWisher.email,
+                      wellwisherId: wellwisherId
+                    });
+                    console.log(`[PAYMENT_VERIFY] Task assignment email sent successfully to well-wisher ${wellWisher.email} for order ${order.orderId}`);
+                  } else {
+                    logError('Well-wisher task assignment email failed to send', new Error(`Email returned false for order ${order.orderId}, well-wisher ${wellWisher.email}`));
+                    console.error(`[PAYMENT_VERIFY] Task assignment email failed to send to well-wisher ${wellWisher.email} for order ${order.orderId}`);
+                  }
                 } catch (emailError) {
-                  console.error('Error sending task assignment email:', emailError);
+                  logError('Error sending task assignment email', emailError as Error);
+                  console.error(`[PAYMENT_VERIFY] Error sending task assignment email to well-wisher ${wellWisher.email} for order ${order.orderId}:`, emailError);
                 }
+              } else {
+                console.error(`[PAYMENT_VERIFY] Well-wisher not found for ID ${wellwisherId} for order ${order.orderId}`);
               }
-            }).catch(() => {}); // Ignore errors
+            }).catch((findError) => {
+              logError('Error finding well-wisher for email', findError as Error);
+              console.error(`[PAYMENT_VERIFY] Error finding well-wisher ${wellwisherId} for order ${order.orderId}:`, findError);
+            });
           } else {
             console.error(`[PAYMENT_VERIFY] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
             logError('Well-wisher assignment returned null', new Error(`Order ${order.orderId} could not be assigned a well-wisher`));
@@ -365,20 +383,29 @@ export async function POST(request: NextRequest) {
               ? order.giftRecipientName 
               : order.userName;
             
-            sendThankYouEmailWithCertificate(
-              recipientEmail,
-              recipientName,
-              order.orderId,
-              treesCount,
-              certificateBuffer
-            ).then(() => {
-              logPaymentEvent('thank_you_email_sent', {
-                orderId: order.orderId,
-                recipientEmail
-              });
-            }).catch((emailError) => {
+            try {
+              const emailSent = await sendThankYouEmailWithCertificate(
+                recipientEmail,
+                recipientName,
+                order.orderId,
+                treesCount,
+                certificateBuffer
+              );
+              
+              if (emailSent) {
+                logPaymentEvent('thank_you_email_sent', {
+                  orderId: order.orderId,
+                  recipientEmail
+                });
+                console.log(`[PAYMENT_VERIFY] Thank you email sent successfully to ${recipientEmail} for order ${order.orderId}`);
+              } else {
+                logError('Thank you email failed to send', new Error(`Email returned false for order ${order.orderId}`));
+                console.error(`[PAYMENT_VERIFY] Thank you email failed to send to ${recipientEmail} for order ${order.orderId}`);
+              }
+            } catch (emailError) {
               logError('Error sending thank you email', emailError as Error);
-            });
+              console.error(`[PAYMENT_VERIFY] Error sending thank you email to ${recipientEmail} for order ${order.orderId}:`, emailError);
+            }
 
             // Send greeting email to gift recipients (non-blocking)
             if (order.isGift && order.giftRecipientEmail) {

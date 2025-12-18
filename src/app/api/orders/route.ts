@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
         const wellWisher = await User.findById(wellwisherId).select('email name');
         if (wellWisher) {
           const totalTrees = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-          await sendWellWisherTaskAssignmentEmail(
+          const emailSent = await sendWellWisherTaskAssignmentEmail(
             wellWisher.email,
             wellWisher.name || '',
             order.orderId,
@@ -216,9 +216,17 @@ export async function POST(request: NextRequest) {
               isGift: isGift || false
             }
           );
+          
+          if (emailSent) {
+            console.log(`[ORDER_CREATE] Task assignment email sent successfully to well-wisher ${wellWisher.email} for order ${order.orderId}`);
+          } else {
+            console.error(`[ORDER_CREATE] Task assignment email failed to send to well-wisher ${wellWisher.email} for order ${order.orderId}`);
+          }
+        } else {
+          console.error(`[ORDER_CREATE] Well-wisher not found for ID ${wellwisherId} for order ${order.orderId}`);
         }
       } catch (emailError) {
-        console.error('Error sending task assignment email:', emailError);
+        console.error(`[ORDER_CREATE] Error sending task assignment email for order ${order.orderId}:`, emailError);
       }
     } else {
       console.error(`[ORDER_CREATE] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
