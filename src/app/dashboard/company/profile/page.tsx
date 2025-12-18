@@ -5,6 +5,7 @@ import { PencilIcon, CheckIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import ImageCropper from '@/components/ImageCropper';
 import ProfilePictureSuggestion from '@/components/Dashboard/ProfilePictureSuggestion';
 
 export default function CompanyProfilePage() {
@@ -26,7 +27,8 @@ export default function CompanyProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [initialFormData, setInitialFormData] = useState(formData);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,29 +112,49 @@ export default function CompanyProfilePage() {
     return null;
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!session?.user?.id) {
-      setSaveError('User session not found');
-      return;
-    }
-
+  const handleImageSelect = (file: File) => {
     const validationError = validateImageFile(file);
     if (validationError) {
       setSaveError(validationError);
-        return;
-      }
+      return;
+    }
+
+    setSaveError(null);
+    
+    // Create preview and show cropper
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const imageUrl = reader.result as string;
+      setImageToCrop(imageUrl);
+      setShowCropper(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = async (croppedImageBlob: Blob) => {
+    if (!session?.user?.id) {
+      setSaveError('User session not found');
+      setShowCropper(false);
+      return;
+    }
+
+    // Convert blob to File
+    const croppedFile = new File([croppedImageBlob], 'profile.jpg', {
+      type: 'image/jpeg',
+    });
 
     setIsUploadingImage(true);
-      setSaveError(null);
-      
-    // Create preview immediately for better UX
+    setShowCropper(false);
+    setSaveError(null);
+
+    try {
+      // Create preview of cropped image
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(croppedFile);
 
-    try {
       const formDataToSend = new FormData();
       formDataToSend.append('companyName', formData.companyName);
       formDataToSend.append('email', formData.email);
@@ -140,8 +162,20 @@ export default function CompanyProfilePage() {
       formDataToSend.append('address', formData.address);
       formDataToSend.append('gstNumber', formData.gstNumber);
       formDataToSend.append('website', formData.website);
-      formDataToSend.append('image', file);
+      formDataToSend.append('image', croppedFile);
 
+      handleImageUploadRequest(formDataToSend, croppedFile);
+    } catch (error) {
+      console.error('Error processing cropped image:', error);
+      setSaveError('Failed to process image. Please try again.');
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleImageUploadRequest = async (formDataToSend: FormData, file: File) => {
+    if (!session?.user?.id) return;
+
+    try {
       const response = await fetch(`/api/users/${session.user.id}`, {
         method: 'PUT',
         body: formDataToSend,
@@ -168,7 +202,7 @@ export default function CompanyProfilePage() {
         // Update state immediately
         setProfileImage(newImage);
         setImagePreview(null);
-        setProfileImageFile(null);
+        setProfileImageFile(file);
         
         // Update session
         if (newImage !== session?.user?.image) {
@@ -201,6 +235,10 @@ export default function CompanyProfilePage() {
     }
   };
 
+  const handleImageUpload = async (file: File) => {
+    handleImageSelect(file);
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -211,29 +249,6 @@ export default function CompanyProfilePage() {
   const handleImageClick = () => {
     if (fileInputRef.current && !isUploadingImage) {
       fileInputRef.current.click();
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    const file = e.dataTransfer.files?.[0];
-    if (file && !isUploadingImage) {
-      handleImageUpload(file);
     }
   };
 
@@ -397,67 +412,71 @@ export default function CompanyProfilePage() {
             {/* Profile Image */}
             <div className="relative inline-block mb-4">
               <div
-                className={`relative w-32 h-32 rounded-full overflow-hidden border-4 transition-all group ${
-                  isDragging 
-                    ? 'border-green-500 scale-105 shadow-lg' 
-                    : isUploadingImage
+                className={`relative w-32 h-32 rounded-full overflow-hidden border-4 transition-all ${
+                  isUploadingImage
                     ? 'border-blue-400'
-                    : 'border-gray-200 hover:border-green-400 cursor-pointer'
+                    : 'border-gray-200'
                 }`}
-                onClick={handleImageClick}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+                style={{ 
+                  aspectRatio: '1 / 1',
+                  borderRadius: '50%'
+                }}
               >
                 {imagePreview || profileImage || session?.user?.image ? (
-                  <Image
-                    key={`profile-img-${imagePreview || profileImage || session?.user?.image || 'default'}`}
-                    src={imagePreview || profileImage || session?.user?.image || ''}
-                    alt={formData.companyName || 'Company'}
-                    fill
-                    className={`object-cover transition-opacity ${isUploadingImage ? 'opacity-50' : ''}`}
-                    sizes="128px"
-                    unoptimized
-                    priority
-                  />
+                  <div className="absolute inset-0 rounded-full overflow-hidden">
+                    <Image
+                      key={`profile-img-${imagePreview || profileImage || session?.user?.image || 'default'}`}
+                      src={imagePreview || profileImage || session?.user?.image || ''}
+                      alt={formData.companyName || 'Company'}
+                      fill
+                      className={`object-cover rounded-full transition-opacity ${isUploadingImage ? 'opacity-50' : ''}`}
+                      style={{ 
+                        objectFit: 'cover',
+                        objectPosition: 'center'
+                      }}
+                      sizes="128px"
+                      unoptimized
+                      priority
+                    />
+                  </div>
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center rounded-full">
                     <span className="text-white text-3xl font-bold">
                       {formData.companyName?.charAt(0).toUpperCase() || 'C'}
                     </span>
                   </div>
                 )}
                 
-                {/* Upload overlay */}
-                {!isUploadingImage && (
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <CameraIcon className="h-8 w-8 text-white" />
-                    </div>
-                  </div>
-                )}
-                
                 {/* Loading overlay */}
                 {isUploadingImage && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full">
                     <div className="h-8 w-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
               
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
                 disabled={isUploadingImage}
               />
               
-              {/* Helper text */}
-              <p className="mt-2 text-xs text-gray-500">
-                {isDragging ? 'Drop image here' : isUploadingImage ? 'Uploading...' : 'Click or drag to upload'}
-              </p>
+              {/* Upload Button */}
+              <div className="mt-4">
+                <motion.button
+                  onClick={handleImageClick}
+                  disabled={isUploadingImage}
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <CameraIcon className="h-4 w-4" />
+                  {isUploadingImage ? 'Uploading...' : 'Upload Photo'}
+                </motion.button>
+              </div>
             </div>
             <h2 className="text-xl font-semibold text-gray-900">
               {formData.companyName || session?.user?.name || 'Company Name'}
@@ -627,6 +646,23 @@ export default function CompanyProfilePage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Image Cropper Modal */}
+      {showCropper && imageToCrop && (
+        <ImageCropper
+          image={imageToCrop}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setShowCropper(false);
+            setImageToCrop(null);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+          }}
+          aspect={1}
+          circularCrop={true}
+        />
+      )}
     </div>
     </>
   );

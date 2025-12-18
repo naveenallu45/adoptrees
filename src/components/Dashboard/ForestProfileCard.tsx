@@ -516,28 +516,40 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
           <div className="md:hidden flex items-center gap-3 sm:gap-4">
             {/* Profile Image - Mobile: Circular */}
             <div className="relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
-              <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-green-300">
-              {getProfileImage() ? (
-                <Image
-                  key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
-                  src={getProfileImage() || ''}
-                  alt={getUserDisplayName()}
-                  fill
-                    className="object-cover rounded-full"
-                    sizes="(max-width: 640px) 48px, 56px"
-                  unoptimized
-                  priority
-                />
-              ) : (
-                <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
-                  {getUserDisplayName()
-                    .split(' ')
-                    .map(n => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2)}
-                </span>
-              )}
+              <div 
+                className="relative w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-green-300"
+                style={{ 
+                  aspectRatio: '1 / 1',
+                  borderRadius: '50%'
+                }}
+              >
+                {getProfileImage() ? (
+                  <div className="absolute inset-0 rounded-full overflow-hidden">
+                    <Image
+                      key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
+                      src={getProfileImage() || ''}
+                      alt={getUserDisplayName()}
+                      fill
+                      className="object-cover rounded-full"
+                      style={{ 
+                        objectFit: 'cover',
+                        objectPosition: 'center'
+                      }}
+                      sizes="(max-width: 640px) 48px, 56px"
+                      unoptimized
+                      priority
+                    />
+                  </div>
+                ) : (
+                  <span className="text-green-800 font-bold text-[10px] sm:text-xs text-center px-1 sm:px-2">
+                    {getUserDisplayName()
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2)}
+                  </span>
+                )}
               </div>
             </div>
             <div>
@@ -548,20 +560,32 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
 
           {/* Laptop: Full-height profile image on left */}
           <div className="hidden md:flex md:flex-shrink-0 md:mt-4">
-            <div className="relative w-[108px] md:w-[130px] lg:w-[155px] h-[108px] md:h-[130px] lg:h-[155px] bg-white rounded-[15px] flex items-center justify-center overflow-hidden border-2 border-green-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
+            <div 
+              className="relative w-[108px] md:w-[130px] lg:w-[155px] h-[108px] md:h-[130px] lg:h-[155px] bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-green-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group"
+              style={{ 
+                aspectRatio: '1 / 1',
+                borderRadius: '50%'
+              }}
+            >
               {getProfileImage() ? (
                 <>
-                  <Image
-                    key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
-                    src={getProfileImage() || ''}
-                    alt={getUserDisplayName()}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    sizes="108px"
-                    unoptimized
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 rounded-full overflow-hidden">
+                    <Image
+                      key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
+                      src={getProfileImage() || ''}
+                      alt={getUserDisplayName()}
+                      fill
+                      className="object-cover rounded-full"
+                      style={{ 
+                        objectFit: 'cover',
+                        objectPosition: 'center'
+                      }}
+                      sizes="108px"
+                      unoptimized
+                      priority
+                    />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
                 </>
               ) : (
                 <span className="text-green-800 font-bold text-lg text-center px-2">

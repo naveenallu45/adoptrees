@@ -254,4 +254,28 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;  /* Chrome, Safari and Opera */
   }
+  
+  /* Mobile touch improvements for image cropper */
+  .cropper-container {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  .cropper-container * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Ensure cropper background image is visible */
+  .cropper-container .advanced-cropper-background {
+    background-color: transparent !important;
+  }
+
+  .cropper-container .advanced-cropper-canvas {
+    background-color: transparent !important;
+  }
 }
