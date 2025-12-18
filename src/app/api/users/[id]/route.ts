@@ -119,13 +119,13 @@ export async function PUT(
       const dateOfBirthField = formData.get('dateOfBirth');
 
       body = {
-        name: nameField ? String(nameField) : undefined,
-        companyName: companyNameField ? String(companyNameField) : undefined,
-        email: emailField ? String(emailField) : undefined,
-        phone: phoneField ? String(phoneField) : undefined,
-        address: addressField ? String(addressField) : undefined,
-        gstNumber: gstNumberField ? String(gstNumberField) : undefined,
-        dateOfBirth: dateOfBirthField ? String(dateOfBirthField) : undefined,
+        name: nameField !== null ? String(nameField) : undefined,
+        companyName: companyNameField !== null ? String(companyNameField) : undefined,
+        email: emailField !== null ? String(emailField) : undefined,
+        phone: phoneField !== null ? String(phoneField) : undefined,
+        address: addressField !== null ? String(addressField) : undefined,
+        gstNumber: gstNumberField !== null ? String(gstNumberField) : undefined,
+        dateOfBirth: dateOfBirthField !== null ? String(dateOfBirthField) : undefined,
       };
     } else {
       body = (await request.json()) as BodyData;
@@ -202,7 +202,10 @@ export async function PUT(
 
     // Update fields based on user type
     if (user.userType === 'individual') {
-      if (name !== undefined) updateData.name = name;
+      if (name !== undefined) {
+        // Trim the name and update it (allow empty string to clear the name)
+        updateData.name = name.trim();
+      }
       
       // Handle date of birth update for individual users
       if (dateOfBirth !== undefined) {

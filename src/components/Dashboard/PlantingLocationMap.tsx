@@ -189,6 +189,10 @@ export default function PlantingLocationMap({
             box-shadow: none !important;
             -webkit-box-shadow: none !important;
             -moz-box-shadow: none !important;
+            padding-bottom: 0 !important;
+          }
+          .gm-style-iw-d {
+            overflow: visible !important;
           }
           .gm-style-iw-t {
             box-shadow: none !important;
@@ -196,7 +200,7 @@ export default function PlantingLocationMap({
             -moz-box-shadow: none !important;
           }
         </style>
-        <div style="padding: 6px 8px; width: fit-content; max-width: 250px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
+        <div style="padding: 6px 8px 14px 8px; width: fit-content; max-width: 250px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
           <div style="display: flex; align-items: center; gap: 6px;">
             ${hasUserImage 
               ? `<img 

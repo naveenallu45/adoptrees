@@ -458,16 +458,17 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     const centerX = originalProfileX + fixedProfileSizeForStats / 2; // Fixed calculation
     const statsCenterX = centerX - (pageWidth * 0.05); // Fixed stats center
     
-    // Column 1: Tree name (first field) - FIXED position
+    // Column 1: Tree name (first field) - FIXED position (moved 4% to the left total, left-aligned)
+    // Use absolute fixed X position - no centering to prevent position shifts
     if (data.treeNames && data.treeNames.length > 0) {
       // Fixed X position - doesn't depend on profileSize or any dynamic values
-      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005);
+      // Left-aligned at fixed position to prevent shifts when text length changes
+      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
       const treeNameText = data.treeNames[0];
       const treeNameFontSize = 27;
-      const treeNameWidth = treeNameText.length * (treeNameFontSize * 0.55);
       
       page.drawText(treeNameText, {
-        x: col1X - treeNameWidth / 2, // Center text at fixed X position
+        x: col1X, // Fixed left-aligned position (same X for every certificate)
         y: statsStartY,
         size: treeNameFontSize,
         font: robotoBoldFont,
@@ -475,39 +476,39 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       });
     }
     
-    // Column 2: Trees count - FIXED position
-    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015);
+    // Column 2: Trees count - FIXED position (moved 2.5% to the left total, left-aligned)
+    // Use absolute fixed X position - no centering to prevent position shifts
+    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) + (pageWidth * 0.01);
     const treesCountText = `${data.treesCount}`;
     const treesCountFontSize = 30;
-    const treesCountWidth = treesCountText.length * (treesCountFontSize * 0.625);
     page.drawText(treesCountText, {
-      x: col2X - treesCountWidth / 2, // Center text at fixed X position
+      x: col2X, // Fixed left-aligned position (same X for every certificate)
       y: statsStartY,
       size: treesCountFontSize,
       font: robotoBoldFont,
       color: rgb(0, 0, 0),
     });
     
-    // Column 3: O2 total value - FIXED position
-    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.015);
+    // Column 3: O2 total value - FIXED position (moved 4% to the left total, left-aligned)
+    // Use absolute fixed X position - no centering to prevent position shifts
+    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
     const o2ValueText = `${data.oxygenKgs.toFixed(1)} /year`;
     const o2ValueFontSize = 30;
-    const o2ValueWidth = o2ValueText.length * (o2ValueFontSize * 0.45);
     page.drawText(o2ValueText, {
-      x: col3X - o2ValueWidth / 2, // Center text at fixed X position
+      x: col3X, // Fixed left-aligned position (same X for every certificate)
       y: statsStartY,
       size: o2ValueFontSize,
       font: robotoBoldFont,
       color: rgb(0, 0, 0),
     });
     
-    // Column 4: CO2 total value - FIXED position
-    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.025);
+    // Column 4: CO2 total value - FIXED position (moved 4% to the left total, left-aligned)
+    // Use absolute fixed X position - no centering to prevent position shifts
+    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.025) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
     const co2ValueText = `${co2Value.toFixed(1)} /year`;
     const co2ValueFontSize = 30;
-    const co2ValueWidth = co2ValueText.length * (co2ValueFontSize * 0.45);
     page.drawText(co2ValueText, {
-      x: col4X - co2ValueWidth / 2, // Center text at fixed X position
+      x: col4X, // Fixed left-aligned position (same X for every certificate)
       y: statsStartY,
       size: co2ValueFontSize,
       font: robotoBoldFont,
