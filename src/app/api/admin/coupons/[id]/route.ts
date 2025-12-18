@@ -30,7 +30,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { code, category, discountPercentage, usageLimitType, totalUsageLimit, perUserUsageLimit, isActive } = body;
+    const { code, category, discountPercentage, usageLimitType, totalUsageLimit, perUserUsageLimit, isActive, isHidden } = body;
 
     // OPTIMIZED: Build update object first, then use findByIdAndUpdate
     const updateData: Record<string, unknown> = {};
@@ -98,6 +98,12 @@ export async function PUT(
     }
     
     if (isActive !== undefined) updateData.isActive = isActive;
+    
+    // Always update isHidden if provided (handles both true and false)
+    // This ensures the field is updated even when setting it to false
+    if (isHidden !== undefined) {
+      updateData.isHidden = Boolean(isHidden);
+    }
 
     // OPTIMIZED: Use findByIdAndUpdate instead of find + save
     const coupon = await Coupon.findByIdAndUpdate(
@@ -113,9 +119,12 @@ export async function PUT(
       );
     }
 
+    // Convert Mongoose document to plain object to ensure all fields are included
+    const couponData = coupon.toObject ? coupon.toObject() : JSON.parse(JSON.stringify(coupon));
+    
     return NextResponse.json({
       success: true,
-      data: coupon,
+      data: couponData,
       message: 'Coupon updated successfully'
     });
   } catch (error: unknown) {

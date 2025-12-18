@@ -20,6 +20,7 @@ interface Coupon {
   perUserUsageLimit: number;
   usedCount: number;
   isActive: boolean;
+  isHidden?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,7 +60,8 @@ export default function CouponsManagement() {
     usageLimitType: 'unlimited' as 'unlimited' | 'custom',
     totalUsageLimit: '',
     perUserUsageLimit: '',
-    isActive: true
+    isActive: true,
+    isHidden: false
   });
 
   // Data fetching is handled by React Query
@@ -74,6 +76,7 @@ export default function CouponsManagement() {
       usageLimitType: 'unlimited' | 'custom';
       perUserUsageLimit: number;
       isActive: boolean;
+      isHidden: boolean;
       totalUsageLimit?: number;
     } = {
       code: formData.code,
@@ -81,7 +84,8 @@ export default function CouponsManagement() {
       discountPercentage: parseFloat(formData.discountPercentage),
       usageLimitType: formData.usageLimitType,
       perUserUsageLimit: parseInt(formData.perUserUsageLimit),
-      isActive: formData.isActive
+      isActive: formData.isActive,
+      isHidden: formData.isHidden
     };
 
     if (formData.usageLimitType === 'custom') {
@@ -115,7 +119,8 @@ export default function CouponsManagement() {
           usageLimitType: editingCouponCopy.usageLimitType,
           totalUsageLimit: editingCouponCopy.totalUsageLimit?.toString() || '',
           perUserUsageLimit: editingCouponCopy.perUserUsageLimit.toString(),
-          isActive: editingCouponCopy.isActive
+          isActive: editingCouponCopy.isActive,
+          isHidden: editingCouponCopy.isHidden || false
         });
       } else {
         setFormData({
@@ -125,7 +130,8 @@ export default function CouponsManagement() {
           usageLimitType: payload.usageLimitType,
           totalUsageLimit: payload.totalUsageLimit?.toString() || '',
           perUserUsageLimit: payload.perUserUsageLimit.toString(),
-          isActive: payload.isActive
+          isActive: payload.isActive,
+          isHidden: payload.isHidden
         });
       }
     }
@@ -141,7 +147,8 @@ export default function CouponsManagement() {
       usageLimitType: 'unlimited',
       totalUsageLimit: '',
       perUserUsageLimit: '',
-      isActive: true
+      isActive: true,
+      isHidden: false
     });
   };
 
@@ -154,7 +161,8 @@ export default function CouponsManagement() {
       usageLimitType: coupon.usageLimitType,
       totalUsageLimit: coupon.totalUsageLimit?.toString() || '',
       perUserUsageLimit: coupon.perUserUsageLimit.toString(),
-      isActive: coupon.isActive
+      isActive: coupon.isActive,
+      isHidden: coupon.isHidden || false
     });
     setShowForm(true);
   };
@@ -242,6 +250,19 @@ export default function CouponsManagement() {
               : 'bg-gray-100 text-gray-800'
           }`}>
             {row.original.isActive ? 'Active' : 'Inactive'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'isHidden',
+        header: 'Visibility',
+        cell: ({ row }) => (
+          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+            row.original.isHidden 
+              ? 'bg-orange-100 text-orange-800' 
+              : 'bg-blue-100 text-blue-800'
+          }`}>
+            {row.original.isHidden ? 'Hidden' : 'Visible'}
           </span>
         ),
       },
@@ -456,6 +477,20 @@ export default function CouponsManagement() {
                       />
                       <span className="text-sm font-medium text-gray-700">Active</span>
                     </label>
+                  </div>
+
+                  {/* Hidden Status */}
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isHidden}
+                        onChange={(e) => setFormData({ ...formData, isHidden: e.target.checked })}
+                        className="mr-2 h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Hidden (not shown in available coupons list)</span>
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500">Hidden coupons won&apos;t appear in the available coupons dropdown, but users can still manually enter them</p>
                   </div>
 
                   {/* Form Actions */}

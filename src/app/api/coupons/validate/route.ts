@@ -120,10 +120,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get active coupons for this user type
+    // Get active coupons for this user type (exclude hidden coupons from list)
     const coupons = await Coupon.find({
       category: userType,
-      isActive: true
+      isActive: true,
+      isHidden: false
     }).select('code discountPercentage').lean();
 
     // Filter coupons that haven't reached their usage limit

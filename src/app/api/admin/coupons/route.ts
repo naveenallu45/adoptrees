@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { code, category, discountPercentage, usageLimitType, totalUsageLimit, perUserUsageLimit } = body;
+    const { code, category, discountPercentage, usageLimitType, totalUsageLimit, perUserUsageLimit, isActive, isHidden } = body;
 
     // Validation
     if (!code || !category || !discountPercentage || !usageLimitType || !perUserUsageLimit) {
@@ -124,35 +124,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create coupon
-    const couponData: {
-      code: string;
-      category: 'individual' | 'company';
-      discountPercentage: number;
-      usageLimitType: 'unlimited' | 'custom';
-      perUserUsageLimit: number;
-      usedCount: number;
-      isActive: boolean;
-      totalUsageLimit?: number;
-    } = {
+    // Create coupon - ensure isHidden is always explicitly set
+    // Always set isHidden explicitly, even if false, to ensure it's saved
+    const isHiddenValue = typeof isHidden === 'boolean' ? isHidden : false;
+    
+    const couponData = {
       code: code.toUpperCase().trim(),
       category,
       discountPercentage,
       usageLimitType,
       perUserUsageLimit,
       usedCount: 0,
-      isActive: true
+      isActive: typeof isActive === 'boolean' ? isActive : true,
+      isHidden: isHiddenValue, // Always explicitly set
+      ...(usageLimitType === 'custom' && { totalUsageLimit })
     };
 
-    if (usageLimitType === 'custom') {
-      couponData.totalUsageLimit = totalUsageLimit;
-    }
+    console.log('Creating coupon with data:', JSON.stringify(couponData, null, 2));
+    console.log('isHidden value being set:', isHiddenValue, 'type:', typeof isHiddenValue);
 
+    // Create coupon - Mongoose should save all fields including isHidden
     const coupon = await Coupon.create(couponData);
+    
+    // Convert to plain object immediately to check what was saved
+    const couponPlain = coupon.toObject ? coupon.toObject() : JSON.parse(JSON.stringify(coupon));
+    console.log('Coupon after create (plain object):', JSON.stringify(couponPlain, null, 2));
+    
+    // Force save to ensure isHidden is persisted if it's missing
+    if (couponPlain.isHidden === undefined || couponPlain.isHidden === null) {
+      console.log('isHidden is missing, force setting it...');
+      coupon.set('isHidden', isHiddenValue);
+      await coupon.save({ validateBeforeSave: true });
+      const afterSave = coupon.toObject ? coupon.toObject() : JSON.parse(JSON.stringify(coupon));
+      console.log('Coupon after force save:', JSON.stringify(afterSave, null, 2));
+    }
+    
+    // Final response object
+    const couponDataResponse = coupon.toObject ? coupon.toObject() : JSON.parse(JSON.stringify(coupon));
+    console.log('Final coupon response:', { _id: couponDataResponse._id, code: couponDataResponse.code, isHidden: couponDataResponse.isHidden });
 
     return NextResponse.json({
       success: true,
-      data: coupon,
+      data: couponDataResponse,
       message: 'Coupon created successfully'
     }, { status: 201 });
   } catch (error: unknown) {

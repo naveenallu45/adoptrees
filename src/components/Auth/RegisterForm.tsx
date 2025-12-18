@@ -93,11 +93,12 @@ export default function RegisterForm() {
           // If auto-login fails, redirect to login page
           router.push('/login?registered=true');
         } else {
-          // Successfully logged in - redirect to dashboard based on user type
+          // Successfully logged in - redirect to dashboard based on user type with newUser flag
+          // Redirect immediately to show profile picture suggestion
           if (userType === 'company') {
-            router.push('/dashboard/company');
+            router.push('/dashboard/company?newUser=true');
           } else {
-            router.push('/dashboard/individual');
+            router.push('/dashboard/individual?newUser=true');
           }
         }
       } catch (signInError) {
@@ -201,7 +202,7 @@ export default function RegisterForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
+              placeholder="Enter your email address"
               className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
             />
           </div>
@@ -213,7 +214,7 @@ export default function RegisterForm() {
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 98765 43210"
+              placeholder="Enter your phone number"
               className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
             />
           </div>

@@ -9,6 +9,7 @@ export interface ICoupon extends Document {
   perUserUsageLimit: number;
   usedCount: number; // Total times coupon has been used
   isActive: boolean;
+  isHidden: boolean; // If true, coupon won't appear in available coupons list but can still be manually entered
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +60,11 @@ const CouponSchema = new Schema<ICoupon>(
     isActive: {
       type: Boolean,
       default: true
+    },
+    isHidden: {
+      type: Boolean,
+      default: false,
+      required: false // Explicitly mark as not required but always set
     }
   },
   {

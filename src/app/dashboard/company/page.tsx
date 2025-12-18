@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function CompanyDashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Redirect to the trees page by default
-    router.replace('/dashboard/company/trees');
-  }, [router]);
+    // Redirect to the trees page by default, preserving query params
+    const params = searchParams.toString();
+    router.replace(`/dashboard/company/trees${params ? `?${params}` : ''}`);
+  }, [router, searchParams]);
 
   return (
     <div className="flex h-screen items-center justify-center">

@@ -38,6 +38,8 @@ export default function CartContent() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [showCouponDropdown, setShowCouponDropdown] = useState(false);
+  const [isCouponValid, setIsCouponValid] = useState(false);
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   const subtotal = getTotalPrice();
   const discountAmount = appliedCoupon?.discountAmount || 0;
@@ -129,6 +131,68 @@ export default function CartContent() {
     fetchAvailableCoupons();
   }, [session?.user]);
 
+  // Real-time coupon validation as user types
+  useEffect(() => {
+    if (!session?.user || appliedCoupon) {
+      setIsCouponValid(false);
+      return;
+    }
+
+    const code = String(couponCode || '').trim();
+    
+    // Reset validation if code is empty
+    if (!code || code.length === 0) {
+      setIsCouponValid(false);
+      setCouponError('');
+      return;
+    }
+
+    // Debounce validation
+    const timeoutId = setTimeout(async () => {
+      try {
+        setCheckingCoupon(true);
+        setCouponError('');
+        
+        const userType = session.user.userType || 'individual';
+        const response = await fetch('/api/coupons/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            code: code,
+            userType,
+            subtotal
+          }),
+          cache: 'no-store'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setIsCouponValid(true);
+          setCouponError('');
+        } else {
+          setIsCouponValid(false);
+          // Only show error if code is still the same (user hasn't changed it)
+          if (String(couponCode || '').trim() === code) {
+            setCouponError(result.error || 'Invalid coupon code');
+          }
+        }
+      } catch (error) {
+        console.error('Error validating coupon:', error);
+        setIsCouponValid(false);
+        if (String(couponCode || '').trim() === code) {
+          setCouponError('Failed to validate coupon');
+        }
+      } finally {
+        setCheckingCoupon(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [couponCode, session?.user, subtotal, appliedCoupon]);
+
   // Validate and apply coupon
   const handleApplyCoupon = async (codeToApply?: string) => {
     const code = String(codeToApply || couponCode || '').trim();
@@ -172,10 +236,12 @@ export default function CartContent() {
         });
         setCouponCode('');
         setCouponError('');
+        setIsCouponValid(false);
         setShowCouponDropdown(false);
       } else {
         setCouponError(result.error || 'Invalid coupon code');
         setAppliedCoupon(null);
+        setIsCouponValid(false);
       }
     } catch (error) {
       console.error('Error validating coupon:', error);
@@ -190,6 +256,7 @@ export default function CartContent() {
     setAppliedCoupon(null);
     setCouponCode('');
     setCouponError('');
+    setIsCouponValid(false);
   };
 
   const handleSelectCoupon = (code: string) => {
@@ -717,11 +784,14 @@ export default function CartContent() {
                         type="text"
                         value={couponCode || ''}
                         onChange={(e) => {
-                          setCouponCode(e.target.value.toUpperCase());
+                          const newCode = e.target.value.toUpperCase();
+                          setCouponCode(newCode);
+                          // Reset validation state when user types
+                          setIsCouponValid(false);
                           setCouponError('');
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && couponCode && String(couponCode).trim().length > 0) {
+                          if (e.key === 'Enter' && isCouponValid && couponCode && String(couponCode).trim().length > 0 && !validatingCoupon && !checkingCoupon) {
                             e.preventDefault();
                             handleApplyCoupon();
                           }
@@ -742,10 +812,10 @@ export default function CartContent() {
                         <button
                           type="button"
                           onClick={() => handleApplyCoupon()}
-                          disabled={validatingCoupon || !couponCode || String(couponCode).trim().length === 0}
+                          disabled={validatingCoupon || checkingCoupon || !isCouponValid || !couponCode || String(couponCode).trim().length === 0}
                           className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
                         >
-                          {validatingCoupon ? '...' : 'Apply'}
+                          {validatingCoupon || checkingCoupon ? '...' : 'Apply'}
                         </button>
                       )}
                     </div>

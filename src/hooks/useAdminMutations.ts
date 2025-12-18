@@ -190,6 +190,7 @@ interface Coupon {
   perUserUsageLimit: number;
   usedCount: number;
   isActive: boolean;
+  isHidden?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -246,31 +247,47 @@ export function useCouponMutations() {
     onMutate: async ({ id, payload }) => {
       await queryClient.cancelQueries({ queryKey: ['admin', 'coupons'] });
       const previousCoupons = queryClient.getQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons']);
-      // Optimistically update
+      // Optimistically update - explicitly preserve all fields including isHidden
       queryClient.setQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons'], (old) => {
         if (!old || !old.data) {
           return old || { success: true, data: [] };
         }
         return {
           ...old,
-          data: old.data.map((coupon) =>
-            coupon._id === id ? { ...coupon, ...payload, updatedAt: new Date().toISOString() } : coupon
-          )
+          data: old.data.map((coupon) => {
+            if (coupon._id === id) {
+              // Explicitly merge payload to ensure isHidden is included
+              const updated = { ...coupon, ...payload, updatedAt: new Date().toISOString() };
+              // Ensure isHidden is explicitly set if provided in payload
+              if ('isHidden' in payload) {
+                updated.isHidden = payload.isHidden;
+              }
+              return updated;
+            }
+            return coupon;
+          })
         };
       });
       return { previousCoupons };
     },
     onSuccess: (updatedCoupon) => {
+      // Update cache with server response - this ensures isHidden is properly set
       queryClient.setQueryData<{ success: boolean; data: Coupon[] }>(['admin', 'coupons'], (old) => {
         if (!old || !old.data) {
           return old || { success: true, data: [] };
         }
         return {
           ...old,
-          data: old.data.map((coupon) => (coupon._id === updatedCoupon._id ? updatedCoupon : coupon))
+          data: old.data.map((coupon) => {
+            if (coupon._id === updatedCoupon._id) {
+              // Ensure all fields including isHidden are properly merged
+              return { ...coupon, ...updatedCoupon };
+            }
+            return coupon;
+          })
         };
       });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] });
+      // Don't invalidate - we've already updated the cache manually
       toast.success('Coupon updated successfully!');
     },
     onError: (error, variables, context) => {

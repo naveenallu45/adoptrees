@@ -5,6 +5,7 @@ import { PencilIcon, CheckIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import ProfilePictureSuggestion from '@/components/Dashboard/ProfilePictureSuggestion';
 
 export default function CompanyProfilePage() {
   const { data: session, update: updateSession } = useSession();
@@ -24,6 +25,8 @@ export default function CompanyProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [initialFormData, setInitialFormData] = useState(formData);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,37 +95,145 @@ export default function CompanyProfilePage() {
     }));
   };
 
+  const validateImageFile = (file: File): string | null => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return 'Please select a valid image file';
+    }
+    
+    // Accept any image size - certificate generation will resize as needed
+    // Very large limit (50MB) as safety check only
+    if (file.size > 50 * 1024 * 1024) {
+      return 'Image size must be less than 50MB';
+    }
+    
+    return null;
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!session?.user?.id) {
+      setSaveError('User session not found');
+      return;
+    }
+
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setSaveError(validationError);
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setSaveError(null);
+    
+    // Create preview immediately for better UX
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('companyName', formData.companyName);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('address', formData.address);
+      formDataToSend.append('gstNumber', formData.gstNumber);
+      formDataToSend.append('website', formData.website);
+      formDataToSend.append('image', file);
+
+      const response = await fetch(`/api/users/${session.user.id}`, {
+        method: 'PUT',
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to upload image' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        const newImage = result.data?.image || null;
+        
+        // Mark the suggestion as seen
+        if (newImage && session?.user?.id) {
+          const suggestionKey = `profile-picture-suggestion-${session.user.id}`;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(suggestionKey, 'true');
+          }
+        }
+        
+        // Update state immediately
+        setProfileImage(newImage);
+        setImagePreview(null);
+        setProfileImageFile(null);
+        
+        // Update session
+        if (newImage !== session?.user?.image) {
+          sessionUpdateRef.current = true;
+          setTimeout(() => {
+            updateSession({
+              image: newImage,
+            }).catch((error) => {
+              console.error('Session update error:', error);
+            }).finally(() => {
+              sessionUpdateRef.current = false;
+            });
+          }, 0);
+        }
+      } else {
+        setSaveError(result.message || 'Failed to upload image');
+        setImagePreview(null);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+      setSaveError(errorMessage);
+      setImagePreview(null);
+    } finally {
+      setIsUploadingImage(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setSaveError('Please select a valid image file');
-        return;
-      }
-      
-      // Accept any image size - certificate generation will resize as needed
-      // Very large limit (50MB) as safety check only
-      if (file.size > 50 * 1024 * 1024) {
-        setSaveError('Image size must be less than 50MB');
-        return;
-      }
-
-      setProfileImageFile(file);
-      setSaveError(null);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      handleImageUpload(file);
     }
   };
 
   const handleImageClick = () => {
-    if (isEditing && fileInputRef.current) {
+    if (fileInputRef.current && !isUploadingImage) {
       fileInputRef.current.click();
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && !isUploadingImage) {
+      handleImageUpload(file);
     }
   };
 
@@ -183,6 +294,15 @@ export default function CompanyProfilePage() {
       if (result.success) {
         // Optimistic update - update UI immediately
         const newImage = result.data?.image || null;
+        
+        // If user uploaded a profile picture, mark the suggestion as seen
+        if (profileImageFile && newImage && session?.user?.id) {
+          const suggestionKey = `profile-picture-suggestion-${session.user.id}`;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(suggestionKey, 'true');
+          }
+        }
+        
         if (newImage) {
           setProfileImage(newImage);
           setImagePreview(null);
@@ -242,11 +362,13 @@ export default function CompanyProfilePage() {
 
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
+    <>
+      <ProfilePictureSuggestion />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
           <p className="mt-2 text-gray-600">
             Manage your company information and corporate settings
           </p>
@@ -274,42 +396,68 @@ export default function CompanyProfilePage() {
           <div className="p-6 text-center">
             {/* Profile Image */}
             <div className="relative inline-block mb-4">
-              <div
-                className={`relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 ${
-                  isEditing ? 'cursor-pointer hover:border-blue-500 transition-colors' : ''
+              <div 
+                className={`relative w-32 h-32 rounded-full overflow-hidden border-4 transition-all group ${
+                  isDragging 
+                    ? 'border-green-500 scale-105 shadow-lg' 
+                    : isUploadingImage
+                    ? 'border-blue-400'
+                    : 'border-gray-200 hover:border-green-400 cursor-pointer'
                 }`}
                 onClick={handleImageClick}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                {imagePreview || profileImage ? (
+                {imagePreview || profileImage || session?.user?.image ? (
                   <Image
-                    src={imagePreview || profileImage || ''}
+                    key={`profile-img-${imagePreview || profileImage || session?.user?.image || 'default'}`}
+                    src={imagePreview || profileImage || session?.user?.image || ''}
                     alt={formData.companyName || 'Company'}
                     fill
-                    className="object-cover"
+                    className={`object-cover transition-opacity ${isUploadingImage ? 'opacity-50' : ''}`}
                     sizes="128px"
+                    unoptimized
+                    priority
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                    <span className="text-4xl font-bold text-white">
+                    <span className="text-white text-3xl font-bold">
                       {formData.companyName?.charAt(0).toUpperCase() || 'C'}
                     </span>
                   </div>
                 )}
-                {isEditing && (
-                  <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <CameraIcon className="w-8 h-8 text-white" />
+                
+                {/* Upload overlay */}
+                {!isUploadingImage && (
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <CameraIcon className="h-8 w-8 text-white" />
+                    </div>
+                  </div>
+                )}
+                
+                {/* Loading overlay */}
+                {isUploadingImage && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                    <div className="h-8 w-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
-              {isEditing && (
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              )}
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                disabled={isUploadingImage}
+              />
+              
+              {/* Helper text */}
+              <p className="mt-2 text-xs text-gray-500">
+                {isDragging ? 'Drop image here' : isUploadingImage ? 'Uploading...' : 'Click or drag to upload'}
+              </p>
             </div>
             <h2 className="text-xl font-semibold text-gray-900">
               {formData.companyName || session?.user?.name || 'Company Name'}
@@ -480,5 +628,6 @@ export default function CompanyProfilePage() {
         </motion.div>
       </div>
     </div>
+    </>
   );
 }
