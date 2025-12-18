@@ -271,6 +271,16 @@ export async function PUT(
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
 
+    // Prevent updates to immutable fields (publicId and qrCode are set at registration only)
+    if (updateData.publicId !== undefined) {
+      delete updateData.publicId;
+      console.warn('Attempted to update immutable field: publicId');
+    }
+    if (updateData.qrCode !== undefined) {
+      delete updateData.qrCode;
+      console.warn('Attempted to update immutable field: qrCode');
+    }
+
     // Log update data
     console.log('Update data before save:', updateData);
 

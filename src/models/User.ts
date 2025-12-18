@@ -65,7 +65,10 @@ const UserSchema = new Schema<IUser>(
       immutable: true, // Once generated, publicId should never change
       // Note: unique sparse index created via database-optimization script, not in schema to avoid duplicate warnings
     },
-    qrCode: { type: String }, // QR code data URL stored at registration
+    qrCode: { 
+      type: String, 
+      immutable: true, // Once generated at registration, QR code should never change
+    }, // QR code data URL stored at registration
     image: { type: String }, // Profile image URL
     imagePublicId: { type: String }, // Cloudinary public ID for profile image
     lastMarketingEmailSent: { type: Date }, // Last time marketing email was sent to this user
@@ -79,7 +82,7 @@ const UserSchema = new Schema<IUser>(
 // Note: Indexes are created via database-optimization script to avoid duplicate warnings
 // in Next.js multi-process environment. Schema-level index definitions removed.
 
-// Ensure email is lowercase and publicId exists before saving
+// Ensure email is lowercase, publicId exists, and QR code is generated before saving
 UserSchema.pre('save', async function(next) {
   if (this.email) {
     this.email = this.email.toLowerCase();
@@ -92,6 +95,8 @@ UserSchema.pre('save', async function(next) {
     };
     this.publicId = generatePublicId();
   }
+  // Note: QR code generation is handled in registration route, not here
+  // to avoid requiring QRCode library in the model file
   next();
 });
 
