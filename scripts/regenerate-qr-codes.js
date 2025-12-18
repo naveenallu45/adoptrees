@@ -113,7 +113,20 @@ async function main() {
 
     const filter = { publicId: { $exists: true, $ne: null, $ne: '' } };
     const totalUsers = await User.countDocuments(filter);
-    console.log(`[MIGRATION] Found ${totalUsers} users with publicId. Regenerating QR codes...`);
+    
+    // Count users with localhost in QR codes or missing QR codes
+    const usersNeedingFix = await User.countDocuments({
+      ...filter,
+      $or: [
+        { qrCode: { $exists: false } },
+        { qrCode: null },
+        { qrCode: '' },
+        { qrCode: { $regex: /localhost|127\.0\.0\.1/ } }
+      ]
+    });
+    
+    console.log(`[MIGRATION] Found ${totalUsers} users with publicId.`);
+    console.log(`[MIGRATION] ${usersNeedingFix} users need QR code regeneration (localhost or missing).`);
 
     if (totalUsers === 0) {
       console.log('[MIGRATION] No users found with publicId. Exiting.');
@@ -140,16 +153,24 @@ async function main() {
       // eslint-disable-next-line no-restricted-syntax
       for (const user of users) {
         try {
-          // eslint-disable-next-line no-await-in-loop
-          const newQrCode = await generateQRCode(user.publicId);
-          user.qrCode = newQrCode;
-          // eslint-disable-next-line no-await-in-loop
-          await user.save();
-          qrRegenerated += 1;
+          // Check if QR code contains localhost or is missing
+          const needsRegeneration = !user.qrCode || 
+            user.qrCode.includes('localhost') || 
+            user.qrCode.includes('127.0.0.1');
+          
+          if (needsRegeneration) {
+            // eslint-disable-next-line no-await-in-loop
+            const newQrCode = await generateQRCode(user.publicId);
+            user.qrCode = newQrCode;
+            // eslint-disable-next-line no-await-in-loop
+            await user.save();
+            qrRegenerated += 1;
+          }
+          
           lastId = user._id;
 
-          if (qrRegenerated % 50 === 0) {
-            console.log(`[MIGRATION] Regenerated QR codes for ${qrRegenerated}/${totalUsers} users...`);
+          if (qrRegenerated % 50 === 0 && qrRegenerated > 0) {
+            console.log(`[MIGRATION] Regenerated QR codes for ${qrRegenerated} users...`);
           }
         } catch (err) {
           console.error('[MIGRATION] Failed to regenerate QR code for user', user._id, err);
@@ -159,7 +180,7 @@ async function main() {
     }
 
     console.log(`[MIGRATION] ✅ Completed! Regenerated QR codes for ${qrRegenerated} users.`);
-    console.log('[MIGRATION] All QR codes now match their publicId and are immutable.');
+    console.log('[MIGRATION] All QR codes now use production URL (https://adoptrees.com) and are immutable.');
 
     await mongoose.connection.close();
     process.exit(0);
