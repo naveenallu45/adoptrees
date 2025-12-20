@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import Order from '@/models/Order';
 import bcrypt from 'bcryptjs';
+import QRCode from 'qrcode';
 import { wellWisherRegistrationSchema } from '@/lib/validations/wellwisher';
 import { checkRateLimit, getClientIp, sanitizeInput, logSecurityEvent } from '@/lib/security';
 import { sendWellWisherOnboardingEmail, sendWellWisherGreetingEmail } from '@/lib/email';
@@ -194,17 +195,87 @@ export async function POST(request: NextRequest) {
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create well-wisher
-    const wellWisher = new User({
+    // Generate publicId manually (same logic as registration)
+    // This ensures well-wishers have publicId for certificates
+    const generatePublicId = () => {
+      const random = Math.random().toString(36).slice(2, 8);
+      const timestamp = Date.now().toString(36).slice(-4);
+      return `${random}${timestamp}`.toLowerCase();
+    };
+    
+    // Ensure unique publicId
+    let publicId = generatePublicId();
+    let attempts = 0;
+    while (attempts < 10) {
+      const existing = await User.findOne({ publicId });
+      if (!existing) break;
+      publicId = generatePublicId();
+      attempts++;
+    }
+    
+    if (attempts >= 10) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to create well-wisher. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Generate QR code for well-wisher (same as regular users)
+    // QR codes are needed for certificates
+    let qrDataUrl: string;
+    try {
+      // Always use production URL for QR codes
+      const origin = 'https://adoptrees.com';
+      const qrUrl = `${origin}/u/${publicId.toLowerCase()}`;
+      qrDataUrl = await QRCode.toDataURL(qrUrl, { 
+        width: 320,
+        margin: 1,
+        errorCorrectionLevel: 'M'
+      });
+      
+      // Validate QR code was generated
+      if (!qrDataUrl || qrDataUrl.trim() === '') {
+        throw new Error('QR code generation returned empty result');
+      }
+    } catch (qrError) {
+      console.error('Error generating QR code for well-wisher:', qrError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create well-wisher. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Create well-wisher with publicId and qrCode set from the start
+    // This avoids issues with immutable fields and ensures certificates work
+    const wellWisher = await User.create({
       name: sanitizeInput(name),
       email: email.toLowerCase(),
       phone: phone ? sanitizeInput(phone) : undefined,
       passwordHash,
       userType: 'individual', // Well-wishers are treated as individuals
       role: 'wellwisher',
+      publicId, // Set explicitly to avoid pre-save hook issues
+      qrCode: qrDataUrl, // Set from the start to avoid immutable field issues
     });
 
-    await wellWisher.save();
+    // Verify publicId and QR code were saved
+    const savedWellWisher = await User.findById(wellWisher._id).select('qrCode publicId').lean() as { qrCode?: string; publicId?: string } | null;
+    if (!savedWellWisher || !savedWellWisher.publicId || savedWellWisher.publicId !== publicId) {
+      console.error('Error: publicId mismatch after save for well-wisher');
+      await User.findByIdAndDelete(wellWisher._id);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create well-wisher. Please try again.' },
+        { status: 500 }
+      );
+    }
+    if (!savedWellWisher.qrCode || savedWellWisher.qrCode.trim() === '') {
+      console.error('Error: QR code was not saved to database for well-wisher');
+      await User.findByIdAndDelete(wellWisher._id);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create well-wisher. Please try again.' },
+        { status: 500 }
+      );
+    }
 
     // Log successful creation
     const ip = getClientIp(request);

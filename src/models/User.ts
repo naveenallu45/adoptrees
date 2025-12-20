@@ -93,9 +93,31 @@ UserSchema.pre('save', async function(next) {
       const timestamp = Date.now().toString(36).slice(-4);
       return `${random}${timestamp}`.toLowerCase();
     };
-    this.publicId = generatePublicId();
+    
+    // Generate publicId and ensure uniqueness (safety net for edge cases)
+    let publicId = generatePublicId();
+    let attempts = 0;
+    while (attempts < 10) {
+      // Check if this publicId already exists
+      // For new documents, check if any other document has this publicId
+      // For existing documents, check if any OTHER document has this publicId
+      // Use this.model() to get the model instance
+      const Model = this.model('User');
+      const existing = await Model.findOne({ publicId });
+      if (!existing || (existing._id.toString() === this._id.toString())) {
+        break;
+      }
+      publicId = generatePublicId();
+      attempts++;
+    }
+    
+    if (attempts >= 10) {
+      return next(new Error('Failed to generate unique publicId'));
+    }
+    
+    this.publicId = publicId;
   }
-  // Note: QR code generation is handled in registration route, not here
+  // Note: QR code generation is handled in registration and well-wisher routes, not here
   // to avoid requiring QRCode library in the model file
   next();
 });

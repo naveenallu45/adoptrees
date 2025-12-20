@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Toaster } from 'react-hot-toast';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -92,6 +93,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           
           {/* Page content */}
           <main className="flex-1 overflow-y-auto">
+            <Toaster position="bottom-right" />
             <div className="p-4 sm:p-6">
               {children}
             </div>

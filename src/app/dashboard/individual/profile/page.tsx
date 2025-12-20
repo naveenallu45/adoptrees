@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import ImageCropper from '@/components/ImageCropper';
 import ProfilePictureSuggestion from '@/components/Dashboard/ProfilePictureSuggestion';
+import toast from 'react-hot-toast';
 
 export default function IndividualProfilePage() {
   const { data: session, update: updateSession } = useSession();
@@ -221,28 +222,32 @@ export default function IndividualProfilePage() {
         setImagePreview(null);
         setProfileImageFile(file);
         
-        // Update session
+        // Show success toast
+        toast.success('Profile picture uploaded successfully!');
+        
+        // Update session immediately (no delay)
         if (newImage !== session?.user?.image) {
           sessionUpdateRef.current = true;
-          setTimeout(() => {
-            updateSession({
-              image: newImage,
-            }).catch((error) => {
-              console.error('Session update error:', error);
-            }).finally(() => {
-              sessionUpdateRef.current = false;
-            });
-          }, 0);
+          updateSession({
+            image: newImage,
+          }).catch((error) => {
+            console.error('Session update error:', error);
+          }).finally(() => {
+            sessionUpdateRef.current = false;
+          });
         }
       } else {
-        setSaveError(result.message || 'Failed to upload image');
+        const errorMsg = result.message || 'Failed to upload image';
+        setSaveError(errorMsg);
         setImagePreview(null);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error uploading image:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
       setSaveError(errorMessage);
       setImagePreview(null);
+      toast.error(errorMessage);
     } finally {
       setIsUploadingImage(false);
       // Reset file input
@@ -354,31 +359,35 @@ export default function IndividualProfilePage() {
           setDateOfBirthLastUpdated(null);
         }
         
+        // Show success toast
+        toast.success('Profile updated successfully!');
+        
         // Only update session if values actually changed (prevents unnecessary re-renders)
         if (nameChanged || emailChanged || imageChanged) {
           sessionUpdateRef.current = true;
-          // Defer session update to prevent immediate re-render cascade
-          setTimeout(() => {
-            updateSession({
-              name: formData.name,
-              email: formData.email,
-              image: newImage,
-            }).catch((error) => {
-              console.error('Session update error:', error);
-            }).finally(() => {
-              sessionUpdateRef.current = false;
-            });
-          }, 0);
+          // Update session immediately (no delay)
+          updateSession({
+            name: formData.name,
+            email: formData.email,
+            image: newImage,
+          }).catch((error) => {
+            console.error('Session update error:', error);
+          }).finally(() => {
+            sessionUpdateRef.current = false;
+          });
         }
         // Removed router.refresh() to prevent unnecessary full page re-render
         // The component already handles optimistic updates and session updates
       } else {
-        setSaveError(result.message || 'Failed to update profile');
+        const errorMsg = result.message || 'Failed to update profile';
+        setSaveError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error saving profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
       setSaveError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
