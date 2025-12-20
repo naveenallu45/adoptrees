@@ -107,20 +107,16 @@ export default function ProfilePictureSuggestion() {
     const isOnProfilePage = pathname?.includes('/dashboard/individual/profile') || 
                             pathname?.includes('/dashboard/company/profile');
     
-    // Check if this is first login
-    // After registration with auto-login, newUser=true is set, which is considered first login
-    const userId = session?.user?.id;
-    const suggestionKey = userId ? `profile-picture-suggestion-${userId}` : null;
-    const hasSeenBefore = typeof window !== 'undefined' && suggestionKey
-      ? localStorage.getItem(suggestionKey) === 'true'
-      : false;
-    const isNewUser = searchParams.get('newUser') === 'true';
-    const isFirstLogin = isNewUser || !hasSeenBefore; // newUser=true from auto-login = first login
+    // Always redirect to profile page when button is clicked
+    // If already on profile page, the redirect will be a no-op but ensures we're on the right page
+    const profilePath = `/dashboard/${userType}/profile`;
     
-    // After first login (including auto-login after registration), always redirect to profile page
-    // This ensures users can easily upload their profile picture after registration
-    if (isFirstLogin || !isOnProfilePage) {
-      router.push(`/dashboard/${userType}/profile`);
+    if (!isOnProfilePage) {
+      // Redirect to profile page if not already there
+      router.push(profilePath);
+    } else {
+      // If already on profile page, scroll to top to show the profile picture section
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
     // Dismiss the modal

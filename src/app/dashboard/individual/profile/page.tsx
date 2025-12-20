@@ -225,15 +225,18 @@ export default function IndividualProfilePage() {
         // Show success toast
         toast.success('Profile picture uploaded successfully!');
         
-        // Update session immediately (no delay)
+        // Update session asynchronously without blocking UI
+        // This prevents page refresh while still updating the session
         if (newImage !== session?.user?.image) {
           sessionUpdateRef.current = true;
-          updateSession({
-            image: newImage,
-          }).catch((error) => {
-            console.error('Session update error:', error);
-          }).finally(() => {
-            sessionUpdateRef.current = false;
+          Promise.resolve().then(() => {
+            updateSession({
+              image: newImage,
+            }).catch((error) => {
+              console.error('Session update error:', error);
+            }).finally(() => {
+              sessionUpdateRef.current = false;
+            });
           });
         }
       } else {
@@ -363,17 +366,21 @@ export default function IndividualProfilePage() {
         toast.success('Profile updated successfully!');
         
         // Only update session if values actually changed (prevents unnecessary re-renders)
+        // Use non-blocking session update to prevent page refresh
         if (nameChanged || emailChanged || imageChanged) {
           sessionUpdateRef.current = true;
-          // Update session immediately (no delay)
-          updateSession({
-            name: formData.name,
-            email: formData.email,
-            image: newImage,
-          }).catch((error) => {
-            console.error('Session update error:', error);
-          }).finally(() => {
-            sessionUpdateRef.current = false;
+          // Update session asynchronously without blocking UI
+          // This prevents page refresh while still updating the session
+          Promise.resolve().then(() => {
+            updateSession({
+              name: formData.name,
+              email: formData.email,
+              image: newImage,
+            }).catch((error) => {
+              console.error('Session update error:', error);
+            }).finally(() => {
+              sessionUpdateRef.current = false;
+            });
           });
         }
         // Removed router.refresh() to prevent unnecessary full page re-render
@@ -409,6 +416,17 @@ export default function IndividualProfilePage() {
   return (
     <>
       <ProfilePictureSuggestion />
+      {/* Full-page loading overlay during upload/save */}
+      {(isUploadingImage || isSaving) && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-xl p-6 flex flex-col items-center gap-4">
+            <div className="h-12 w-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-700 font-medium">
+              {isUploadingImage ? 'Uploading profile picture...' : 'Saving profile...'}
+            </p>
+          </div>
+        </div>
+      )}
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
