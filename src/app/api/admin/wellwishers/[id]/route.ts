@@ -6,6 +6,7 @@ import Order from '@/models/Order';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { sendWellWisherUpdateEmail } from '@/lib/email';
+import { assignWellWisherEqually } from '@/lib/utils/wellwisher-assignment';
 
 export async function GET(
   request: NextRequest,
@@ -256,20 +257,27 @@ export async function DELETE(
       });
     }
 
-    // OPTIMIZED: Redistribute tasks equally among available well-wishers
-    // Use round-robin approach and parallelize all order updates
-    const reassignmentUpdates: Array<{ orderId: string; newWellWisherId: string; tasksCount: number }> = [];
+    // IMMEDIATE REASSIGNMENT: Redistribute all tasks (regardless of status) equally among available well-wishers
+    // Use the equal distribution algorithm to ensure fair task distribution
+    const reassignmentUpdates: Array<{ orderId: string; newWellWisherId: string; tasksCount: number; taskStatuses: string[] }> = [];
     const updatePromises: Promise<unknown>[] = [];
 
-    assignedOrders.forEach((order, index) => {
-      // Select next well-wisher in round-robin fashion
-      const newWellWisher = availableWellWishers[index % availableWellWishers.length];
-      // Handle _id which can be ObjectId or string when using .lean()
-      const newWellWisherId = newWellWisher._id instanceof mongoose.Types.ObjectId
-        ? newWellWisher._id.toString()
-        : String(newWellWisher._id);
+    // Reassign each order immediately using equal distribution algorithm
+    for (const order of assignedOrders) {
+      // Get the best well-wisher using equal distribution (considers current workload)
+      const newWellWisherId = await assignWellWisherEqually();
+      
+      if (!newWellWisherId) {
+        console.error(`[WELLWISHER_DELETE] Failed to assign well-wisher for order ${order.orderId || order._id}`);
+        continue; // Skip this order if assignment fails
+      }
 
-      // OPTIMIZED: Parallelize order updates instead of sequential await
+      // Get task statuses for reporting
+      const tasks = (order.wellwisherTasks as Array<{ status?: string }>) || [];
+      const taskStatuses = tasks.map(task => task.status || 'unknown');
+
+      // IMMEDIATE UPDATE: Update order with new well-wisher assignment
+      // All tasks (pending, in_progress, completed, updating) are reassigned together
       updatePromises.push(
         Order.findByIdAndUpdate(
           order._id,
@@ -280,21 +288,36 @@ export async function DELETE(
       reassignmentUpdates.push({
         orderId: (order.orderId as string) || String(order._id),
         newWellWisherId: newWellWisherId,
-        tasksCount: (order.wellwisherTasks as unknown[])?.length || 0
+        tasksCount: tasks.length,
+        taskStatuses: taskStatuses
       });
-    });
+    }
 
-    // OPTIMIZED: Wait for all order updates in parallel, then delete well-wisher
+    // IMMEDIATE EXECUTION: Wait for all order updates in parallel, then delete well-wisher
+    // No delays - all reassignments happen immediately
     await Promise.all(updatePromises);
     await User.findByIdAndDelete(id);
 
+    // Calculate statistics for response
+    const totalTasks = reassignmentUpdates.reduce((sum, update) => sum + update.tasksCount, 0);
+    const uniqueWellWishersUsed = new Set(reassignmentUpdates.map(update => update.newWellWisherId)).size;
+    
+    // Count tasks by status
+    const tasksByStatus = reassignmentUpdates.reduce((acc, update) => {
+      update.taskStatuses.forEach(status => {
+        acc[status] = (acc[status] || 0) + 1;
+      });
+      return acc;
+    }, {} as Record<string, number>);
+
     return NextResponse.json({
       success: true,
-      message: 'Well-wisher deleted successfully. All tasks have been reassigned equally to available well-wishers.',
+      message: 'Well-wisher deleted successfully. All tasks have been immediately reassigned using equal distribution.',
       reassigned: {
         ordersCount: assignedOrders.length,
-        totalTasks: reassignmentUpdates.reduce((sum, update) => sum + update.tasksCount, 0),
-        wellWishersUsed: availableWellWishers.length
+        totalTasks: totalTasks,
+        wellWishersUsed: uniqueWellWishersUsed,
+        tasksByStatus: tasksByStatus
       }
     });
   } catch (_error) {
