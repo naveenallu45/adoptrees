@@ -6,6 +6,7 @@ import User from '@/models/User';
 import Tree from '@/models/Tree';
 import QRCode from 'qrcode';
 import { requireAdmin } from '@/lib/api-auth';
+import { logPaymentEvent } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -52,9 +53,53 @@ export async function GET(
       );
     }
 
-    // Always regenerate certificate to ensure QR code has correct origin
-    // This ensures the QR code always works regardless of where it's accessed from
-    // The QR code URL must match the current request origin (localhost in dev, production in prod)
+    // If certificate URL exists in Cloudinary, fetch and return it (preferred method)
+    if (order.certificateUrl) {
+      try {
+        logPaymentEvent('certificate_downloaded_from_cloudinary', {
+          orderId: order.orderId,
+          certificateUrl: order.certificateUrl
+        });
+        
+        // Fetch PDF from Cloudinary
+        const response = await fetch(order.certificateUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch certificate from Cloudinary: ${response.statusText}`);
+        }
+        
+        const pdfBuffer = Buffer.from(await response.arrayBuffer());
+        
+        // Return the PDF
+        const pdfArrayBuffer = new Uint8Array(pdfBuffer);
+        return new NextResponse(pdfArrayBuffer, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="certificate-${orderId}.pdf"`,
+            'Content-Length': pdfBuffer.length.toString(),
+          },
+        });
+      } catch (fetchError) {
+        console.error('[CERTIFICATE] Error fetching from Cloudinary, falling back to buffer:', fetchError);
+        // Fall through to buffer check below
+      }
+    }
+
+    // Fallback: If no Cloudinary URL, check if certificate buffer exists
+    if (order.certificate) {
+      // Return the stored certificate buffer
+      const pdfArrayBuffer = new Uint8Array(order.certificate);
+      return new NextResponse(pdfArrayBuffer, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="certificate-${orderId}.pdf"`,
+          'Content-Length': order.certificate.length.toString(),
+        },
+      });
+    }
+
+    // Last resort: Regenerate certificate if neither URL nor buffer exists
+    // This should rarely happen, but ensures backward compatibility
+    console.warn(`[CERTIFICATE] Regenerating certificate for order ${orderId} - no stored certificate found`);
     try {
       // Get user details including publicId, qrCode, profile image, name, companyName, and userType
       // Always fetch latest profile data to ensure certificate shows current profile

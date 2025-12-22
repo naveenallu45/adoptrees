@@ -8,6 +8,7 @@ import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { processOrderCompletion } from '@/lib/order-processing';
 import { generateCertificate } from '@/lib/certificate';
+import { uploadCertificateToCloudinary } from '@/lib/upload';
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
@@ -194,7 +195,21 @@ export async function POST(request: NextRequest) {
               qrCode: user.qrCode, // Use stored QR code from user
             });
             
-            order.certificate = certificateBuffer;
+            // Upload certificate to Cloudinary and store URL
+            try {
+              const { url: certificateUrl } = await uploadCertificateToCloudinary(
+                certificateBuffer,
+                order.orderId
+              );
+              order.certificateUrl = certificateUrl;
+            } catch (uploadError) {
+              logError('Failed to upload certificate to Cloudinary', uploadError as Error, {
+                orderId: order.orderId
+              });
+              // Continue with storing buffer as fallback
+              order.certificate = certificateBuffer;
+            }
+            
             await order.save();
           }
         } catch (certError) {
@@ -400,7 +415,21 @@ export async function POST(request: NextRequest) {
             });
 
           // Update order with certificate
-          order.certificate = certificateBuffer;
+          // Upload certificate to Cloudinary and store URL
+          try {
+            const { url: certificateUrl } = await uploadCertificateToCloudinary(
+              certificateBuffer,
+              order.orderId
+            );
+            order.certificateUrl = certificateUrl;
+          } catch (uploadError) {
+            logError('Failed to upload certificate to Cloudinary', uploadError as Error, {
+              orderId: order.orderId
+            });
+            // Continue with storing buffer as fallback
+            order.certificate = certificateBuffer;
+          }
+          
           await order.save();
 
           // Send thank you email with certificate (await to ensure it runs)

@@ -94,7 +94,48 @@ export async function GET(
       );
     }
 
-    // Generate certificate (similar to authenticated endpoint)
+    // If certificate URL exists in Cloudinary, fetch and return it (preferred method)
+    if (order.certificateUrl) {
+      try {
+        // Fetch PDF from Cloudinary
+        const response = await fetch(order.certificateUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch certificate from Cloudinary: ${response.statusText}`);
+        }
+        
+        const pdfBuffer = Buffer.from(await response.arrayBuffer());
+        
+        // Return the PDF
+        const pdfArrayBuffer = new Uint8Array(pdfBuffer);
+        return new NextResponse(pdfArrayBuffer, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="certificate-${orderIdParam}.pdf"`,
+            'Content-Length': pdfBuffer.length.toString(),
+          },
+        });
+      } catch (fetchError) {
+        console.error('[PublicCertificate] Error fetching from Cloudinary, falling back to buffer:', fetchError);
+        // Fall through to buffer check below
+      }
+    }
+
+    // Fallback: If no Cloudinary URL, check if certificate buffer exists
+    if (order.certificate) {
+      // Return the stored certificate buffer
+      const pdfArrayBuffer = new Uint8Array(order.certificate);
+      return new NextResponse(pdfArrayBuffer, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="certificate-${orderIdParam}.pdf"`,
+          'Content-Length': order.certificate.length.toString(),
+        },
+      });
+    }
+
+    // Last resort: Regenerate certificate if neither URL nor buffer exists
+    // This should rarely happen, but ensures backward compatibility
+    console.warn(`[PublicCertificate] Regenerating certificate for order ${orderIdParam} - no stored certificate found`);
     try {
       if (!user.publicId) {
         return NextResponse.json(

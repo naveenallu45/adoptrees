@@ -86,8 +86,10 @@ export interface IOrder extends Document {
   }[];
   // Admin fields
   adminNotes?: string;
-  // Certificate PDF stored as Buffer
+  // Certificate PDF stored as Buffer (legacy, prefer certificateUrl)
   certificate?: Buffer;
+  // Certificate URL stored in Cloudinary (preferred)
+  certificateUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -351,6 +353,10 @@ const OrderSchema: Schema = new Schema({
   certificate: {
     type: Buffer,
     select: false // Don't include in queries by default to avoid loading large data
+  },
+  certificateUrl: {
+    type: String,
+    // Certificate URL from Cloudinary (preferred over Buffer)
   }
 }, {
   timestamps: true

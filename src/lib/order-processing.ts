@@ -4,6 +4,7 @@ import Coupon from '@/models/Coupon';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { sendWellWisherTaskAssignmentEmail, sendThankYouEmailWithCertificate, sendGiftRecipientGreetingEmail } from '@/lib/email';
 import { generateCertificate } from '@/lib/certificate';
+import { uploadCertificateToCloudinary } from '@/lib/upload';
 
 /**
  * Complete order processing after payment
@@ -142,7 +143,25 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             qrCode: user.qrCode,
           });
 
-          order.certificate = certificateBuffer;
+          // Upload certificate to Cloudinary and store URL
+          try {
+            const { url: certificateUrl } = await uploadCertificateToCloudinary(
+              certificateBuffer,
+              order.orderId
+            );
+            order.certificateUrl = certificateUrl;
+            logPaymentEvent('certificate_uploaded_to_cloudinary', {
+              orderId: order.orderId,
+              certificateUrl
+            });
+          } catch (uploadError) {
+            logError('Failed to upload certificate to Cloudinary', uploadError as Error, {
+              orderId: order.orderId
+            });
+            // Continue with storing buffer as fallback
+            order.certificate = certificateBuffer;
+          }
+          
           await order.save();
           result.completed.certificate = true;
 
