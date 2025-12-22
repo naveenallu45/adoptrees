@@ -29,21 +29,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true, status: 'duplicate' });
     }
 
+    // PRODUCTION: Validate webhook secret is configured
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      logError('Razorpay webhook secret not configured', new Error('RAZORPAY_WEBHOOK_SECRET is missing'));
+      return NextResponse.json(
+        { error: 'Webhook configuration error' },
+        { status: 500 }
+      );
+    }
+
     // Verify webhook signature
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET!)
+      .createHmac('sha256', webhookSecret)
       .update(body)
       .digest('hex');
 
     if (signature !== expectedSignature) {
-      logError('Invalid webhook signature', new Error('Signature mismatch'));
+      logError('Invalid webhook signature', new Error('Signature mismatch'), {
+        webhookId: webhookId || 'unknown',
+        signatureLength: signature.length,
+        expectedLength: expectedSignature.length
+      });
       return NextResponse.json(
         { error: 'Invalid signature' },
+        { status: 401 }
+      );
+    }
+
+    // Parse webhook event body
+    let event;
+    try {
+      event = JSON.parse(body);
+    } catch (parseError) {
+      logError('Invalid webhook JSON body', parseError as Error, { webhookId: webhookId || 'unknown' });
+      return NextResponse.json(
+        { error: 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    const event = JSON.parse(body);
+    // Validate event structure
+    if (!event || !event.event) {
+      logError('Invalid webhook event structure', new Error('Missing event field'), { 
+        webhookId: webhookId || 'unknown',
+        body: body.substring(0, 200) // Log first 200 chars for debugging
+      });
+      return NextResponse.json(
+        { error: 'Invalid event structure' },
+        { status: 400 }
+      );
+    }
+
     logPaymentEvent('webhook_received', { 
       event: event.event,
       webhookId: webhookId || 'unknown'
@@ -61,21 +98,57 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
+    // Validate payload structure before processing
+    if (!event.payload) {
+      logError('Webhook missing payload', new Error('No payload in event'), { 
+        event: event.event,
+        webhookId: webhookId || 'unknown'
+      });
+      return NextResponse.json(
+        { error: 'Invalid event payload' },
+        { status: 400 }
+      );
+    }
+
     switch (event.event) {
       case 'payment.captured':
+        if (!event.payload.payment || !event.payload.payment.entity) {
+          logError('Invalid payment.captured payload', new Error('Missing payment entity'), { webhookId });
+          return NextResponse.json(
+            { error: 'Invalid payload structure' },
+            { status: 400 }
+          );
+        }
         await handlePaymentCaptured(event.payload.payment.entity);
         break;
       
       case 'payment.failed':
+        if (!event.payload.payment || !event.payload.payment.entity) {
+          logError('Invalid payment.failed payload', new Error('Missing payment entity'), { webhookId });
+          return NextResponse.json(
+            { error: 'Invalid payload structure' },
+            { status: 400 }
+          );
+        }
         await handlePaymentFailed(event.payload.payment.entity);
         break;
       
       case 'order.paid':
+        if (!event.payload.order || !event.payload.order.entity) {
+          logError('Invalid order.paid payload', new Error('Missing order entity'), { webhookId });
+          return NextResponse.json(
+            { error: 'Invalid payload structure' },
+            { status: 400 }
+          );
+        }
         await handleOrderPaid(event.payload.order.entity);
         break;
       
       default:
-        logPaymentEvent('webhook_unhandled_event', { event: event.event });
+        logPaymentEvent('webhook_unhandled_event', { 
+          event: event.event,
+          webhookId: webhookId || 'unknown'
+        });
     }
 
     return NextResponse.json({ received: true });

@@ -70,9 +70,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // PRODUCTION: Validate Razorpay secret is configured
+    const razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!razorpaySecret) {
+      logError('Razorpay key secret not configured', new Error('RAZORPAY_KEY_SECRET is missing'));
+      return NextResponse.json(
+        { success: false, error: 'Payment gateway configuration error' },
+        { 
+          status: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    }
+
     // Verify the payment signature
     const generated_signature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac('sha256', razorpaySecret)
       .update(razorpay_order_id + '|' + razorpay_payment_id)
       .digest('hex');
 
