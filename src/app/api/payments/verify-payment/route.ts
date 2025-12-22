@@ -4,11 +4,10 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import User from '@/models/User';
-import Coupon from '@/models/Coupon';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
+import { processOrderCompletion } from '@/lib/order-processing';
 import { generateCertificate } from '@/lib/certificate';
-import { sendThankYouEmailWithCertificate, sendWellWisherTaskAssignmentEmail, sendGiftRecipientGreetingEmail } from '@/lib/email';
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
@@ -210,28 +209,40 @@ export async function POST(request: NextRequest) {
     // Update order with payment details
     order.paymentStatus = 'paid';
     order.paymentId = razorpay_payment_id;
-    order.status = 'confirmed';
-
-    // OPTIMIZED: Run parallel operations for faster processing
-    const [couponUpdateResult] = await Promise.allSettled([
-      // Increment coupon usage count if coupon was used (non-blocking)
-      order.couponCode ? Coupon.findOneAndUpdate(
-        { code: order.couponCode },
-        { $inc: { usedCount: 1 } }
-      ) : Promise.resolve(null)
-    ]);
-
-    if (couponUpdateResult.status === 'rejected') {
-      logError('Error incrementing coupon usage count', couponUpdateResult.reason as Error);
+    // Store Razorpay order ID if not already stored
+    if (!order.razorpayOrderId && razorpay_order_id) {
+      order.razorpayOrderId = razorpay_order_id;
     }
-
-    // Save order immediately (before heavy operations)
+    order.status = 'confirmed';
     await order.save();
 
-    // PRODUCTION-SAFE: Process certificate + thank-you email within the request lifecycle.
-    // In serverless environments, work scheduled after returning the response (setImmediate)
-    // is not guaranteed to run. Doing it here ensures users reliably receive their emails.
+    // PRODUCTION-SAFE: Use centralized order processing function
+    // This is idempotent and handles all edge cases
     try {
+      const processingResult = await processOrderCompletion(order);
+      
+      if (!processingResult.success) {
+        logError('Order processing failed in verify-payment', new Error(processingResult.error || 'Unknown error'), {
+          orderId: order.orderId,
+          paymentId: razorpay_payment_id
+        });
+        // Don't throw - order is already marked as paid, processing can be retried
+      } else {
+        logPaymentEvent('order_processing_completed_via_verify', {
+          orderId: order.orderId,
+          completed: processingResult.completed
+        });
+      }
+    } catch (processingError) {
+      logError('Error in order processing', processingError as Error, {
+        orderId: order.orderId,
+        paymentId: razorpay_payment_id
+      });
+      // Order is already marked as paid - reconciliation cron will retry
+    }
+
+    // Legacy code block - keeping for reference but should not execute
+    /* try {
       // Calculate values needed for certificate and emails
       const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
       
@@ -442,7 +453,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (backgroundError) {
       logError('Error in payment post-processing (certificate/email)', backgroundError as Error);
-    }
+    } */
 
     logPaymentEvent('payment_verification_successful', {
       orderId: order.orderId,

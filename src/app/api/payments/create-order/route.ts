@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
           razorpayOrderId = razorpayOrder.id;
           
           // Update order with Razorpay order ID
-          existingPendingOrder.paymentId = razorpayOrderId;
+          existingPendingOrder.razorpayOrderId = razorpayOrderId;
           await existingPendingOrder.save();
         }
 
@@ -286,6 +286,10 @@ export async function POST(request: NextRequest) {
       razorpayOrderId: razorpayOrder.id,
       amount: amountInPaise 
     });
+
+    // Store Razorpay order ID in the order
+    order.razorpayOrderId = razorpayOrder.id;
+    await order.save();
 
     return NextResponse.json({
       success: true,

@@ -29,7 +29,8 @@ export interface IOrder extends Document {
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: string;
-  paymentId?: string;
+  paymentId?: string; // Razorpay payment ID (set after payment)
+  razorpayOrderId?: string; // Razorpay order ID (set when order is created)
   // Gift specific fields
   isGift: boolean;
   giftRecipientName?: string;
@@ -201,7 +202,11 @@ const OrderSchema: Schema = new Schema({
     type: String
   },
   paymentId: {
-    type: String
+    type: String // Razorpay payment ID (set after payment)
+  },
+  razorpayOrderId: {
+    type: String, // Razorpay order ID (set when order is created)
+    index: true
   },
   isGift: {
     type: Boolean,

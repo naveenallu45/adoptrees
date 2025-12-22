@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import ImageCropper from '@/components/ImageCropper';
 import ProfilePictureSuggestion from '@/components/Dashboard/ProfilePictureSuggestion';
+import { emitProfileUpdate } from '@/lib/profile-update-events';
 import toast from 'react-hot-toast';
 
 export default function CompanyProfilePage() {
@@ -200,23 +201,42 @@ export default function CompanyProfilePage() {
           }
         }
         
-        // Update state immediately
+        // OPTIMISTIC UPDATE: Update state immediately (before session update)
         setProfileImage(newImage);
         setImagePreview(null);
         setProfileImageFile(file);
+        
+        // Emit profile update event to notify other components
+        if (session?.user?.id) {
+          emitProfileUpdate(session.user.id, 'image_updated', {
+            image: newImage,
+          });
+        }
         
         // Show success toast
         toast.success('Profile picture uploaded successfully!');
         
         // Update session asynchronously without blocking UI
-        // This prevents page refresh while still updating the session
+        // Use requestIdleCallback or setTimeout to prevent blocking
         if (newImage !== session?.user?.image) {
           sessionUpdateRef.current = true;
-          Promise.resolve().then(() => {
+          // Use requestIdleCallback if available, otherwise setTimeout
+          const scheduleUpdate = typeof window !== 'undefined' && 'requestIdleCallback' in window
+            ? (cb: () => void) => (window as unknown as { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback(cb)
+            : (cb: () => void) => setTimeout(cb, 0);
+          
+          scheduleUpdate(() => {
             updateSession({
               image: newImage,
             }).catch((error) => {
               console.error('Session update error:', error);
+              // Revert optimistic update on error
+              if (session?.user?.image) {
+                setProfileImage(session.user.image);
+                emitProfileUpdate(session.user.id, 'image_updated', {
+                  image: session.user.image,
+                });
+              }
             }).finally(() => {
               sessionUpdateRef.current = false;
             });
@@ -337,6 +357,27 @@ export default function CompanyProfilePage() {
         const emailChanged = formData.email !== session?.user?.email;
         const imageChanged = newImage !== session?.user?.image;
         
+        // Emit profile update events to notify other components
+        if (session?.user?.id) {
+          if (imageChanged) {
+            emitProfileUpdate(session.user.id, 'image_updated', {
+              image: newImage,
+            });
+          }
+          if (nameChanged) {
+            emitProfileUpdate(session.user.id, 'name_updated', {
+              name: formData.companyName,
+            });
+          }
+          if (nameChanged || imageChanged || emailChanged) {
+            emitProfileUpdate(session.user.id, 'profile_updated', {
+              name: formData.companyName,
+              email: formData.email,
+              image: newImage,
+            });
+          }
+        }
+        
         setInitialFormData(formData);
         setSaveError(null);
         setIsEditing(false);
@@ -345,18 +386,29 @@ export default function CompanyProfilePage() {
         toast.success('Profile updated successfully!');
         
         // Only update session if values actually changed (prevents unnecessary re-renders)
-        // Use non-blocking session update to prevent page refresh
+        // Use requestIdleCallback or setTimeout to prevent blocking and page refresh
         if (nameChanged || emailChanged || imageChanged) {
           sessionUpdateRef.current = true;
-          // Update session asynchronously without blocking UI
-          // This prevents page refresh while still updating the session
-          Promise.resolve().then(() => {
+          // Use requestIdleCallback if available, otherwise setTimeout
+          const scheduleUpdate = typeof window !== 'undefined' && 'requestIdleCallback' in window
+            ? (cb: () => void) => (window as unknown as { requestIdleCallback: (cb: () => void, options?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1000 })
+            : (cb: () => void) => setTimeout(cb, 100);
+          
+          scheduleUpdate(() => {
             updateSession({
               name: formData.companyName,
               email: formData.email,
               image: newImage || undefined,
             }).catch((error) => {
               console.error('Session update error:', error);
+              // Revert optimistic updates on error
+              if (session?.user?.id) {
+                emitProfileUpdate(session.user.id, 'profile_updated', {
+                  name: session.user.name || '',
+                  email: session.user.email || '',
+                  image: session.user.image || null,
+                });
+              }
             }).finally(() => {
               sessionUpdateRef.current = false;
             });
@@ -452,17 +504,17 @@ export default function CompanyProfilePage() {
                 {imagePreview || profileImage || session?.user?.image ? (
                   <div className="absolute inset-0 rounded-full overflow-hidden">
                     <Image
-                      key={`profile-img-${imagePreview || profileImage || session?.user?.image || 'default'}`}
-                      src={imagePreview || profileImage || session?.user?.image || ''}
+                      key={`profile-img-${imagePreview || profileImage || session?.user?.image || 'default'}-${Date.now()}`}
+                      src={`${imagePreview || profileImage || session?.user?.image || ''}${(imagePreview || profileImage || session?.user?.image) ? `?t=${Date.now()}` : ''}`}
                       alt={formData.companyName || 'Company'}
                       fill
-                      className={`object-cover rounded-full transition-opacity ${isUploadingImage ? 'opacity-50' : ''}`}
+                      className={`object-cover rounded-full transition-opacity duration-300 ${isUploadingImage ? 'opacity-50' : ''}`}
                       style={{ 
                         objectFit: 'cover',
                         objectPosition: 'center'
                       }}
                       sizes="128px"
-                      unoptimized
+                      unoptimized={!!imagePreview}
                       priority
                     />
                   </div>

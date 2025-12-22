@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
-import User from '@/models/User';
 import { logPaymentEvent, logError } from '@/lib/logger';
-import { sendWellWisherTaskAssignmentEmail } from '@/lib/email';
+import { processOrderCompletion } from '@/lib/order-processing';
+import { verifyPaymentStatusWithRazorpay } from '@/lib/payment-reconciliation';
 
 // Store processed webhook IDs to prevent duplicate processing
 const processedWebhooks = new Set<string>();
@@ -89,14 +89,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handlePaymentCaptured(payment: { id: string; [key: string]: unknown }) {
+async function handlePaymentCaptured(payment: { id: string; order_id?: string; [key: string]: unknown }) {
   try {
-    const order = await Order.findOne({ 
-      'paymentId': payment.id 
-    });
+    // Try to find order by Razorpay order ID first (most reliable)
+    // The payment entity contains order_id which is the Razorpay order ID
+    let order = null;
+    
+    if (payment.order_id) {
+      order = await Order.findOne({ 
+        razorpayOrderId: payment.order_id 
+      });
+    }
+    
+    // Fallback: try to find by payment ID (in case paymentId was already set)
+    if (!order && payment.id) {
+      order = await Order.findOne({ 
+        paymentId: payment.id 
+      });
+    }
 
     if (!order) {
-      logError('Order not found for payment', new Error(`Payment ID: ${payment.id}`));
+      logError('Order not found for payment', new Error(`Payment ID: ${payment.id}, Order ID: ${payment.order_id || 'unknown'}`));
       return;
     }
 
@@ -108,8 +121,9 @@ async function handlePaymentCaptured(payment: { id: string; [key: string]: unkno
       return;
     }
 
-    // Update order status immediately
+    // Update order with payment details (transaction-safe)
     order.paymentStatus = 'paid';
+    order.paymentId = payment.id; // Store Razorpay payment ID
     order.status = 'confirmed';
     await order.save();
 
@@ -118,98 +132,97 @@ async function handlePaymentCaptured(payment: { id: string; [key: string]: unkno
       paymentId: payment.id 
     });
 
-    // OPTIMIZED: Process well-wisher assignment and emails in background (non-blocking)
-    setImmediate(async () => {
-      try {
-        // Create wellwisher tasks - assign using equal distribution
-        // Only assign if not already assigned
-        if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
-          const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
-          const wellwisherId = await assignWellWisherEqually();
-        
-          if (wellwisherId) {
-            console.log(`[WEBHOOK] Assigning well-wisher ${wellwisherId} to order ${order.orderId}`);
-            const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
-              taskId: `${order.orderId}-${index}`,
-              task: `Plant and care for ${item.treeName}`,
-              description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-              scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-              status: 'pending' as const,
-              location: 'To be determined'
-            }));
-
-            order.assignedWellwisher = wellwisherId;
-            order.wellwisherTasks = wellwisherTasks;
-            await order.save();
-            
-            // Send task assignment email to well-wisher (non-blocking)
-            User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
-              if (wellWisher) {
-                try {
-                  const totalTrees = order.items.reduce((sum: number, item: { quantity: number; [key: string]: unknown }) => sum + item.quantity, 0);
-                  const emailSent = await sendWellWisherTaskAssignmentEmail(
-                    wellWisher.email,
-                    wellWisher.name || '',
-                    order.orderId,
-                    wellwisherTasks,
-                    {
-                      totalTrees,
-                      customerName: order.userName,
-                      isGift: order.isGift || false
-                    }
-                  );
-                  
-                  if (emailSent) {
-                    logPaymentEvent('wellwisher_task_assignment_email_sent', {
-                      orderId: order.orderId,
-                      wellwisherEmail: wellWisher.email,
-                      wellwisherId: wellwisherId
-                    });
-                    console.log(`[WEBHOOK] Task assignment email sent successfully to well-wisher ${wellWisher.email} for order ${order.orderId}`);
-                  } else {
-                    logError('Well-wisher task assignment email failed to send', new Error(`Email returned false for order ${order.orderId}, well-wisher ${wellWisher.email}`));
-                    console.error(`[WEBHOOK] Task assignment email failed to send to well-wisher ${wellWisher.email} for order ${order.orderId}`);
-                  }
-                } catch (emailError) {
-                  logError('Error sending task assignment email', emailError as Error);
-                  console.error(`[WEBHOOK] Error sending task assignment email to well-wisher ${wellWisher.email} for order ${order.orderId}:`, emailError);
-                }
-              } else {
-                console.error(`[WEBHOOK] Well-wisher not found for ID ${wellwisherId} for order ${order.orderId}`);
-              }
-            }).catch((findError) => {
-              logError('Error finding well-wisher for email', findError as Error);
-              console.error(`[WEBHOOK] Error finding well-wisher ${wellwisherId} for order ${order.orderId}:`, findError);
-            });
-          } else {
-            console.error(`[WEBHOOK] Failed to assign well-wisher to order ${order.orderId} - no well-wisher available`);
-            logError('Well-wisher assignment returned null', new Error(`Order ${order.orderId} could not be assigned a well-wisher`));
-          }
-        } else {
-          console.log(`[WEBHOOK] Order ${order.orderId} already has well-wisher assigned: ${order.assignedWellwisher}`);
-        }
-      } catch (backgroundError) {
-        console.error(`[WEBHOOK] Error in background processing for order ${order.orderId}:`, backgroundError);
-        logError('Error in background webhook processing', backgroundError as Error);
+    // PRODUCTION-SAFE: Use centralized order processing function
+    // This is idempotent and handles all edge cases
+    try {
+      const processingResult = await processOrderCompletion(order);
+      
+      if (!processingResult.success) {
+        logError('Order processing failed in webhook', new Error(processingResult.error || 'Unknown error'), {
+          orderId: order.orderId,
+          paymentId: payment.id
+        });
+        // Don't throw - order is already marked as paid, processing can be retried
+      } else {
+        logPaymentEvent('order_processing_completed_via_webhook', {
+          orderId: order.orderId,
+          completed: processingResult.completed
+        });
       }
-    });
+    } catch (processingError) {
+      logError('Error in order processing', processingError as Error, {
+        orderId: order.orderId,
+        paymentId: payment.id
+      });
+      // Order is already marked as paid - reconciliation cron will retry
+    }
 
   } catch (_error) {
     logError('Error handling payment captured webhook', _error as Error);
   }
 }
 
-async function handlePaymentFailed(payment: { id: string; [key: string]: unknown }) {
+async function handlePaymentFailed(payment: { id: string; order_id?: string; [key: string]: unknown }) {
   try {
-    const order = await Order.findOne({ 
-      'paymentId': payment.id 
-    });
+    // Try to find order by Razorpay order ID first
+    let order = null;
+    
+    if (payment.order_id) {
+      order = await Order.findOne({ 
+        razorpayOrderId: payment.order_id 
+      });
+    }
+    
+    // Fallback: try to find by payment ID
+    if (!order && payment.id) {
+      order = await Order.findOne({ 
+        paymentId: payment.id 
+      });
+    }
 
     if (!order) {
-      logError('Order not found for failed payment', new Error(`Payment ID: ${payment.id}`));
+      logError('Order not found for failed payment', new Error(`Payment ID: ${payment.id}, Order ID: ${payment.order_id || 'unknown'}`));
       return;
     }
 
+    // PRODUCTION-SAFE: Verify payment status with Razorpay before marking as failed
+    // Edge case: Payment might be marked as failed but money was actually deducted
+    if (payment.id) {
+      const razorpayStatus = await verifyPaymentStatusWithRazorpay(payment.id);
+      
+      if (razorpayStatus) {
+        // If payment is actually captured, don't mark as failed
+        if (razorpayStatus.status === 'captured' && razorpayStatus.captured) {
+          logPaymentEvent('payment_failed_webhook_but_payment_captured', {
+            orderId: order.orderId,
+            paymentId: payment.id,
+            razorpayStatus: razorpayStatus.status,
+            action: 'completing_order_instead'
+          });
+          
+          // Complete the order since payment was successful
+          order.paymentStatus = 'paid';
+          order.paymentId = payment.id;
+          order.status = 'confirmed';
+          await order.save();
+          
+          // Process order completion
+          await processOrderCompletion(order);
+          return;
+        }
+        
+        // If payment is authorized but not captured, it will auto-refund
+        if (razorpayStatus.status === 'authorized') {
+          logPaymentEvent('payment_authorized_not_captured', {
+            orderId: order.orderId,
+            paymentId: payment.id,
+            note: 'Payment authorized but not captured - Razorpay will auto-refund'
+          });
+        }
+      }
+    }
+
+    // Mark as failed only if payment is truly failed
     order.paymentStatus = 'failed';
     order.status = 'cancelled';
     await order.save();

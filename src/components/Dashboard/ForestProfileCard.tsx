@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { profileUpdateEmitter } from '@/lib/profile-update-events';
 
 interface OrderItem {
   treeId: string | { $oid: string };
@@ -411,6 +412,8 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
     return session.user.name || (userType === 'company' ? 'Company' : 'Individual');
   };
 
+  const [imageCacheBuster, setImageCacheBuster] = useState(0);
+
   const getProfileImage = () => {
     // Priority: public user image > fetched user image > session image
     if (publicId && publicUserImage) {
@@ -424,12 +427,43 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
     return session?.user?.image || null;
   };
 
+  const getProfileImageWithCacheBust = () => {
+    const image = getProfileImage();
+    if (!image) return null;
+    // Add cache busting parameter to force image reload
+    return `${image}${image.includes('?') ? '&' : '?'}t=${imageCacheBuster}`;
+  };
+
   // Update user image when session image changes
   useEffect(() => {
     if (session?.user?.image && !publicId) {
       setUserImage(session.user.image);
     }
   }, [session?.user?.image, publicId]);
+
+  // Listen to profile update events for real-time updates
+  useEffect(() => {
+    if (!session?.user?.id || publicId) return; // Only listen for own profile, not public profiles
+
+    const unsubscribe = profileUpdateEmitter.subscribe(session.user.id, (event) => {
+      if (event.type === 'image_updated' || event.type === 'profile_updated') {
+        // Update image immediately when profile is updated
+        if (event.data.image !== undefined) {
+          setUserImage(event.data.image);
+          // Force image cache bust to reload image immediately
+          setImageCacheBuster(Date.now());
+        }
+      }
+      if (event.type === 'name_updated' || event.type === 'profile_updated') {
+        // Name updates are handled by session, but we can force a refetch if needed
+        // The session will update and trigger a re-render
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [session?.user?.id, publicId]);
 
   // Update current time for real-time "last planting" display
   useEffect(() => {
@@ -526,11 +560,11 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
                 {getProfileImage() ? (
                   <div className="absolute inset-0 rounded-full overflow-hidden">
                     <Image
-                      key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
-                      src={getProfileImage() || ''}
+                      key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}-${imageCacheBuster}`}
+                      src={getProfileImageWithCacheBust() || ''}
                       alt={getUserDisplayName()}
                       fill
-                      className="object-cover rounded-full"
+                      className="object-cover rounded-full transition-opacity duration-300"
                       style={{ 
                         objectFit: 'cover',
                         objectPosition: 'center'
@@ -571,11 +605,11 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
                 <>
                   <div className="absolute inset-0 rounded-full overflow-hidden">
                     <Image
-                      key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}`}
-                      src={getProfileImage() || ''}
+                      key={`profile-${getProfileImage()}-${session?.user?.id || publicId || 'default'}-${imageCacheBuster}`}
+                      src={getProfileImageWithCacheBust() || ''}
                       alt={getUserDisplayName()}
                       fill
-                      className="object-cover rounded-full"
+                      className="object-cover rounded-full transition-opacity duration-300"
                       style={{ 
                         objectFit: 'cover',
                         objectPosition: 'center'
