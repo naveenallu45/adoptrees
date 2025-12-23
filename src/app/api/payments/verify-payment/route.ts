@@ -509,13 +509,16 @@ export async function POST(request: NextRequest) {
     });
     
     // Now safely return success response after core post-processing
+    // Use finalAmount (after coupon and credits) if available, otherwise use totalAmount
+    const displayAmount = order.finalAmount !== undefined ? order.finalAmount : order.totalAmount;
+    
     return NextResponse.json({
       success: true,
       message: 'Payment verified successfully',
       data: {
         orderId: order.orderId,
         paymentStatus: order.paymentStatus,
-        totalAmount: order.totalAmount,
+        totalAmount: displayAmount, // Show discounted price
         items: order.items.length
       }
     }, {

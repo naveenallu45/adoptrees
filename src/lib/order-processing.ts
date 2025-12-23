@@ -233,6 +233,48 @@ export async function processOrderCompletion(order: IOrder): Promise<{
       }
     }
 
+    // Award credits: 10% of tree price (not discounted) for individual/company adoptions (not forest)
+    // Only award if credits haven't been awarded yet (idempotent)
+    if (!order.creditsEarned || order.creditsEarned === 0) {
+      try {
+        // Calculate credits based on tree price (not discounted price)
+        // Only for individual and company tree types (not forest)
+        let creditsToAward = 0;
+        order.items.forEach((item: { treeType?: string; price: number; quantity: number; [key: string]: unknown }) => {
+          const treeType = item.treeType || 'individual';
+          // Only award credits for individual and company adoptions, not forest
+          if (treeType === 'individual' || treeType === 'company') {
+            // 10% of tree price (not discounted) per item
+            creditsToAward += Math.round((item.price * item.quantity) * 0.1);
+          }
+        });
+
+        if (creditsToAward > 0) {
+          // Update user credits
+          const user = await User.findById(order.userId);
+          if (user) {
+            const currentCredits = user.credits || 0;
+            user.credits = currentCredits + creditsToAward;
+            await user.save();
+
+            // Store credits earned in order
+            order.creditsEarned = creditsToAward;
+            await order.save();
+
+            logPaymentEvent('credits_awarded', {
+              orderId: order.orderId,
+              userId: order.userId,
+              creditsAwarded: creditsToAward,
+              newBalance: user.credits
+            });
+          }
+        }
+      } catch (creditsError) {
+        logError('Error awarding credits', creditsError as Error);
+        // Non-critical, don't fail the whole process
+      }
+    }
+
     logPaymentEvent('order_processing_completed', {
       orderId: order.orderId,
       completed: result.completed

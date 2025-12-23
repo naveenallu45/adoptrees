@@ -40,10 +40,45 @@ export default function CartContent() {
   const [showCouponDropdown, setShowCouponDropdown] = useState(false);
   const [isCouponValid, setIsCouponValid] = useState(false);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const [useCredits, setUseCredits] = useState<boolean>(false);
+  const [_loadingCredits, setLoadingCredits] = useState<boolean>(false);
 
   const subtotal = getTotalPrice();
   const discountAmount = appliedCoupon?.discountAmount || 0;
-  const total = appliedCoupon ? appliedCoupon.finalAmount : subtotal;
+  const amountAfterCoupon = appliedCoupon ? appliedCoupon.finalAmount : subtotal;
+  
+  // Calculate credits discount (max 25% of order after coupon)
+  const maxCreditsUsage = Math.round(amountAfterCoupon * 0.25);
+  const creditsToUse = useCredits ? Math.min(userCredits, maxCreditsUsage) : 0;
+  const total = amountAfterCoupon - creditsToUse;
+
+  // Fetch user credits
+  useEffect(() => {
+    const fetchUserCredits = async () => {
+      if (!session?.user?.id) {
+        setUserCredits(0);
+        return;
+      }
+      
+      try {
+        setLoadingCredits(true);
+        const response = await fetch(`/api/users/${session.user.id}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setUserCredits(result.data.credits || 0);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch user credits:', error);
+      } finally {
+        setLoadingCredits(false);
+      }
+    };
+
+    fetchUserCredits();
+  }, [session?.user?.id]);
 
   // Multiple Razorpay loading strategies
   useEffect(() => {
@@ -427,6 +462,7 @@ export default function CartContent() {
         giftMessage: cartItems.find(item => item.adoptionType === 'gift')?.giftMessage,
         couponCode: appliedCoupon?.code || null,
         couponDiscount: appliedCoupon ? appliedCoupon.discountAmount : 0,
+        creditsUsed: creditsToUse,
         finalAmount: total
       };
 
@@ -902,6 +938,37 @@ export default function CartContent() {
                   </div>
                 </div>
 
+                {/* Credits Section */}
+                {session && userCredits > 0 && (
+                  <div className="mb-4 sm:mb-6 pb-4 border-b border-green-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-sm font-medium text-gray-700">Use Credits</span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useCredits}
+                          onChange={(e) => setUseCredits(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      </label>
+                    </div>
+                    <div className="text-xs text-gray-600 mb-2">
+                      Available: <span className="font-semibold text-green-600">₹{userCredits.toLocaleString()}</span>
+                    </div>
+                    {useCredits && (
+                      <div className="text-xs text-gray-500">
+                        You can use up to <span className="font-semibold">₹{maxCreditsUsage.toLocaleString()}</span> (25% of order)
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                   <div className="flex justify-between items-center text-sm sm:text-base py-2">
                     <span className="text-gray-600 font-medium">Subtotal</span>
@@ -914,6 +981,16 @@ export default function CartContent() {
                       </span>
                       <span className="font-semibold text-green-600">
                         -₹{discountAmount.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {useCredits && creditsToUse > 0 && (
+                    <div className="flex justify-between items-center text-sm sm:text-base py-2">
+                      <span className="text-gray-600 font-medium">
+                        Credits Used
+                      </span>
+                      <span className="font-semibold text-green-600">
+                        -₹{creditsToUse.toLocaleString()}
                       </span>
                     </div>
                   )}

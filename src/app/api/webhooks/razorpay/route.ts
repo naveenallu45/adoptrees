@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import User from '@/models/User';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { processOrderCompletion } from '@/lib/order-processing';
 import { verifyPaymentStatusWithRazorpay } from '@/lib/payment-reconciliation';
@@ -299,6 +300,28 @@ async function handlePaymentFailed(payment: { id: string; order_id?: string; [ke
     order.paymentStatus = 'failed';
     order.status = 'cancelled';
     await order.save();
+    
+    // Refund credits if they were used
+    if (order.creditsUsed && order.creditsUsed > 0) {
+      try {
+        const user = await User.findById(order.userId);
+        if (user) {
+          user.credits = (user.credits || 0) + order.creditsUsed;
+          await user.save();
+          
+          logPaymentEvent('credits_refunded_payment_failed', {
+            orderId: order.orderId,
+            userId: order.userId,
+            creditsRefunded: order.creditsUsed,
+            newBalance: user.credits
+          });
+        }
+      } catch (creditsError) {
+        logError('Error refunding credits on payment failure', creditsError as Error, {
+          orderId: order.orderId
+        });
+      }
+    }
     
     logPaymentEvent('payment_failed_webhook_processed', { 
       orderId: order.orderId,

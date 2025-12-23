@@ -4,6 +4,7 @@ import { auth } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Tree from '@/models/Tree';
+import User from '@/models/User';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { items, isGift, giftRecipientName, giftRecipientEmail, giftMessage, couponCode, couponDiscount, finalAmount } = body;
+    const { items, isGift, giftRecipientName, giftRecipientEmail, giftMessage, couponCode, couponDiscount, creditsUsed, finalAmount } = body;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -156,8 +157,75 @@ export async function POST(request: NextRequest) {
 
     // Calculate total amount in paise (Razorpay requires amount in smallest currency unit)
     const totalAmount = orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    // Use finalAmount if provided (with coupon discount), otherwise use totalAmount
-    const orderTotalAmount = finalAmount !== undefined ? finalAmount : totalAmount;
+    // Calculate amount after coupon discount
+    const amountAfterCoupon = finalAmount !== undefined ? finalAmount : totalAmount;
+    
+    // Validate and process credits usage
+    let creditsToUse = 0;
+    if (creditsUsed && creditsUsed > 0) {
+      // Fetch user to check available credits
+      const user = await User.findById(session.user.id);
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { 
+            status: 404,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+
+      const availableCredits = user.credits || 0;
+      const maxCreditsUsage = Math.round(amountAfterCoupon * 0.25); // Max 25% of order
+      
+      // Validate credits usage
+      if (creditsUsed > availableCredits) {
+        return NextResponse.json(
+          { success: false, error: `Insufficient credits. Available: ₹${availableCredits}` },
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+
+      if (creditsUsed > maxCreditsUsage) {
+        return NextResponse.json(
+          { success: false, error: `Maximum credits usage is 25% of order (₹${maxCreditsUsage})` },
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+
+      creditsToUse = Math.min(creditsUsed, availableCredits, maxCreditsUsage);
+      
+      // Deduct credits from user
+      user.credits = (user.credits || 0) - creditsToUse;
+      await user.save();
+
+      logPaymentEvent('credits_deducted', {
+        userId: session.user.id,
+        creditsDeducted: creditsToUse,
+        newBalance: user.credits
+      });
+    }
+
+    // Final amount after credits
+    const orderTotalAmount = amountAfterCoupon - creditsToUse;
     const amountInPaise = Math.round(orderTotalAmount * 100); // Convert to paise
 
     // Check for duplicate pending orders (within last 5 minutes) with same items
@@ -249,6 +317,7 @@ export async function POST(request: NextRequest) {
       totalAmount,
       couponCode: couponCode || undefined,
       couponDiscount: couponDiscount || undefined,
+      creditsUsed: creditsToUse || undefined,
       finalAmount: orderTotalAmount,
       isGift,
       giftRecipientName,

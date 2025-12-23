@@ -26,6 +26,8 @@ export interface IOrder extends Document {
   couponCode?: string;
   couponDiscount?: number;
   finalAmount?: number; // Amount after coupon discount
+  creditsUsed?: number; // Credits used in this order (max 25% of order total)
+  creditsEarned?: number; // Credits earned from this order (10% of tree price, not discounted)
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: string;
@@ -188,6 +190,27 @@ const OrderSchema: Schema = new Schema({
     type: Number,
     required: [true, 'Total amount is required'],
     min: [0, 'Total amount cannot be negative']
+  },
+  couponCode: {
+    type: String
+  },
+  couponDiscount: {
+    type: Number,
+    min: [0, 'Coupon discount cannot be negative']
+  },
+  finalAmount: {
+    type: Number,
+    min: [0, 'Final amount cannot be negative']
+  },
+  creditsUsed: {
+    type: Number,
+    default: 0,
+    min: [0, 'Credits used cannot be negative']
+  },
+  creditsEarned: {
+    type: Number,
+    default: 0,
+    min: [0, 'Credits earned cannot be negative']
   },
   status: {
     type: String,

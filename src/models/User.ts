@@ -19,6 +19,7 @@ export interface IUser {
   image?: string; // Profile image URL
   imagePublicId?: string; // Cloudinary public ID for profile image
   lastMarketingEmailSent?: Date; // Last time marketing email was sent to this user
+  credits?: number; // User credits balance (10% of tree price earned on each order)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +73,7 @@ const UserSchema = new Schema<IUser>(
     image: { type: String }, // Profile image URL
     imagePublicId: { type: String }, // Cloudinary public ID for profile image
     lastMarketingEmailSent: { type: Date }, // Last time marketing email was sent to this user
+    credits: { type: Number, default: 0, min: 0 }, // User credits balance (10% of tree price earned on each order)
   },
   { 
     timestamps: true,
