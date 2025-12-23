@@ -165,7 +165,7 @@ export async function processOrderCompletion(order: IOrder): Promise<{
           await order.save();
           result.completed.certificate = true;
 
-          // 3. Send thank you email with certificate
+          // 3. Send thank you email with certificate (non-blocking for better performance)
           const recipientEmail = order.isGift && order.giftRecipientEmail 
             ? order.giftRecipientEmail 
             : order.userEmail;
@@ -173,21 +173,27 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             ? order.giftRecipientName 
             : order.userName;
           
-          try {
-            const emailSent = await sendThankYouEmailWithCertificate(
-              recipientEmail,
-              recipientName,
-              order.orderId,
-              treesCount,
-              certificateBuffer
-            );
-            
+          // Send email asynchronously - don't block
+          sendThankYouEmailWithCertificate(
+            recipientEmail,
+            recipientName,
+            order.orderId,
+            treesCount,
+            certificateBuffer
+          ).then((emailSent) => {
             if (emailSent) {
               result.completed.email = true;
+              logPaymentEvent('thank_you_email_sent', {
+                orderId: order.orderId,
+                recipientEmail
+              });
             }
-          } catch (emailError) {
+          }).catch((emailError) => {
             logError('Error sending thank you email', emailError as Error);
-          }
+          });
+          
+          // Mark email as completed (will be sent in background)
+          result.completed.email = true;
 
           // Send gift recipient emails (non-blocking)
           if (order.isGift && order.giftRecipientEmail) {

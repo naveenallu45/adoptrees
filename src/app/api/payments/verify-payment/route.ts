@@ -248,30 +248,49 @@ export async function POST(request: NextRequest) {
     order.status = 'confirmed';
     await order.save();
 
-    // PRODUCTION-SAFE: Use centralized order processing function
-    // This is idempotent and handles all edge cases
-    try {
-      const processingResult = await processOrderCompletion(order);
-      
-      if (!processingResult.success) {
-        logError('Order processing failed in verify-payment', new Error(processingResult.error || 'Unknown error'), {
-          orderId: order.orderId,
-          paymentId: razorpay_payment_id
-        });
-        // Don't throw - order is already marked as paid, processing can be retried
-      } else {
-        logPaymentEvent('order_processing_completed_via_verify', {
-          orderId: order.orderId,
-          completed: processingResult.completed
-        });
-      }
-    } catch (processingError) {
-      logError('Error in order processing', processingError as Error, {
+    // OPTIMIZED: Return success immediately for better UX
+    // Process heavy tasks (certificate, emails) in background
+    // This ensures payment verification is fast (< 1 second)
+    
+    // Fire-and-forget: Process order completion asynchronously
+    // This doesn't block the payment response
+    processOrderCompletion(order).catch((processingError) => {
+      logError('Error in background order processing', processingError as Error, {
         orderId: order.orderId,
         paymentId: razorpay_payment_id
       });
-      // Order is already marked as paid - reconciliation cron will retry
-    }
+      // Order is already marked as paid - reconciliation cron will retry if needed
+    });
+
+    // Log payment verification
+    logPaymentEvent('payment_verification_successful', {
+      orderId: order.orderId,
+      paymentId: razorpay_payment_id,
+      totalAmount: order.totalAmount,
+      itemsCount: order.items.length,
+      backgroundProcessing: true
+    });
+    
+    // Return success immediately - user gets instant feedback
+    // Use finalAmount (after coupon and credits) if available, otherwise use totalAmount
+    const displayAmount = order.finalAmount !== undefined ? order.finalAmount : order.totalAmount;
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Payment verified successfully',
+      data: {
+        orderId: order.orderId,
+        paymentStatus: order.paymentStatus,
+        totalAmount: displayAmount, // Show discounted price
+        items: order.items.length
+      }
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
 
     // Legacy code block - keeping for reference but should not execute
     /* try {
@@ -501,33 +520,6 @@ export async function POST(request: NextRequest) {
       logError('Error in payment post-processing (certificate/email)', backgroundError as Error);
     } */
 
-    logPaymentEvent('payment_verification_successful', {
-      orderId: order.orderId,
-      paymentId: razorpay_payment_id,
-      totalAmount: order.totalAmount,
-      itemsCount: order.items.length
-    });
-    
-    // Now safely return success response after core post-processing
-    // Use finalAmount (after coupon and credits) if available, otherwise use totalAmount
-    const displayAmount = order.finalAmount !== undefined ? order.finalAmount : order.totalAmount;
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Payment verified successfully',
-      data: {
-        orderId: order.orderId,
-        paymentStatus: order.paymentStatus,
-        totalAmount: displayAmount, // Show discounted price
-        items: order.items.length
-      }
-    }, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    });
 
   } catch (_error) {
     logError('Error verifying payment', _error as Error);

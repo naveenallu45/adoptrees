@@ -112,9 +112,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch tree details and validate
+    // Fetch tree details and validate (optimized with lean() for better performance)
     const treeIds = items.map((item: { treeId: string }) => item.treeId);
-    const trees = await Tree.find({ _id: { $in: treeIds }, isActive: true });
+    const trees = await Tree.find({ _id: { $in: treeIds }, isActive: true })
+      .select('_id name imageUrl price oxygenKgs co2 treeType')
+      .lean(); // Use lean() for faster queries - returns plain JS objects
     
     if (trees.length !== treeIds.length) {
       return NextResponse.json(
@@ -230,6 +232,7 @@ export async function POST(request: NextRequest) {
 
     // Check for duplicate pending orders (within last 5 minutes) with same items
     // This prevents multiple orders from being created if user clicks payment button multiple times
+    // Optimized: Use lean() and limit to 1 for faster query
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const existingPendingOrder = await Order.findOne({
       userId: session.user.id,
@@ -239,13 +242,17 @@ export async function POST(request: NextRequest) {
       createdAt: { $gte: fiveMinutesAgo },
       'items.0.treeId': orderItems[0]?.treeId, // Check first item matches
       'items.0.quantity': orderItems[0]?.quantity
-    }).sort({ createdAt: -1 });
+    })
+      .select('orderId razorpayOrderId paymentId items')
+      .sort({ createdAt: -1 })
+      .lean()
+      .limit(1);
 
     // If duplicate order found, return existing one instead of creating new
     if (existingPendingOrder) {
       // Verify items match exactly
       const itemsMatch = existingPendingOrder.items.length === orderItems.length &&
-        existingPendingOrder.items.every((existingItem, idx) => {
+        existingPendingOrder.items.every((existingItem: { treeId: string; quantity: number; adoptionType?: string }, idx: number) => {
           const newItem = orderItems[idx];
           return existingItem.treeId === newItem.treeId &&
                  existingItem.quantity === newItem.quantity &&
@@ -259,7 +266,9 @@ export async function POST(request: NextRequest) {
         });
         
         // Get or create Razorpay order for existing order
-        let razorpayOrderId = existingPendingOrder.paymentId; // If already has one
+        // Note: existingPendingOrder is a lean object, so we need to fetch the full document to update
+        let razorpayOrderId = (existingPendingOrder as { paymentId?: string; razorpayOrderId?: string }).razorpayOrderId || 
+                              (existingPendingOrder as { paymentId?: string; razorpayOrderId?: string }).paymentId;
         
         if (!razorpayOrderId) {
           // Create Razorpay order for existing order
@@ -277,9 +286,11 @@ export async function POST(request: NextRequest) {
           });
           razorpayOrderId = razorpayOrder.id;
           
-          // Update order with Razorpay order ID
-          existingPendingOrder.razorpayOrderId = razorpayOrderId;
-          await existingPendingOrder.save();
+          // Update order with Razorpay order ID (fetch full document to update)
+          await Order.updateOne(
+            { orderId: existingPendingOrder.orderId },
+            { razorpayOrderId: razorpayOrderId }
+          );
         }
 
         return NextResponse.json({
