@@ -76,6 +76,7 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
   const [currentTime, setCurrentTime] = useState(new Date()); // For real-time updates
   const [ordersData, setOrdersData] = useState<Order[]>([]); // Store orders to check planting status
   const [forestTreeIds, setForestTreeIds] = useState<Set<string>>(new Set());
+  const [userCredits, setUserCredits] = useState<number>(0);
 
   const normalizeTreeId = (treeId: OrderItem['treeId']) => {
     if (!treeId) return '';
@@ -377,7 +378,7 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
     };
 
     const fetchUserImage = async () => {
-      // Fetch user image from database to ensure it's up-to-date
+      // Fetch user image and credits from database to ensure it's up-to-date
       // Only fetch if not viewing public profile
       if (!publicId && session?.user?.id) {
         try {
@@ -389,6 +390,10 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
             } else if (result.success) {
               // Clear image if user doesn't have one
               setUserImage(null);
+            }
+            // Fetch credits
+            if (result.success && result.data?.credits !== undefined) {
+              setUserCredits(result.data.credits || 0);
             }
           }
         } catch (_error) {
@@ -543,7 +548,23 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="p-4 sm:p-5 md:p-6 text-white">
+      <div className="p-4 sm:p-5 md:p-6 text-white relative">
+        {/* Green Credits Display - Top Right */}
+        {!publicId && session?.user?.id && (
+          <div className="absolute top-4 right-4 sm:top-5 sm:right-5 md:top-6 md:right-6 z-10">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20 shadow-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-green-200 font-medium">Green Credits</span>
+                  <span className="text-sm font-bold text-white">₹{userCredits.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Layout: Mobile horizontal, Laptop vertical with full-height image */}
         <div className="flex flex-col md:flex-row md:items-stretch gap-4 md:gap-6">
           {/* Mobile: Small circular image with text */}

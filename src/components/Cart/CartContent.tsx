@@ -526,6 +526,9 @@ export default function CartContent() {
         },
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           // Handle payment success
+          // Add a small delay to ensure Razorpay modal is fully closed
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
           try {
             const verifyResponse = await fetch('/api/payments/verify-payment', {
               method: 'POST',
@@ -565,19 +568,26 @@ export default function CartContent() {
               });
               clearCart();
               setPaymentStatus('success');
-              setShowPaymentDialog(true);
-              // Refresh the page to update any server-rendered data
-              router.refresh();
+              // Ensure dialog shows after state updates
+              setTimeout(() => {
+                setShowPaymentDialog(true);
+              }, 100);
+              // Don't refresh immediately - let the dialog show first
+              // Refresh will happen when dialog is closed
             } else {
               setPaymentStatus('failed');
               setPaymentMessage('Payment verification failed: ' + (verifyResult.error || 'Unknown error'));
-              setShowPaymentDialog(true);
+              setTimeout(() => {
+                setShowPaymentDialog(true);
+              }, 100);
             }
           } catch (_error) {
             console.error('Payment verification error:', _error);
             setPaymentStatus('failed');
             setPaymentMessage('Failed to verify payment. Please contact support with your order ID: ' + orderId);
-            setShowPaymentDialog(true);
+            setTimeout(() => {
+              setShowPaymentDialog(true);
+            }, 100);
           } finally {
             setIsPlacingOrder(false);
           }
@@ -618,6 +628,8 @@ export default function CartContent() {
     setOrderDetails(null);
     setPaymentMessage('');
     const containsForestItems = checkoutContext?.containsForestItems ?? false;
+    // Refresh the page to update any server-rendered data
+    router.refresh();
     // Redirect to appropriate dashboard only on success
     if (paymentStatus === 'success') {
       if (session?.user?.userType === 'individual') {
@@ -946,7 +958,7 @@ export default function CartContent() {
                         <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span className="text-sm font-medium text-gray-700">Use Credits</span>
+                        <span className="text-sm font-medium text-gray-700">Use Green Credits</span>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -987,7 +999,7 @@ export default function CartContent() {
                   {useCredits && creditsToUse > 0 && (
                     <div className="flex justify-between items-center text-sm sm:text-base py-2">
                       <span className="text-gray-600 font-medium">
-                        Credits Used
+                        Green Credits Used
                       </span>
                       <span className="font-semibold text-green-600">
                         -₹{creditsToUse.toLocaleString()}
