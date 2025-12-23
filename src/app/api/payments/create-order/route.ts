@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
       // Validate credits usage
       if (creditsUsed > availableCredits) {
         return NextResponse.json(
-          { success: false, error: `Insufficient credits. Available: ₹${availableCredits}` },
+          { success: false, error: `Insufficient Green Credits. Available: ${availableCredits} pts` },
           { 
             status: 400,
             headers: {
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
 
       if (creditsUsed > maxCreditsUsage) {
         return NextResponse.json(
-          { success: false, error: `Maximum credits usage is 25% of order (₹${maxCreditsUsage})` },
+          { success: false, error: `Maximum Green Credits usage is 25% of order (${maxCreditsUsage} pts)` },
           { 
             status: 400,
             headers: {

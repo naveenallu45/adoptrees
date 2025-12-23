@@ -559,7 +559,7 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
                 </svg>
                 <div className="flex flex-col">
                   <span className="text-[10px] text-green-200 font-medium">Green Credits</span>
-                  <span className="text-sm font-bold text-white">₹{userCredits.toLocaleString()}</span>
+                  <span className="text-sm font-bold text-white">{userCredits.toLocaleString()} pts</span>
                 </div>
               </div>
             </div>

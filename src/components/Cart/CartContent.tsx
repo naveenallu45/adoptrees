@@ -971,13 +971,8 @@ export default function CartContent() {
                       </label>
                     </div>
                     <div className="text-xs text-gray-600 mb-2">
-                      Available: <span className="font-semibold text-green-600">₹{userCredits.toLocaleString()}</span>
+                      Available: <span className="font-semibold text-green-600">{userCredits.toLocaleString()} pts</span>
                     </div>
-                    {useCredits && (
-                      <div className="text-xs text-gray-500">
-                        You can use up to <span className="font-semibold">₹{maxCreditsUsage.toLocaleString()}</span> (25% of order)
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -1002,7 +997,7 @@ export default function CartContent() {
                         Green Credits Used
                       </span>
                       <span className="font-semibold text-green-600">
-                        -₹{creditsToUse.toLocaleString()}
+                        -{creditsToUse.toLocaleString()} pts
                       </span>
                     </div>
                   )}

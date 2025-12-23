@@ -585,7 +585,7 @@ export default function IndividualProfilePage() {
                   </svg>
                   <span className="text-sm font-medium text-gray-700">Green Credits</span>
                 </div>
-                <span className="text-2xl font-bold text-green-600">₹{credits.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-green-600">{credits.toLocaleString()} pts</span>
               </div>
             </div>
           </div>
