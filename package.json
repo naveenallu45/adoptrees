@@ -13,6 +13,7 @@
     "optimize-db": "node scripts/optimize-database.js",
     "check-unassigned": "node scripts/check-unassigned-orders.js",
     "fix-unassigned": "node scripts/check-unassigned-orders.js --fix",
+    "recalculate-coupon-usage": "node scripts/recalculate-coupon-usage.js",
     "analyze": "ANALYZE=true next build",
     "perf": "next build && next start"
   },

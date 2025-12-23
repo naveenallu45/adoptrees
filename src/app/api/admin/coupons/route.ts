@@ -41,9 +41,15 @@ export async function GET(request: NextRequest) {
         .limit(limit)
         .lean();
 
+      // Ensure usedCount is included and has a default value if missing
+      const couponsWithUsedCount = coupons.map(coupon => ({
+        ...coupon,
+        usedCount: coupon.usedCount !== undefined && coupon.usedCount !== null ? coupon.usedCount : 0
+      }));
+
       return NextResponse.json({
         success: true,
-        data: coupons,
+        data: couponsWithUsedCount,
         pagination: {
           page,
           limit,
@@ -55,9 +61,15 @@ export async function GET(request: NextRequest) {
       // Non-paginated query (for admin dashboard)
       const coupons = await Coupon.find({}).sort({ createdAt: -1 }).lean();
 
+      // Ensure usedCount is included and has a default value if missing
+      const couponsWithUsedCount = coupons.map(coupon => ({
+        ...coupon,
+        usedCount: coupon.usedCount !== undefined && coupon.usedCount !== null ? coupon.usedCount : 0
+      }));
+
       return NextResponse.json({
         success: true,
-        data: coupons
+        data: couponsWithUsedCount
       });
     }
   } catch (error) {

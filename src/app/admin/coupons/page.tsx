@@ -224,11 +224,15 @@ export default function CouponsManagement() {
         cell: ({ row }) => {
           const coupon = row.original;
           if (coupon.usageLimitType === 'unlimited') {
-            return <span className="text-gray-600">Unlimited</span>;
+            return (
+              <span className="text-gray-700">
+                {coupon.usedCount || 0} / <span className="text-gray-600">Unlimited</span>
+              </span>
+            );
           }
           return (
             <span className="text-gray-700">
-              {coupon.usedCount} / {coupon.totalUsageLimit || 0}
+              {coupon.usedCount || 0} / {coupon.totalUsageLimit || 0}
             </span>
           );
         },
