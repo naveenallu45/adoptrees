@@ -32,7 +32,19 @@ export async function GET(request: NextRequest) {
                     { $ne: ['$status', 'pending'] }
                   ]
                 },
-                '$totalAmount',
+                {
+                  // Use finalAmount if available, otherwise calculate from totalAmount - couponDiscount if coupon exists
+                  $ifNull: [
+                    '$finalAmount',
+                    {
+                      $cond: [
+                        { $and: [{ $ifNull: ['$couponDiscount', false] }, { $gt: ['$couponDiscount', 0] }] },
+                        { $subtract: ['$totalAmount', '$couponDiscount'] },
+                        '$totalAmount'
+                      ]
+                    }
+                  ]
+                },
                 0
               ]
             }

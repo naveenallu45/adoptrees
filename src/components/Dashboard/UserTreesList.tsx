@@ -126,6 +126,9 @@ interface Order {
   userEmail?: string;
   items: OrderItem[];
   totalAmount: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  finalAmount?: number;
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   isGift: boolean;
@@ -1075,14 +1078,35 @@ useEffect(() => {
                       ))}
                     </div>
 
-                    <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900">
-                        Total: ₹{order.totalAmount.toLocaleString()}
-                      </span>
-                      {order.isGift && order.giftMessage && (
-                        <p className="text-xs text-gray-600 italic">
-                          &ldquo;{order.giftMessage}&rdquo;
-                        </p>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-900">
+                          {order.couponCode && order.couponDiscount ? (
+                            <div className="flex flex-col">
+                              <span>Total: ₹{(
+                                order.finalAmount ?? 
+                                (order.totalAmount - order.couponDiscount)
+                              ).toLocaleString()}</span>
+                              <span className="text-xs text-gray-500 line-through">
+                                ₹{order.totalAmount.toLocaleString()}
+                              </span>
+                            </div>
+                          ) : (
+                            `Total: ₹${order.totalAmount.toLocaleString()}`
+                          )}
+                        </span>
+                        {order.isGift && order.giftMessage && (
+                          <p className="text-xs text-gray-600 italic">
+                            &ldquo;{order.giftMessage}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                      {order.couponCode && order.couponDiscount && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-600">Coupon applied:</span>
+                          <span className="font-medium text-purple-700">{order.couponCode}</span>
+                          <span className="text-gray-500">(-₹{order.couponDiscount.toLocaleString()})</span>
+                        </div>
                       )}
                     </div>
                   </motion.div>

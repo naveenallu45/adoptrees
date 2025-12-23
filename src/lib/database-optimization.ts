@@ -123,7 +123,21 @@ export class QueryOptimizer {
     revenuePipeline.push({
       $group: {
         _id: null,
-        totalRevenue: { $sum: '$totalAmount' }
+        totalRevenue: {
+          $sum: {
+            // Use finalAmount if available, otherwise calculate from totalAmount - couponDiscount if coupon exists
+            $ifNull: [
+              '$finalAmount',
+              {
+                $cond: [
+                  { $and: [{ $ifNull: ['$couponDiscount', false] }, { $gt: ['$couponDiscount', 0] }] },
+                  { $subtract: ['$totalAmount', '$couponDiscount'] },
+                  '$totalAmount'
+                ]
+              }
+            ]
+          }
+        }
       }
     });
 

@@ -58,6 +58,9 @@ interface Adoption {
     occasion?: string;
   }[];
   totalAmount: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  finalAmount?: number;
   status: 'pending' | 'confirmed' | 'planted' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   isGift: boolean;
@@ -235,9 +238,19 @@ export default function AdminAdoptionsPage() {
     if (!allData?.data) return { totalRevenue: 0, statusCounts: {}, userTypeCounts: {}, giftOrders: 0 };
     
     // Only count revenue from paid orders (exclude pending, failed, cancelled)
+    // Use finalAmount if available (after coupon discount), otherwise calculate from totalAmount - couponDiscount
     const totalRevenue = filteredAdoptions
       .filter(adoption => adoption.paymentStatus === 'paid' && adoption.status !== 'pending')
-      .reduce((sum, adoption) => sum + adoption.totalAmount, 0);
+      .reduce((sum, adoption) => {
+        if (adoption.finalAmount !== undefined && adoption.finalAmount !== null) {
+          return sum + adoption.finalAmount;
+        }
+        // Calculate finalAmount from totalAmount - couponDiscount if coupon exists
+        if (adoption.couponDiscount && adoption.couponDiscount > 0) {
+          return sum + (adoption.totalAmount - adoption.couponDiscount);
+        }
+        return sum + adoption.totalAmount;
+      }, 0);
     
     const statusCounts = filteredAdoptions.reduce((acc, adoption) => {
       acc[adoption.status] = (acc[adoption.status] || 0) + 1;
@@ -440,11 +453,52 @@ export default function AdminAdoptionsPage() {
       }),
       columnHelper.accessor('totalAmount', {
         header: 'Amount',
-        cell: (_info) => (
-          <span className="font-medium text-gray-900">
-            ₹{_info.getValue().toFixed(2)}
-          </span>
-        ),
+        cell: (_info) => {
+          const adoption = _info.row.original;
+          const hasCoupon = adoption.couponCode && adoption.couponDiscount;
+          // Calculate finalAmount if missing but coupon exists
+          const finalAmount = adoption.finalAmount ?? 
+            (hasCoupon && adoption.couponDiscount ? adoption.totalAmount - adoption.couponDiscount : adoption.totalAmount);
+          
+          return (
+            <div className="flex flex-col">
+              {hasCoupon ? (
+                <>
+                  <span className="font-medium text-gray-900">
+                    ₹{finalAmount.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-gray-500 line-through">
+                    ₹{adoption.totalAmount.toFixed(2)}
+                  </span>
+                </>
+              ) : (
+                <span className="font-medium text-gray-900">
+                  ₹{adoption.totalAmount.toFixed(2)}
+                </span>
+              )}
+            </div>
+          );
+        },
+      }),
+      columnHelper.display({
+        id: 'coupon',
+        header: 'Coupon',
+        cell: (info) => {
+          const adoption = info.row.original;
+          if (adoption.couponCode && adoption.couponDiscount) {
+            return (
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-purple-700">
+                  {adoption.couponCode}
+                </span>
+                <span className="text-xs text-gray-500">
+                  -₹{adoption.couponDiscount.toFixed(2)}
+                </span>
+              </div>
+            );
+          }
+          return <span className="text-xs text-gray-400">—</span>;
+        },
       }),
       columnHelper.accessor('status', {
         header: 'Status',
