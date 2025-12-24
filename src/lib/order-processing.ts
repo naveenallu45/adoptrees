@@ -1,10 +1,11 @@
 import { IOrder } from '@/models/Order';
+import Order from '@/models/Order';
 import User from '@/models/User';
 import Coupon from '@/models/Coupon';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { sendWellWisherTaskAssignmentEmail, sendThankYouEmailWithCertificate, sendGiftRecipientGreetingEmail } from '@/lib/email';
 import { generateCertificate } from '@/lib/certificate';
-import { uploadCertificateToCloudinary } from '@/lib/upload';
+// Removed Cloudinary upload - certificates stored only in database
 
 /**
  * Complete order processing after payment
@@ -52,53 +53,92 @@ export async function processOrderCompletion(order: IOrder): Promise<{
         const { assignWellWisherEqually } = await import('@/lib/utils/wellwisher-assignment');
         const wellwisherId = await assignWellWisherEqually();
       
-        if (wellwisherId) {
-          const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
-            taskId: `${order.orderId}-${index}`,
-            task: `Plant and care for ${item.treeName}`,
-            description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-            scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-            status: 'pending' as const,
-            location: 'To be determined'
-          }));
-
-          order.assignedWellwisher = wellwisherId;
-          order.wellwisherTasks = wellwisherTasks;
-          await order.save();
-          result.completed.wellwisher = true;
-
-          // Send task assignment email (non-blocking)
-          User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
-            if (wellWisher) {
-              try {
-                await sendWellWisherTaskAssignmentEmail(
-                  wellWisher.email,
-                  wellWisher.name || '',
-                  order.orderId,
-                  wellwisherTasks,
-                  {
-                    totalTrees: treesCount,
-                    customerName: order.userName,
-                    isGift: order.isGift || false
-                  }
-                );
-              } catch (emailError) {
-                logError('Error sending well-wisher email', emailError as Error);
-              }
-            }
-          }).catch((findError) => {
-            logError('Error finding well-wisher for email', findError as Error);
+        if (!wellwisherId) {
+          // No well-wisher available - log error and mark as incomplete
+          const errorMsg = 'No well-wisher available for assignment';
+          logError('Well-wisher assignment failed', new Error(errorMsg), {
+            orderId: order.orderId,
+            reason: 'no_wellwisher_available'
           });
+          result.success = false;
+          result.error = errorMsg;
+          // Don't mark as completed - will allow retry
+          return result;
         }
+
+        const wellwisherTasks = order.items.map((item: { treeName: string; quantity: number; [key: string]: unknown }, index: number) => ({
+          taskId: `${order.orderId}-${index}`,
+          task: `Plant and care for ${item.treeName}`,
+          description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+          scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
+          status: 'pending' as const,
+          location: 'To be determined'
+        }));
+
+        order.assignedWellwisher = wellwisherId;
+        order.wellwisherTasks = wellwisherTasks;
+        await order.save();
+        
+        // Verify assignment was saved successfully
+        const savedOrder = await Order.findById(order._id).select('assignedWellwisher wellwisherTasks').lean();
+        if (!savedOrder || savedOrder.assignedWellwisher?.toString() !== wellwisherId) {
+          const errorMsg = 'Well-wisher assignment failed to save';
+          logError('Well-wisher assignment verification failed', new Error(errorMsg), {
+            orderId: order.orderId,
+            wellwisherId,
+            savedWellwisher: savedOrder?.assignedWellwisher?.toString()
+          });
+          result.success = false;
+          result.error = errorMsg;
+          return result;
+        }
+        
+        result.completed.wellwisher = true;
+        logPaymentEvent('wellwisher_assigned', {
+          orderId: order.orderId,
+          wellwisherId,
+          tasksCount: wellwisherTasks.length
+        });
+
+        // Send task assignment email (non-blocking)
+        User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
+          if (wellWisher) {
+            try {
+              await sendWellWisherTaskAssignmentEmail(
+                wellWisher.email,
+                wellWisher.name || '',
+                order.orderId,
+                wellwisherTasks,
+                {
+                  totalTrees: treesCount,
+                  customerName: order.userName,
+                  isGift: order.isGift || false
+                }
+              );
+            } catch (emailError) {
+              logError('Error sending well-wisher email', emailError as Error);
+            }
+          }
+        }).catch((findError) => {
+          logError('Error finding well-wisher for email', findError as Error);
+        });
       } catch (assignmentError) {
-        logError('Error assigning well-wisher', assignmentError as Error);
+        const errorMsg = `Error assigning well-wisher: ${assignmentError instanceof Error ? assignmentError.message : String(assignmentError)}`;
+        logError('Error assigning well-wisher', assignmentError as Error, {
+          orderId: order.orderId
+        });
+        result.success = false;
+        result.error = errorMsg;
+        // Don't mark as completed - will allow retry
+        return result;
       }
     } else {
       result.completed.wellwisher = true; // Already assigned
     }
 
-    // 2. Generate certificate if not exists
-    if (!order.certificate) {
+    // 2. Generate certificate for email (not stored - generated on-demand)
+    // Always generate fresh certificate with latest user data
+    if (true) { // Always generate for email
       try {
         const user = await User.findById(order.userId).select('publicId qrCode image name companyName userType');
         
@@ -143,26 +183,8 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             qrCode: user.qrCode,
           });
 
-          // Upload certificate to Cloudinary and store URL
-          try {
-            const { url: certificateUrl } = await uploadCertificateToCloudinary(
-              certificateBuffer,
-              order.orderId
-            );
-            order.certificateUrl = certificateUrl;
-            logPaymentEvent('certificate_uploaded_to_cloudinary', {
-              orderId: order.orderId,
-              certificateUrl
-            });
-          } catch (uploadError) {
-            logError('Failed to upload certificate to Cloudinary', uploadError as Error, {
-              orderId: order.orderId
-            });
-            // Continue with storing buffer as fallback
-            order.certificate = certificateBuffer;
-          }
-          
-          await order.save();
+          // Don't store certificate - generate on-demand when needed
+          // Certificate is generated here only for email attachment
           result.completed.certificate = true;
 
           // 3. Send thank you email with certificate (non-blocking for better performance)
@@ -173,24 +195,41 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             ? order.giftRecipientName 
             : order.userName;
           
-          // Send email asynchronously - don't block
-          sendThankYouEmailWithCertificate(
-            recipientEmail,
-            recipientName,
-            order.orderId,
-            treesCount,
-            certificateBuffer
-          ).then((emailSent) => {
-            if (emailSent) {
-              result.completed.email = true;
-              logPaymentEvent('thank_you_email_sent', {
+          // Validate certificate buffer before sending email
+          if (!certificateBuffer || certificateBuffer.length === 0) {
+            logError('Certificate buffer is empty, cannot send email', new Error('Empty certificate buffer'), {
+              orderId: order.orderId
+            });
+          } else {
+            // Send email asynchronously - don't block
+            sendThankYouEmailWithCertificate(
+              recipientEmail,
+              recipientName,
+              order.orderId,
+              treesCount,
+              certificateBuffer
+            ).then((emailSent) => {
+              if (emailSent) {
+                result.completed.email = true;
+                logPaymentEvent('thank_you_email_sent', {
+                  orderId: order.orderId,
+                  recipientEmail,
+                  certificateSize: certificateBuffer.length
+                });
+              } else {
+                logError('Thank you email was not sent successfully', new Error('Email sending returned false'), {
+                  orderId: order.orderId,
+                  recipientEmail
+                });
+              }
+            }).catch((emailError) => {
+              logError('Error sending thank you email', emailError as Error, {
                 orderId: order.orderId,
-                recipientEmail
+                recipientEmail,
+                certificateSize: certificateBuffer.length
               });
-            }
-          }).catch((emailError) => {
-            logError('Error sending thank you email', emailError as Error);
-          });
+            });
+          }
           
           // Mark email as completed (will be sent in background)
           result.completed.email = true;
@@ -222,8 +261,6 @@ export async function processOrderCompletion(order: IOrder): Promise<{
         result.success = false;
         result.error = `Certificate generation failed: ${certError instanceof Error ? certError.message : String(certError)}`;
       }
-    } else {
-      result.completed.certificate = true; // Already exists
     }
 
     // Update coupon usage if applicable

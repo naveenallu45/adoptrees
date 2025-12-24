@@ -51,6 +51,20 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   }
 
   try {
+    // Log attachment info for debugging
+    if (options.attachments && options.attachments.length > 0) {
+      console.log('[EMAIL] Sending email with attachments:', {
+        to: options.to,
+        subject: options.subject,
+        attachmentCount: options.attachments.length,
+        attachments: options.attachments.map(att => ({
+          filename: att.filename,
+          contentType: att.contentType,
+          size: att.content instanceof Buffer ? att.content.length : typeof att.content
+        }))
+      });
+    }
+    
     await transporter.sendMail({
       from: env.SMTP_FROM_EMAIL 
         ? `"${env.SMTP_FROM_NAME || 'Adoptrees'}" <${env.SMTP_FROM_EMAIL}>`
@@ -61,9 +75,11 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       text: options.text || options.html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
       attachments: options.attachments || [],
     });
+    
+    console.log('[EMAIL] Email sent successfully:', { to: options.to, subject: options.subject });
     return true;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('[EMAIL] Error sending email:', error);
     
     // Provide helpful error messages for common issues
     if (error instanceof Error) {
@@ -175,6 +191,24 @@ export async function sendThankYouEmailWithCertificate(
   treesCount: number,
   certificateBuffer: Buffer
 ): Promise<boolean> {
+  // Validate inputs
+  if (!email || !email.includes('@')) {
+    console.error('[EMAIL] Invalid email address:', email);
+    return false;
+  }
+  
+  if (!certificateBuffer || certificateBuffer.length === 0) {
+    console.error('[EMAIL] Invalid certificate buffer for order:', orderId);
+    return false;
+  }
+  
+  // Validate certificate buffer is a valid PDF (starts with PDF header)
+  const pdfHeader = certificateBuffer.slice(0, 4).toString();
+  if (pdfHeader !== '%PDF') {
+    console.error('[EMAIL] Certificate buffer is not a valid PDF for order:', orderId);
+    return false;
+  }
+  
   const displayName = name || 'Friend';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
   
@@ -220,18 +254,51 @@ export async function sendThankYouEmailWithCertificate(
     </html>
   `;
 
-  return sendEmail({
-    to: email,
-    subject: 'Thank You for Contributing to a Greener India 🌳 - Your Certificate',
-    html,
-    attachments: [
-      {
-        filename: `Adoptrees_Certificate_${orderId}.pdf`,
-        content: certificateBuffer,
-        contentType: 'application/pdf',
-      },
-    ],
-  });
+  try {
+    console.log('[EMAIL] Sending thank you email with certificate:', {
+      to: email,
+      orderId,
+      certificateSize: certificateBuffer.length,
+      treesCount
+    });
+    
+    // Ensure certificate buffer is a proper Buffer instance
+    const pdfBuffer = Buffer.isBuffer(certificateBuffer) 
+      ? certificateBuffer 
+      : Buffer.from(certificateBuffer);
+    
+    const emailSent = await sendEmail({
+      to: email,
+      subject: 'Thank You for Contributing to a Greener India 🌳 - Your Certificate',
+      html,
+      attachments: [
+        {
+          filename: `Adoptrees_Certificate_${orderId}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ],
+    });
+    
+    if (emailSent) {
+      console.log('[EMAIL] Thank you email sent successfully:', { to: email, orderId });
+    } else {
+      console.error('[EMAIL] Failed to send thank you email:', { to: email, orderId });
+    }
+    
+    return emailSent;
+  } catch (error) {
+    console.error('[EMAIL] Error in sendThankYouEmailWithCertificate:', error);
+    if (error instanceof Error) {
+      console.error('[EMAIL] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        orderId,
+        email
+      });
+    }
+    return false;
+  }
 }
 
 /**

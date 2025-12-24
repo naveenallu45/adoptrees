@@ -8,7 +8,7 @@ import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { processOrderCompletion } from '@/lib/order-processing';
 import { generateCertificate } from '@/lib/certificate';
-import { uploadCertificateToCloudinary } from '@/lib/upload';
+// Removed Cloudinary upload - certificates stored only in database
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
@@ -195,22 +195,12 @@ export async function POST(request: NextRequest) {
               qrCode: user.qrCode, // Use stored QR code from user
             });
             
-            // Upload certificate to Cloudinary and store URL
-            try {
-              const { url: certificateUrl } = await uploadCertificateToCloudinary(
-                certificateBuffer,
-                order.orderId
-              );
-              order.certificateUrl = certificateUrl;
-            } catch (uploadError) {
-              logError('Failed to upload certificate to Cloudinary', uploadError as Error, {
-                orderId: order.orderId
-              });
-              // Continue with storing buffer as fallback
-              order.certificate = certificateBuffer;
-            }
-            
-            await order.save();
+            // Don't store certificate - generate on-demand when needed
+            // Certificate generation logged but not stored
+            logPaymentEvent('certificate_generated_for_existing_order', {
+              orderId: order.orderId,
+              certificateSize: certificateBuffer.length
+            });
           }
         } catch (certError) {
           logError('Error generating certificate for existing order', certError as Error);
@@ -440,23 +430,12 @@ export async function POST(request: NextRequest) {
               qrCode: user.value.qrCode,
             });
 
-          // Update order with certificate
-          // Upload certificate to Cloudinary and store URL
-          try {
-            const { url: certificateUrl } = await uploadCertificateToCloudinary(
-              certificateBuffer,
-              order.orderId
-            );
-            order.certificateUrl = certificateUrl;
-          } catch (uploadError) {
-            logError('Failed to upload certificate to Cloudinary', uploadError as Error, {
-              orderId: order.orderId
-            });
-            // Continue with storing buffer as fallback
-            order.certificate = certificateBuffer;
-          }
-          
-          await order.save();
+          // Don't store certificate - generate on-demand when needed
+          // Certificate generation logged but not stored
+          logPaymentEvent('certificate_generated_for_order', {
+            orderId: order.orderId,
+            certificateSize: certificateBuffer.length
+          });
 
           // Send thank you email with certificate (await to ensure it runs)
             const recipientEmail = order.isGift && order.giftRecipientEmail 
