@@ -272,8 +272,11 @@ export async function POST(request: NextRequest) {
     });
     
     // Return success immediately - user gets instant feedback
-    // Use finalAmount (after coupon and credits) if available, otherwise use totalAmount
-    const displayAmount = order.finalAmount !== undefined ? order.finalAmount : order.totalAmount;
+    // Include pricing breakdown for display in success dialog
+    const originalAmount = order.totalAmount;
+    const couponDiscount = order.couponDiscount || 0;
+    const creditsUsed = order.creditsUsed || 0;
+    const finalAmount = order.finalAmount !== undefined ? order.finalAmount : originalAmount;
     
     return NextResponse.json({
       success: true,
@@ -281,7 +284,11 @@ export async function POST(request: NextRequest) {
       data: {
         orderId: order.orderId,
         paymentStatus: order.paymentStatus,
-        totalAmount: displayAmount, // Show discounted price
+        totalAmount: finalAmount, // Final amount paid (after discounts and credits)
+        originalAmount: originalAmount, // Original amount before discounts
+        couponDiscount: couponDiscount, // Discount from coupon
+        creditsUsed: creditsUsed, // Green credits used
+        couponCode: order.couponCode || null, // Coupon code if applied
         items: order.items.length
       }
     }, {

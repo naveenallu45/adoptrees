@@ -20,7 +20,11 @@ export default function CartContent() {
   const [paymentMessage, setPaymentMessage] = useState('');
   const [orderDetails, setOrderDetails] = useState<{
     orderId: string;
-    totalAmount: number;
+    totalAmount: number; // Final amount paid
+    originalAmount?: number; // Original amount before discounts
+    couponDiscount?: number; // Discount from coupon
+    creditsUsed?: number; // Green credits used
+    couponCode?: string | null; // Coupon code if applied
     itemsCount: number;
   } | null>(null);
   const [checkoutContext, setCheckoutContext] = useState<{ containsForestItems: boolean } | null>(null);
@@ -564,6 +568,10 @@ export default function CartContent() {
               setOrderDetails({
                 orderId: verifyResult.data.orderId,
                 totalAmount: verifyResult.data.totalAmount,
+                originalAmount: verifyResult.data.originalAmount,
+                couponDiscount: verifyResult.data.couponDiscount,
+                creditsUsed: verifyResult.data.creditsUsed,
+                couponCode: verifyResult.data.couponCode,
                 itemsCount: verifyResult.data.items
               });
               clearCart();

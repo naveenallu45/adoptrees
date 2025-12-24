@@ -12,7 +12,11 @@ interface PaymentDialogProps {
   status: PaymentStatus;
   orderDetails?: {
     orderId: string;
-    totalAmount: number;
+    totalAmount: number; // Final amount paid
+    originalAmount?: number; // Original amount before discounts
+    couponDiscount?: number; // Discount from coupon
+    creditsUsed?: number; // Green credits used
+    couponCode?: string | null; // Coupon code if applied
     itemsCount: number;
   } | null;
   errorMessage?: string;
@@ -160,6 +164,44 @@ export default function PaymentDialog({
                               <span className="text-base font-bold text-gray-900 font-mono">{orderDetails.orderId}</span>
                             </div>
                             <div className="h-px bg-green-200"></div>
+                            
+                            {/* Pricing Breakdown - Show if discounts or credits were applied */}
+                            {(orderDetails.originalAmount && orderDetails.originalAmount !== orderDetails.totalAmount) || 
+                             (orderDetails.couponDiscount && orderDetails.couponDiscount > 0) || 
+                             (orderDetails.creditsUsed && orderDetails.creditsUsed > 0) ? (
+                              <>
+                                {orderDetails.originalAmount && orderDetails.originalAmount !== orderDetails.totalAmount && (
+                                  <>
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm font-medium text-gray-600">Original Amount</span>
+                                      <span className="text-base font-semibold text-gray-700">₹{orderDetails.originalAmount.toLocaleString()}</span>
+                                    </div>
+                                    {orderDetails.couponDiscount && orderDetails.couponDiscount > 0 && (
+                                      <>
+                                        <div className="h-px bg-green-200"></div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-medium text-gray-600">
+                                            Coupon Discount {orderDetails.couponCode && `(${orderDetails.couponCode})`}
+                                          </span>
+                                          <span className="text-base font-semibold text-green-600">-₹{orderDetails.couponDiscount.toLocaleString()}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    {orderDetails.creditsUsed && orderDetails.creditsUsed > 0 && (
+                                      <>
+                                        <div className="h-px bg-green-200"></div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-medium text-gray-600">Green Credits Used</span>
+                                          <span className="text-base font-semibold text-green-600">-₹{orderDetails.creditsUsed.toLocaleString()}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    <div className="h-px bg-green-300 my-2"></div>
+                                  </>
+                                )}
+                              </>
+                            ) : null}
+                            
                             <div className="flex justify-between items-center">
                               <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Amount Paid</span>
                               <span className="text-xl font-bold text-green-600">₹{orderDetails.totalAmount.toLocaleString()}</span>
