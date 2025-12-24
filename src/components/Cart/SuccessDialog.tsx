@@ -166,17 +166,17 @@ export default function PaymentDialog({
                             <div className="h-px bg-green-200"></div>
                             
                             {/* Pricing Breakdown - Show if discounts or credits were applied */}
-                            {(orderDetails.originalAmount && orderDetails.originalAmount !== orderDetails.totalAmount) || 
-                             (orderDetails.couponDiscount && orderDetails.couponDiscount > 0) || 
-                             (orderDetails.creditsUsed && orderDetails.creditsUsed > 0) ? (
+                            {(orderDetails.originalAmount !== undefined && orderDetails.originalAmount !== orderDetails.totalAmount) || 
+                             (orderDetails.couponDiscount !== undefined && orderDetails.couponDiscount > 0) || 
+                             (orderDetails.creditsUsed !== undefined && orderDetails.creditsUsed > 0) ? (
                               <>
-                                {orderDetails.originalAmount && orderDetails.originalAmount !== orderDetails.totalAmount && (
+                                {orderDetails.originalAmount !== undefined && orderDetails.originalAmount !== orderDetails.totalAmount && (
                                   <>
                                     <div className="flex justify-between items-center">
                                       <span className="text-sm font-medium text-gray-600">Original Amount</span>
                                       <span className="text-base font-semibold text-gray-700">₹{orderDetails.originalAmount.toLocaleString()}</span>
                                     </div>
-                                    {orderDetails.couponDiscount && orderDetails.couponDiscount > 0 && (
+                                    {orderDetails.couponDiscount !== undefined && orderDetails.couponDiscount > 0 && (
                                       <>
                                         <div className="h-px bg-green-200"></div>
                                         <div className="flex justify-between items-center">
@@ -187,12 +187,12 @@ export default function PaymentDialog({
                                         </div>
                                       </>
                                     )}
-                                    {orderDetails.creditsUsed && orderDetails.creditsUsed > 0 && (
+                                    {orderDetails.creditsUsed !== undefined && orderDetails.creditsUsed > 0 && (
                                       <>
                                         <div className="h-px bg-green-200"></div>
                                         <div className="flex justify-between items-center">
                                           <span className="text-sm font-medium text-gray-600">Green Credits Used</span>
-                                          <span className="text-base font-semibold text-green-600">-₹{orderDetails.creditsUsed.toLocaleString()}</span>
+                                          <span className="text-base font-semibold text-green-600">-{orderDetails.creditsUsed.toLocaleString()} pts</span>
                                         </div>
                                       </>
                                     )}

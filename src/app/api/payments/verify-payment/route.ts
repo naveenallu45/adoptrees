@@ -244,7 +244,21 @@ export async function POST(request: NextRequest) {
     
     // Fire-and-forget: Process order completion asynchronously
     // This doesn't block the payment response
-    processOrderCompletion(order).catch((processingError) => {
+    processOrderCompletion(order).then((processingResult) => {
+      // Log the processing result to track email completion
+      if (!processingResult.success || !processingResult.completed.email) {
+        logError('Order processing completed but email may have failed', new Error(processingResult.error || 'Email not sent'), {
+          orderId: order.orderId,
+          paymentId: razorpay_payment_id,
+          completed: processingResult.completed
+        });
+      } else {
+        logPaymentEvent('order_processing_completed_successfully', {
+          orderId: order.orderId,
+          completed: processingResult.completed
+        });
+      }
+    }).catch((processingError) => {
       logError('Error in background order processing', processingError as Error, {
         orderId: order.orderId,
         paymentId: razorpay_payment_id
@@ -263,10 +277,17 @@ export async function POST(request: NextRequest) {
     
     // Return success immediately - user gets instant feedback
     // Include pricing breakdown for display in success dialog
-    const originalAmount = order.totalAmount;
+    const originalAmount = order.totalAmount; // Original amount before any discounts
     const couponDiscount = order.couponDiscount || 0;
     const creditsUsed = order.creditsUsed || 0;
-    const finalAmount = order.finalAmount !== undefined ? order.finalAmount : originalAmount;
+    // Calculate final amount: original - coupon discount - credits
+    // Use stored finalAmount if available, otherwise calculate it
+    const finalAmount = order.finalAmount !== undefined 
+      ? order.finalAmount 
+      : (originalAmount - couponDiscount - creditsUsed);
+    
+    // Ensure originalAmount is always set when discounts or credits are applied
+    const shouldShowBreakdown = couponDiscount > 0 || creditsUsed > 0;
     
     return NextResponse.json({
       success: true,
@@ -275,9 +296,9 @@ export async function POST(request: NextRequest) {
         orderId: order.orderId,
         paymentStatus: order.paymentStatus,
         totalAmount: finalAmount, // Final amount paid (after discounts and credits)
-        originalAmount: originalAmount, // Original amount before discounts
-        couponDiscount: couponDiscount, // Discount from coupon
-        creditsUsed: creditsUsed, // Green credits used
+        originalAmount: shouldShowBreakdown ? originalAmount : undefined, // Original amount before discounts (only if discounts/credits applied)
+        couponDiscount: couponDiscount > 0 ? couponDiscount : undefined, // Discount from coupon
+        creditsUsed: creditsUsed > 0 ? creditsUsed : undefined, // Green credits used (in points)
         couponCode: order.couponCode || null, // Coupon code if applied
         items: order.items.length
       }

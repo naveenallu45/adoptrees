@@ -159,8 +159,12 @@ export async function POST(request: NextRequest) {
 
     // Calculate total amount in paise (Razorpay requires amount in smallest currency unit)
     const totalAmount = orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    // Calculate amount after coupon discount
-    const amountAfterCoupon = finalAmount !== undefined ? finalAmount : totalAmount;
+    // Calculate amount after coupon discount (before credits)
+    // If finalAmount is provided, calculate amountAfterCoupon by reversing the credits
+    // Otherwise, calculate from totalAmount and couponDiscount
+    const amountAfterCoupon = finalAmount !== undefined 
+      ? (finalAmount + (creditsUsed || 0)) // Reverse credits to get amount after coupon
+      : (totalAmount - (couponDiscount || 0)); // Calculate from total minus coupon discount
     
     // Validate and process credits usage
     let creditsToUse = 0;
@@ -227,7 +231,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Final amount after credits
-    const orderTotalAmount = amountAfterCoupon - creditsToUse;
+    // If finalAmount was provided, use it directly (it already includes credits)
+    // Otherwise, calculate it from amountAfterCoupon - creditsToUse
+    const orderTotalAmount = finalAmount !== undefined 
+      ? finalAmount 
+      : (amountAfterCoupon - creditsToUse);
     const amountInPaise = Math.round(orderTotalAmount * 100); // Convert to paise
 
     // Check for duplicate pending orders (within last 5 minutes) with same items

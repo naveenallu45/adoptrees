@@ -100,28 +100,48 @@ export async function processOrderCompletion(order: IOrder): Promise<{
           tasksCount: wellwisherTasks.length
         });
 
-        // Send task assignment email (non-blocking)
-        User.findById(wellwisherId).select('email name').then(async (wellWisher) => {
-          if (wellWisher) {
-            try {
-              await sendWellWisherTaskAssignmentEmail(
-                wellWisher.email,
-                wellWisher.name || '',
-                order.orderId,
-                wellwisherTasks,
-                {
-                  totalTrees: treesCount,
-                  customerName: order.userName,
-                  isGift: order.isGift || false
-                }
-              );
-            } catch (emailError) {
-              logError('Error sending well-wisher email', emailError as Error);
+        // Send task assignment email and await completion
+        try {
+          const wellWisher = await User.findById(wellwisherId).select('email name');
+          if (wellWisher && wellWisher.email) {
+            const emailSent = await sendWellWisherTaskAssignmentEmail(
+              wellWisher.email,
+              wellWisher.name || '',
+              order.orderId,
+              wellwisherTasks,
+              {
+                totalTrees: treesCount,
+                customerName: order.userName,
+                isGift: order.isGift || false
+              }
+            );
+            
+            if (emailSent) {
+              logPaymentEvent('wellwisher_task_assignment_email_sent', {
+                orderId: order.orderId,
+                wellwisherId,
+                wellwisherEmail: wellWisher.email,
+                tasksCount: wellwisherTasks.length
+              });
+            } else {
+              logError('Well-wisher task assignment email failed to send', new Error('Email sending returned false'), {
+                orderId: order.orderId,
+                wellwisherId,
+                wellwisherEmail: wellWisher.email
+              });
             }
+          } else {
+            logError('Well-wisher not found or missing email', new Error('Well-wisher not found'), {
+              orderId: order.orderId,
+              wellwisherId
+            });
           }
-        }).catch((findError) => {
-          logError('Error finding well-wisher for email', findError as Error);
-        });
+        } catch (emailError) {
+          logError('Error sending well-wisher email', emailError as Error, {
+            orderId: order.orderId,
+            wellwisherId
+          });
+        }
       } catch (assignmentError) {
         const errorMsg = `Error assigning well-wisher: ${assignmentError instanceof Error ? assignmentError.message : String(assignmentError)}`;
         logError('Error assigning well-wisher', assignmentError as Error, {
@@ -200,15 +220,18 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             logError('Certificate buffer is empty, cannot send email', new Error('Empty certificate buffer'), {
               orderId: order.orderId
             });
+            result.completed.email = false;
           } else {
-            // Send email asynchronously - don't block
-            sendThankYouEmailWithCertificate(
-              recipientEmail,
-              recipientName,
-              order.orderId,
-              treesCount,
-              certificateBuffer
-            ).then((emailSent) => {
+            // Send email and await completion to ensure it's sent
+            try {
+              const emailSent = await sendThankYouEmailWithCertificate(
+                recipientEmail,
+                recipientName,
+                order.orderId,
+                treesCount,
+                certificateBuffer
+              );
+              
               if (emailSent) {
                 result.completed.email = true;
                 logPaymentEvent('thank_you_email_sent', {
@@ -217,22 +240,21 @@ export async function processOrderCompletion(order: IOrder): Promise<{
                   certificateSize: certificateBuffer.length
                 });
               } else {
+                result.completed.email = false;
                 logError('Thank you email was not sent successfully', new Error('Email sending returned false'), {
                   orderId: order.orderId,
                   recipientEmail
                 });
               }
-            }).catch((emailError) => {
+            } catch (emailError) {
+              result.completed.email = false;
               logError('Error sending thank you email', emailError as Error, {
                 orderId: order.orderId,
                 recipientEmail,
                 certificateSize: certificateBuffer.length
               });
-            });
+            }
           }
-          
-          // Mark email as completed (will be sent in background)
-          result.completed.email = true;
 
           // Send gift recipient emails (non-blocking)
           if (order.isGift && order.giftRecipientEmail) {
