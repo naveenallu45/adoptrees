@@ -276,20 +276,34 @@ export async function PUT(
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
 
-    // Prevent updates to immutable fields (publicId and qrCode are set at registration only)
+    // CRITICAL: Prevent updates to immutable fields (publicId and qrCode are set at registration only)
+    // These fields CANNOT be deleted, modified, or cleared
     if (updateData.publicId !== undefined) {
       delete updateData.publicId;
-      console.warn('Attempted to update immutable field: publicId');
+      console.warn('[User Update] Attempted to update immutable field: publicId - blocked');
     }
     if (updateData.qrCode !== undefined) {
       delete updateData.qrCode;
-      console.warn('Attempted to update immutable field: qrCode');
+      console.warn('[User Update] Attempted to update immutable field: qrCode - blocked');
+    }
+
+    // Additional safety: Ensure we're not using $unset to remove these fields
+    // The model hooks will catch this, but we add explicit protection here too
+    if ('$unset' in updateData) {
+      const updateDataWithUnset = updateData as UpdateData & { $unset?: Record<string, unknown> };
+      const unset = updateDataWithUnset.$unset;
+      if (unset && (unset.publicId !== undefined || unset.qrCode !== undefined)) {
+        delete unset.publicId;
+        delete unset.qrCode;
+        console.warn('[User Update] Attempted to $unset immutable fields - blocked');
+      }
     }
 
     // Log update data
     console.log('Update data before save:', updateData);
 
     // Use findByIdAndUpdate to save all changes at once
+    // The model hooks will provide additional protection against publicId/qrCode modifications
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { $set: updateData },
