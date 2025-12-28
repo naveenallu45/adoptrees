@@ -22,6 +22,7 @@ interface PaymentDialogProps {
   errorMessage?: string;
   onRetry?: () => void;
   isForestOrder?: boolean;
+  onViewTrees?: () => void; // Callback for "View Your Trees" button
 }
 
 export default function PaymentDialog({ 
@@ -31,7 +32,8 @@ export default function PaymentDialog({
   orderDetails, 
   errorMessage,
   onRetry,
-  isForestOrder = false
+  isForestOrder = false,
+  onViewTrees
 }: PaymentDialogProps) {
   const getStatusConfig = () => {
     switch (status) {
@@ -102,6 +104,9 @@ export default function PaymentDialog({
   const handlePrimaryAction = () => {
     if (status === 'failed' && onRetry) {
       onRetry();
+    } else if (status === 'success' && onViewTrees) {
+      // Redirect to trees page when "View Your Trees" is clicked
+      onViewTrees();
     } else {
       onClose();
     }

@@ -34,7 +34,7 @@ export default function HeroSection() {
           </p>
 
           {/* CTA Button */}
-          <div className="flex justify-center">
+          <div className="flex justify-center pb-6 sm:pb-8 md:pb-10">
             <Link 
               href="/dealers#trees"
               className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-sm sm:text-base font-semibold hover:bg-white/30 transition-all duration-300 shadow-lg hover:scale-105 border border-white/30"

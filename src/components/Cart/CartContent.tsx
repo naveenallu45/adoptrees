@@ -711,16 +711,22 @@ export default function CartContent() {
     setShowPaymentDialog(false);
     setOrderDetails(null);
     setPaymentMessage('');
+    router.refresh();
+    setCheckoutContext(null);
+  };
+
+  const handleViewTrees = () => {
+    setShowPaymentDialog(false);
+    setOrderDetails(null);
+    setPaymentMessage('');
     const containsForestItems = checkoutContext?.containsForestItems ?? false;
     // Refresh the page to update any server-rendered data
     router.refresh();
-    // Redirect to appropriate dashboard only on success
-    if (paymentStatus === 'success') {
-      if (session?.user?.userType === 'individual') {
-        router.push(containsForestItems ? '/dashboard/individual/forest' : '/dashboard/individual/trees');
-      } else if (session?.user?.userType === 'company') {
-        router.push(containsForestItems ? '/dashboard/company/forest' : '/dashboard/company/trees');
-      }
+    // Redirect to appropriate dashboard based on user type
+    if (session?.user?.userType === 'individual') {
+      router.push(containsForestItems ? '/dashboard/individual/forest' : '/dashboard/individual/trees');
+    } else if (session?.user?.userType === 'company' || session?.user?.userType === 'dealer') {
+      router.push(containsForestItems ? '/dashboard/company/forest' : '/dashboard/company/trees');
     }
     setCheckoutContext(null);
   };
@@ -1208,6 +1214,7 @@ export default function CartContent() {
         errorMessage={paymentMessage}
         onRetry={handleRetryPayment}
         isForestOrder={checkoutContext?.containsForestItems}
+        onViewTrees={handleViewTrees}
       />
     </div>
   );

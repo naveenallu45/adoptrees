@@ -851,8 +851,8 @@ useEffect(() => {
                                     : ((item.recipientEmail || primaryOrder.giftRecipientEmail)?.toLowerCase().trim());
                                   const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
                                   
-                                  // For dealer orders where customer is viewing their own trees
-                                  if (isDealerOrder && isRecipient && isDealerItem) {
+                                  // For dealer orders, always show dealer name (for both logged-in and public views)
+                                  if (isDealerOrder && isDealerItem) {
                                     const dealerName = primaryOrder.dealerName || primaryOrder.showroomName || primaryOrder.userName || 'Dealer';
                                     const vehicleName = item.vehicleName;
                                     
@@ -871,7 +871,7 @@ useEffect(() => {
                                     );
                                   }
                                   
-                                  // For regular gift items or dealer viewing
+                                  // For regular gift items (non-dealer)
                                   const displayName = isDealerItem 
                                     ? (item.customerName || 'Customer')
                                     : (item.recipientName || primaryOrder.giftRecipientName);
