@@ -157,29 +157,41 @@ export async function GET(request: NextRequest) {
             }
           },
           // Determine the owner of this item (buyer or gift recipient)
-          // Priority: 1. items.recipientEmail (item-level gift), 2. giftRecipientEmail (order-level gift), 3. userEmail (buyer)
+          // Priority: 1. items.customerEmail (dealer orders), 2. items.recipientEmail (item-level gift), 3. giftRecipientEmail (order-level gift), 4. userEmail (buyer)
           ownerEmail: {
             $cond: {
               if: {
                 $and: [
-                  { $ne: ['$items.recipientEmail', null] },
-                  { $ne: ['$items.recipientEmail', undefined] },
-                  { $ne: ['$items.recipientEmail', ''] }
+                  { $ne: ['$items.customerEmail', null] },
+                  { $ne: ['$items.customerEmail', undefined] },
+                  { $ne: ['$items.customerEmail', ''] }
                 ]
               },
-              then: { $toLower: '$items.recipientEmail' },
+              then: { $toLower: '$items.customerEmail' },
               else: {
                 $cond: {
                   if: {
                     $and: [
-                      { $or: ['$isGift', { $eq: ['$items.adoptionType', 'gift'] }] },
-                      { $ne: ['$giftRecipientEmail', null] },
-                      { $ne: ['$giftRecipientEmail', undefined] },
-                      { $ne: ['$giftRecipientEmail', ''] }
+                      { $ne: ['$items.recipientEmail', null] },
+                      { $ne: ['$items.recipientEmail', undefined] },
+                      { $ne: ['$items.recipientEmail', ''] }
                     ]
                   },
-                  then: { $toLower: '$giftRecipientEmail' },
-                  else: { $toLower: '$userEmail' }
+                  then: { $toLower: '$items.recipientEmail' },
+                  else: {
+                    $cond: {
+                      if: {
+                        $and: [
+                          { $or: ['$isGift', { $eq: ['$items.adoptionType', 'gift'] }] },
+                          { $ne: ['$giftRecipientEmail', null] },
+                          { $ne: ['$giftRecipientEmail', undefined] },
+                          { $ne: ['$giftRecipientEmail', ''] }
+                        ]
+                      },
+                      then: { $toLower: '$giftRecipientEmail' },
+                      else: { $toLower: '$userEmail' }
+                    }
+                  }
                 }
               }
             }
@@ -245,12 +257,21 @@ export async function GET(request: NextRequest) {
           isGiftItem: {
             $or: [
               { $eq: ['$items.adoptionType', 'gift'] },
+              // Dealer orders where customerEmail is present
+              { $and: [
+                { $eq: ['$userType', 'dealer'] },
+                { $ne: ['$items.customerEmail', null] },
+                { $ne: ['$items.customerEmail', undefined] },
+                { $ne: ['$items.customerEmail', ''] }
+              ]},
+              // Regular gift orders with recipientEmail
               { $and: [
                 '$isGift',
                 { $ne: ['$items.recipientEmail', null] },
                 { $ne: ['$items.recipientEmail', undefined] },
                 { $ne: ['$items.recipientEmail', ''] }
               ]},
+              // Regular gift orders with giftRecipientEmail
               { $and: [
                 '$isGift',
                 { $ne: ['$giftRecipientEmail', null] },

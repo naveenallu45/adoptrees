@@ -18,6 +18,9 @@ interface OrderItem {
 interface Order {
   paymentStatus: string;
   totalAmount: number;
+  finalAmount?: number; // Amount after discounts
+  couponDiscount?: number;
+  creditsUsed?: number;
   items: OrderItem[];
   [key: string]: unknown;
 }
@@ -40,7 +43,11 @@ export default function CompanyTransactionsPage() {
           const orders = result.data || [];
           const totalSpent = orders.reduce((sum: number, order: Order) => {
             if (order.paymentStatus === 'paid') {
-              return sum + order.totalAmount;
+              // Use finalAmount (after discounts) if available, otherwise calculate from totalAmount
+              const amountPaid = order.finalAmount !== undefined 
+                ? order.finalAmount 
+                : (order.totalAmount - (order.couponDiscount || 0) - (order.creditsUsed || 0));
+              return sum + Math.max(0, amountPaid); // Ensure non-negative
             }
             return sum;
           }, 0);
