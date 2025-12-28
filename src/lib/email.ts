@@ -133,8 +133,8 @@ export async function sendOTPEmail(email: string, otp: string): Promise<boolean>
   });
 }
 
-export async function sendWelcomeEmail(email: string, name: string, userType: 'individual' | 'company'): Promise<boolean> {
-  const displayName = name || (userType === 'company' ? 'Valued Customer' : 'Friend');
+export async function sendWelcomeEmail(email: string, name: string, userType: 'individual' | 'company' | 'dealer'): Promise<boolean> {
+  const displayName = name || (userType === 'company' || userType === 'dealer' ? 'Valued Customer' : 'Friend');
   
   const html = `
     <!DOCTYPE html>
@@ -162,7 +162,7 @@ export async function sendWelcomeEmail(email: string, name: string, userType: 'i
             <p style="margin: 0; color: #1f2937; font-weight: 500;">Ready to start planting? Visit your dashboard to begin your journey!</p>
           </div>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com'}/dashboard/${userType}/trees" 
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com'}/dashboard/${userType === 'dealer' ? 'company' : userType}/trees" 
                style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 0;">
               Go to Dashboard
             </a>
@@ -183,13 +183,19 @@ export async function sendWelcomeEmail(email: string, name: string, userType: 'i
 
 /**
  * Send thank you email with certificate PDF after successful tree adoption
+ * For dealer orders, includes dealer name and vehicle information
  */
 export async function sendThankYouEmailWithCertificate(
   email: string,
   name: string,
   orderId: string,
   treesCount: number,
-  certificateBuffer: Buffer
+  certificateBuffer: Buffer,
+  dealerInfo?: {
+    dealerName?: string;
+    showroomName?: string;
+    vehicleName?: string;
+  }
 ): Promise<boolean> {
   // Validate inputs
   if (!email || !email.includes('@')) {
@@ -212,44 +218,203 @@ export async function sendThankYouEmailWithCertificate(
   const displayName = name || 'Friend';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
   
+  // Check if this is a dealer order
+  const isDealerOrder = !!(dealerInfo?.dealerName || dealerInfo?.showroomName);
+  const dealerName = dealerInfo?.dealerName || dealerInfo?.showroomName || '';
+  const vehicleName = dealerInfo?.vehicleName || '';
+  
+  // Customize email content for dealer orders
+  let greetingMessage: string;
+  let mainMessage: string;
+  let subject: string;
+  let occasionText: string = '';
+  
+  if (isDealerOrder) {
+    // Format vehicle name as buying occasion
+    if (vehicleName) {
+      const capitalizedVehicle = vehicleName.charAt(0).toUpperCase() + vehicleName.slice(1).toLowerCase();
+      occasionText = `Occasion of buying ${capitalizedVehicle}`;
+    }
+    
+    const vehicleText = vehicleName ? ` with your ${vehicleName} purchase` : '';
+    greetingMessage = `🎉 Congratulations on your new vehicle${vehicleText}! 🚗`;
+    mainMessage = `<strong>${dealerName}</strong> has gifted you <strong>${treesCount} tree${treesCount > 1 ? 's' : ''}</strong> as a token of appreciation for choosing them as your trusted partner.${occasionText ? ` This tree adoption is for the <strong>${occasionText}</strong>.` : ''} This thoughtful gesture represents their commitment to environmental sustainability and your shared responsibility towards a greener future.`;
+    subject = vehicleName 
+      ? `🎁 Gift from ${dealerName} - Tree Adoption Certificate for Your ${vehicleName} 🌳`
+      : `🎁 Gift from ${dealerName} - Tree Adoption Certificate 🌳`;
+  } else {
+    greetingMessage = 'Thank you for contributing to a <strong>Greener India</strong>! 🌿';
+    mainMessage = `Your commitment to planting <strong>${treesCount} tree${treesCount > 1 ? 's' : ''}</strong> is making a real difference in our environment. Every tree you adopt helps:`;
+    subject = 'Thank You for Contributing to a Greener India 🌳 - Your Certificate';
+  }
+  
+  // Production-level HTML email template with table-based layout for maximum email client compatibility
   const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Thank You for Contributing to a Greener India</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>${isDealerOrder ? 'Gift Tree Certificate' : 'Thank You for Contributing to a Greener India'}</title>
+        <!--[if mso]>
+        <style type="text/css">
+          body, table, td {font-family: Arial, sans-serif !important;}
+        </style>
+        <![endif]-->
       </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 21px;">🌳 Thank You! 🌳</h1>
-        </div>
-        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
-          <h2 style="color: #1f2937; margin-top: 0;">Hello ${displayName}!</h2>
-          <p style="font-size: 12px; color: #374151;">Thank you for contributing to a <strong>Greener India</strong>! 🌿</p>
-          <p style="color: #374151;">Your commitment to planting <strong>${treesCount} tree${treesCount > 1 ? 's' : ''}</strong> is making a real difference in our environment. Every tree you adopt helps:</p>
-          <ul style="color: #374151; line-height: 1.8; padding-left: 20px;">
-            <li>🌱 Combat climate change by absorbing CO₂</li>
-            <li>💨 Produce clean oxygen for our planet</li>
-            <li>🌍 Restore biodiversity and ecosystems</li>
-            <li>🤝 Support local communities and farmers</li>
-          </ul>
-          <div style="background: white; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <p style="margin: 0; color: #1f2937; font-weight: 500;">📄 Your certificate is attached to this email!</p>
-            <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 11px;">Download and share your contribution certificate with pride.</p>
-          </div>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${appUrl}/dashboard" 
-               style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 0;">
-              View Your Trees
-            </a>
-          </div>
-          <p style="color: #6b7280; font-size: 11px; margin-top: 30px;">We'll keep you updated as your trees are planted and grow. Stay tuned for planting photos and location details!</p>
-          <p style="color: #6b7280; font-size: 11px; margin-top: 20px;">Best regards,<br>The Adoptrees Team 🌿</p>
-          <p style="color: #9ca3af; font-size: 9px; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-            Order ID: ${orderId}
-          </p>
-        </div>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <!-- Wrapper Table -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+          <tr>
+            <td align="center" style="padding: 20px 0;">
+              <!-- Main Container -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                      ${isDealerOrder ? '🎁 Gift Tree Certificate 🎁' : '🌳 Thank You! 🌳'}
+                    </h1>
+                  </td>
+                </tr>
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px 30px; background-color: #ffffff;">
+                    <h2 style="color: #1f2937; margin-top: 0; margin-bottom: 20px; font-size: 24px; font-weight: 600;">Hello ${displayName}!</h2>
+                    
+                    ${isDealerOrder ? `
+                      <!-- Dealer Order Content -->
+                      <!-- Congratulations Banner -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 25px;">
+                        <tr>
+                          <td style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);">
+                            <p style="margin: 0; color: #92400e; font-weight: 700; font-size: 18px; line-height: 1.4;">${greetingMessage}</p>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Main Message -->
+                      <p style="color: #374151; font-size: 16px; line-height: 1.8; margin-bottom: 25px;">${mainMessage}</p>
+                      
+                      ${vehicleName ? `
+                        <!-- Vehicle Information Card -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 25px;">
+                          <tr>
+                            <td style="background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border: 2px solid #10b981; padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.15);">
+                              <p style="margin: 0 0 10px 0; color: #1f2937; font-weight: 700; font-size: 22px;">🚗 ${vehicleName}</p>
+                              <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">Your vehicle purchase has contributed to a greener planet!</p>
+                            </td>
+                          </tr>
+                        </table>
+                      ` : ''}
+                      
+                      ${occasionText ? `
+                        <!-- Occasion Information -->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 25px;">
+                          <tr>
+                            <td style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);">
+                              <p style="margin: 0 0 8px 0; color: #065f46; font-weight: 700; font-size: 16px;">${occasionText}</p>
+                              <p style="margin: 0; color: #047857; font-size: 14px; line-height: 1.5;">This tree adoption celebrates your vehicle purchase!</p>
+                            </td>
+                          </tr>
+                        </table>
+                      ` : ''}
+                      
+                      <!-- Dealer Information Card -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 25px;">
+                        <tr>
+                          <td style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-left: 4px solid #8b5cf6; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.1);">
+                            <p style="margin: 0 0 8px 0; color: #1f2937; font-weight: 600; font-size: 16px;">🎁 Gifted by: <strong style="color: #6b21a8;">${dealerName}</strong></p>
+                            <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">This tree adoption is a special gift from your dealer as a token of appreciation.</p>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Impact Information -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 25px;">
+                        <tr>
+                          <td style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #3b82f6; padding: 20px; border-radius: 8px;">
+                            <p style="margin: 0 0 15px 0; color: #1e40af; font-weight: 700; font-size: 16px; text-align: center;">🌿 Your Environmental Impact</p>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                              <tr>
+                                <td style="text-align: center; padding: 10px;">
+                                  <p style="margin: 0; color: #10b981; font-size: 28px; font-weight: 700;">${treesCount}</p>
+                                  <p style="margin: 5px 0 0 0; color: #065f46; font-size: 12px; font-weight: 600;">Tree${treesCount > 1 ? 's' : ''} Adopted</p>
+                                </td>
+                                <td style="text-align: center; padding: 10px;">
+                                  <p style="margin: 0; color: #10b981; font-size: 28px; font-weight: 700;">💨</p>
+                                  <p style="margin: 5px 0 0 0; color: #065f46; font-size: 12px; font-weight: 600;">Oxygen Produced</p>
+                                </td>
+                                <td style="text-align: center; padding: 10px;">
+                                  <p style="margin: 0; color: #10b981; font-size: 28px; font-weight: 700;">🌍</p>
+                                  <p style="margin: 5px 0 0 0; color: #065f46; font-size: 12px; font-weight: 600;">CO₂ Absorbed</p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    ` : `
+                      <!-- Regular Order Content -->
+                      <p style="font-size: 16px; color: #374151; line-height: 1.8; margin-bottom: 20px;">${greetingMessage}</p>
+                      <p style="color: #374151; font-size: 16px; line-height: 1.8; margin-bottom: 25px;">${mainMessage}</p>
+                      <ul style="color: #374151; line-height: 1.8; padding-left: 20px; margin-bottom: 25px; font-size: 15px;">
+                        <li style="margin-bottom: 10px;">🌱 Combat climate change by absorbing CO₂</li>
+                        <li style="margin-bottom: 10px;">💨 Produce clean oxygen for our planet</li>
+                        <li style="margin-bottom: 10px;">🌍 Restore biodiversity and ecosystems</li>
+                        <li style="margin-bottom: 10px;">🤝 Support local communities and farmers</li>
+                      </ul>
+                    `}
+                    
+                    <!-- Certificate Information -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);">
+                          <p style="margin: 0 0 8px 0; color: #1f2937; font-weight: 600; font-size: 16px;">📄 Your Certificate is Attached!</p>
+                          <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">Download and share your contribution certificate with pride. This certificate validates your commitment to environmental sustainability.</p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- CTA Button -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 30px;">
+                      <tr>
+                        <td align="center">
+                          <a href="${appUrl}/dashboard" 
+                             style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                            View Your Trees
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Additional Information -->
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">We'll keep you updated as your trees are planted and grow. Stay tuned for planting photos and location details!</p>
+                    
+                    <!-- Closing -->
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-bottom: 0;">
+                      Best regards,<br>
+                      <strong style="color: #10b981;">The Adoptrees Team</strong> 🌿
+                    </p>
+                  </td>
+                </tr>
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 25px 30px; border-top: 1px solid #e5e7eb;">
+                    <p style="margin: 0; color: #9ca3af; font-size: 11px; line-height: 1.6; text-align: center;">
+                      Order ID: ${orderId}${isDealerOrder ? ` | Gifted by: ${dealerName}${vehicleName ? ` | Vehicle: ${vehicleName}` : ''}` : ''}
+                    </p>
+                    <p style="margin: 15px 0 0 0; color: #9ca3af; font-size: 10px; line-height: 1.6; text-align: center;">
+                      © ${new Date().getFullYear()} Adoptrees. All rights reserved.<br>
+                      Building a Greener India, One Tree at a Time.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>
   `;
@@ -269,7 +434,7 @@ export async function sendThankYouEmailWithCertificate(
     
     const emailSent = await sendEmail({
       to: email,
-      subject: 'Thank You for Contributing to a Greener India 🌳 - Your Certificate',
+      subject: subject,
       html,
       attachments: [
         {
@@ -483,7 +648,7 @@ export async function sendGrowthUpdateEmail(
 export function getMarketingEmailTemplate(
   templateId: string, 
   displayName: string, 
-  userType: 'individual' | 'company', 
+  userType: 'individual' | 'company' | 'dealer', 
   appUrl: string,
   couponCode?: string,
   discount?: number,
@@ -858,7 +1023,8 @@ export function getMarketingEmailTemplate(
   };
 
   // Return template based on user type
-  const templates = userType === 'company' ? companyTemplates : individualTemplates;
+  // Dealers use company templates for marketing emails
+  const templates = (userType === 'company' || userType === 'dealer') ? companyTemplates : individualTemplates;
   const baseTemplate = templates[templateId] || templates['adopt-trees'];
   
   // Add coupon information to content if provided
@@ -921,13 +1087,13 @@ export function getMarketingEmailTemplate(
 export async function sendMarketingEmail(
   email: string,
   name: string,
-  userType: 'individual' | 'company',
+  userType: 'individual' | 'company' | 'dealer',
   templateId?: string,
   couponCode?: string,
   discount?: number,
   discountType?: 'percentage' | 'amount'
 ): Promise<boolean> {
-  const displayName = name || (userType === 'company' ? 'Valued Customer' : 'Friend');
+  const displayName = name || (userType === 'company' || userType === 'dealer' ? 'Valued Customer' : 'Friend');
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adoptrees.com';
   
   // Use provided template or rotate between different marketing messages
@@ -984,7 +1150,7 @@ export async function sendMarketingEmail(
                     <div style="background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); border-left: 4px solid #10b981; padding: 18px 20px; margin: 30px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
                       <p style="margin: 0 0 8px 0; color: #1f2937; font-weight: 600; font-size: 12px;">💡 Inspiration</p>
                       <p style="margin: 0; color: #6b7280; font-size: 11px; line-height: 1.6; font-style: italic;">
-                        ${userType === 'company' 
+                        ${(userType === 'company' || userType === 'dealer')
                           ? '"The future belongs to those who understand that doing more with less is compassionate, prosperous, and enduring." — Paul Hawken'
                           : '"The Earth does not belong to us; we belong to the Earth. All things are connected." — Chief Seattle'
                         }
@@ -1002,8 +1168,8 @@ export async function sendMarketingEmail(
                     <!-- Impact Section -->
                     <div style="background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%); border: 1px solid #7dd3fc; padding: 20px; margin: 30px 0; border-radius: 8px;">
                       <p style="margin: 0; color: #0c4a6e; font-size: 11px; line-height: 1.6;">
-                        <strong>📊 ${userType === 'company' ? 'Corporate Impact:' : 'Your Impact:'}</strong> 
-                        ${userType === 'company' 
+                        <strong>📊 ${(userType === 'company' || userType === 'dealer') ? 'Corporate Impact:' : 'Your Impact:'}</strong> 
+                        ${(userType === 'company' || userType === 'dealer')
                           ? 'Every tree your company adopts contributes to ESG compliance, carbon offset goals, and demonstrates environmental leadership. Thank you for being part of India\'s corporate green movement!'
                           : 'Every tree you adopt contributes to cleaner air, restored ecosystems, and a healthier planet. Thank you for being part of this green movement!'
                         }

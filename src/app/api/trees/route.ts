@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     
     // Build query filter
     const filter: { isActive: boolean; treeType?: string } = { isActive: true };
-    if (type === 'individual' || type === 'company' || type === 'forest') {
+    if (type === 'individual' || type === 'company' || type === 'forest' || type === 'dealer') {
       filter.treeType = type;
     }
     

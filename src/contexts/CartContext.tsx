@@ -10,11 +10,17 @@ export interface CartItem {
   imageUrl: string;
   info: string;
   oxygenKgs: number;
-  type: 'individual' | 'company' | 'forest';
+  type: 'individual' | 'company' | 'forest' | 'dealer';
   adoptionType?: 'self' | 'gift';
   recipientName?: string;
   recipientEmail?: string;
   giftMessage?: string;
+  // Dealer customer fields
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  vehicleName?: string;
+  customerProfilePicture?: string;
   // Package fields for corporate trees
   packageQuantity?: number;
   packagePrice?: number;

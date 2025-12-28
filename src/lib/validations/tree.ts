@@ -33,9 +33,9 @@ export const treeSchema = z.object({
     .nonnegative('Oxygen production cannot be negative')
     .max(10000, 'Oxygen production value seems unreasonably high'),
   treeType: z
-    .enum(['individual', 'company', 'forest'])
-    .refine((val) => ['individual', 'company', 'forest'].includes(val), {
-      message: 'Tree type must be either individual, company, or forest'
+    .enum(['individual', 'company', 'forest', 'dealer'])
+    .refine((val) => ['individual', 'company', 'forest', 'dealer'].includes(val), {
+      message: 'Tree type must be either individual, company, forest, or dealer'
     }),
   packageQuantity: z
     .number()

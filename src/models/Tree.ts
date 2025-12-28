@@ -11,7 +11,7 @@ export interface ITree extends Document {
   smallImageUrls?: string[];
   smallImagePublicIds?: string[];
   isActive: boolean;
-  treeType: 'individual' | 'company' | 'forest';
+  treeType: 'individual' | 'company' | 'forest' | 'dealer';
   // Package fields for corporate trees
   packageQuantity?: number;
   packagePrice?: number;
@@ -75,7 +75,7 @@ const TreeSchema: Schema = new Schema({
   },
   treeType: {
     type: String,
-    enum: ['individual', 'company', 'forest'],
+    enum: ['individual', 'company', 'forest', 'dealer'],
     required: [true, 'Tree type is required'],
     default: 'individual'
   },

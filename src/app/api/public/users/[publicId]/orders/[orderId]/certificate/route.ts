@@ -180,31 +180,39 @@ export async function GET(
         }
       });
 
-      // Get latest profile image URL from user model (users frequently change their profile)
-      // Always fetch fresh from database to ensure certificate uses current profile picture
-      const profilePicUrl = user.image || undefined;
-
-      // For gift orders, use gift recipient name; otherwise use user name
-      // For company users, prefer companyName; for individuals, use name
+      // For dealer orders, always use customer's account info (not dealer's)
+      // The user is already the customer (fetched by publicId), so use their account data
       let currentUserName: string;
-      if (order.isGift && order.giftRecipientName) {
+      let currentProfilePicUrl: string | undefined;
+      
+      if (order.userType === 'dealer' && order.customerUserId) {
+        // For dealer orders, use customer's account name and profile picture
+        // Never use dealer's info - always use customer's account data
+        // The user is already the customer (accessed via their publicId)
+        currentUserName = user.name || 'Customer';
+        currentProfilePicUrl = user.image || undefined;
+      } else if (order.isGift && order.giftRecipientName) {
+        // For gift orders, use gift recipient name
         currentUserName = order.giftRecipientName;
+        currentProfilePicUrl = user.image || undefined;
       } else {
+        // For regular orders, use the user's account info
         // Prefer userType-specific name: companyName for companies, name for individuals
-        if (user.userType === 'company') {
-          currentUserName = user.companyName || user.name || order.userName || 'Company';
+        if (user.userType === 'company' || user.userType === 'dealer') {
+          currentUserName = user.companyName || user.name || order.userName || (user.userType === 'dealer' ? 'Dealer' : 'Company');
         } else {
           currentUserName = user.name || order.userName || 'User';
         }
+        currentProfilePicUrl = user.image || undefined;
       }
       
-      console.log('[PublicCertificate] Using userName:', currentUserName, 'profilePicUrl:', profilePicUrl ? 'present' : 'missing');
+      console.log('[PublicCertificate] Using userName:', currentUserName, 'profilePicUrl:', currentProfilePicUrl ? 'present' : 'missing');
 
       // Generate certificate
       const { generateCertificate } = await import('@/lib/certificate');
       const certificateBuffer = await generateCertificate({
         userName: currentUserName,
-        profilePicUrl: profilePicUrl,
+        profilePicUrl: currentProfilePicUrl,
         treesCount,
         oxygenKgs,
         co2Kgs: co2Kgs,

@@ -7,7 +7,7 @@ import { Toaster } from 'react-hot-toast';
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  userType: 'individual' | 'company';
+  userType: 'individual' | 'company' | 'dealer';
 }
 
 export default function AuthGuard({ children, userType }: AuthGuardProps) {
@@ -22,11 +22,16 @@ export default function AuthGuard({ children, userType }: AuthGuardProps) {
       return;
     }
 
-    if (session.user.userType !== userType) {
+    // Allow dealers to access company dashboard
+    const isAllowed = session.user.userType === userType || 
+                      (userType === 'company' && session.user.userType === 'dealer') ||
+                      (userType === 'dealer' && session.user.userType === 'company');
+    
+    if (!isAllowed) {
       // Redirect to the correct dashboard based on user type
       if (session.user.userType === 'individual') {
         router.push('/dashboard/individual/trees');
-      } else if (session.user.userType === 'company') {
+      } else if (session.user.userType === 'company' || session.user.userType === 'dealer') {
         router.push('/dashboard/company/trees');
       }
       return;
@@ -44,7 +49,14 @@ export default function AuthGuard({ children, userType }: AuthGuardProps) {
     );
   }
 
-  if (!session || session.user.userType !== userType) {
+  // Allow dealers to access company dashboard
+  const isAllowed = session && (
+    session.user.userType === userType || 
+    (userType === 'company' && session.user.userType === 'dealer') ||
+    (userType === 'dealer' && session.user.userType === 'company')
+  );
+  
+  if (!isAllowed) {
     return null;
   }
 

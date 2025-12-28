@@ -7,6 +7,7 @@ import Tree from '@/models/Tree';
 import User from '@/models/User';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
+import { createOrUpdateCustomerAccount } from '@/lib/customer-account';
 
 // Lazy initialization of Razorpay to avoid module load errors
 function getRazorpayInstance() {
@@ -114,13 +115,37 @@ export async function POST(request: NextRequest) {
 
     // Fetch tree details and validate (optimized with lean() for better performance)
     const treeIds = items.map((item: { treeId: string }) => item.treeId);
+    
+    // Validate treeIds are not empty
+    if (treeIds.length === 0 || treeIds.some(id => !id || id.trim() === '')) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid tree IDs in order items' },
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    }
+    
     const trees = await Tree.find({ _id: { $in: treeIds }, isActive: true })
       .select('_id name imageUrl price oxygenKgs co2 treeType')
       .lean(); // Use lean() for faster queries - returns plain JS objects
     
     if (trees.length !== treeIds.length) {
+      const foundTreeIds = trees.map(t => String(t._id));
+      const missingTreeIds = treeIds.filter(id => !foundTreeIds.includes(id));
+      logError('Some trees not found or inactive', new Error('Tree validation failed'), {
+        requestedTreeIds: treeIds,
+        foundTreeIds,
+        missingTreeIds
+      });
+      
       return NextResponse.json(
-        { success: false, error: 'One or more trees not found or inactive' },
+        { success: false, error: `One or more trees not found or inactive. Please refresh the page and try again.` },
         { 
           status: 400,
           headers: {
@@ -133,11 +158,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order items with tree details
-    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; giftMessage?: string; forestName?: string; occasion?: string; treeTypeOverride?: 'individual' | 'company' | 'forest'; }) => {
+    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; giftMessage?: string; forestName?: string; occasion?: string; treeTypeOverride?: 'individual' | 'company' | 'forest'; customerName?: string; customerEmail?: string; customerPhone?: string; vehicleName?: string; customerProfilePicture?: string; }) => {
       const tree = trees.find(t => String(t._id) === item.treeId);
       if (!tree) {
         throw new Error(`Tree not found: ${item.treeId}`);
       }
+
+      // Map 'dealer' treeType to 'individual' since Order model treeType enum doesn't include 'dealer'
+      // Dealer trees are adopted for individual customers
+      const resolvedTreeType = item.treeTypeOverride || tree.treeType || 'individual';
+      const finalTreeType = resolvedTreeType === 'dealer' ? 'individual' : resolvedTreeType;
 
       return {
         treeId: String(tree._id),
@@ -147,13 +177,18 @@ export async function POST(request: NextRequest) {
         price: tree.price,
         oxygenKgs: tree.oxygenKgs,
         co2Kgs: (tree.co2 !== undefined && tree.co2 !== null) ? tree.co2 : undefined,
-        treeType: item.treeTypeOverride || tree.treeType || 'individual',
+        treeType: finalTreeType,
         adoptionType: item.adoptionType || 'self',
         recipientName: item.recipientName,
         recipientEmail: item.recipientEmail,
         giftMessage: item.giftMessage,
         forestName: item.forestName,
-        occasion: item.occasion
+        occasion: item.occasion,
+        customerName: item.customerName,
+        customerEmail: item.customerEmail,
+        customerPhone: item.customerPhone,
+        vehicleName: item.vehicleName,
+        customerProfilePicture: item.customerProfilePicture
       };
     });
 
@@ -166,24 +201,30 @@ export async function POST(request: NextRequest) {
       ? (finalAmount + (creditsUsed || 0)) // Reverse credits to get amount after coupon
       : (totalAmount - (couponDiscount || 0)); // Calculate from total minus coupon discount
     
+    // Fetch user from database to get correct name and credits
+    const user = await User.findById(session.user.id).select('name companyName userType credits');
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { 
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    }
+
+    // Get correct userName based on userType
+    const userName = (user.userType === 'company' || user.userType === 'dealer') 
+      ? (user.companyName || user.name || 'User')
+      : (user.name || 'User');
+
     // Validate and process credits usage
     let creditsToUse = 0;
     if (creditsUsed && creditsUsed > 0) {
-      // Fetch user to check available credits
-      const user = await User.findById(session.user.id);
-      if (!user) {
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { 
-            status: 404,
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'POST, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            },
-          }
-        );
-      }
 
       const availableCredits = user.credits || 0;
       const maxCreditsUsage = Math.round(amountAfterCoupon * 0.25); // Max 25% of order
@@ -320,8 +361,199 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // For dealer orders, create/update customer accounts
+    let customerUserId: string | undefined;
+    if (session.user.userType === 'dealer') {
+      console.log('[PAYMENT_CREATE] Processing dealer order', {
+        dealerId: session.user.id,
+        orderItemsCount: orderItems.length,
+        firstItem: orderItems[0] ? {
+          hasCustomerName: !!orderItems[0].customerName,
+          hasCustomerEmail: !!orderItems[0].customerEmail,
+          customerName: orderItems[0].customerName,
+          customerEmail: orderItems[0].customerEmail
+        } : 'no items'
+      });
+      
+      // Get customer info from first item (all items should have same customer for dealer orders)
+      if (orderItems.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'No items in order' },
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+      
+      const firstItem = orderItems[0];
+      // Validate customer info - check for empty strings and whitespace
+      const customerName = firstItem.customerName?.trim();
+      const customerEmail = firstItem.customerEmail?.trim();
+      
+      if (!customerName || customerName === '') {
+        logError('Missing customer name in dealer order', new Error('Customer name required'), {
+          dealerId: session.user.id,
+          orderItemsCount: orderItems.length
+        });
+        return NextResponse.json(
+          { success: false, error: 'Customer name is required for dealer orders. Please add customer information to your cart items.' },
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+      
+      if (!customerEmail || customerEmail === '') {
+        logError('Missing customer email in dealer order', new Error('Customer email required'), {
+          dealerId: session.user.id,
+          customerName: customerName
+        });
+        return NextResponse.json(
+          { success: false, error: 'Customer email is required for dealer orders. Please add customer information to your cart items.' },
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customerEmail)) {
+        return NextResponse.json(
+          { success: false, error: 'Please enter a valid customer email address.' },
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+      
+      try {
+        // Automatically create or update customer account for dealer orders
+        // This is mandatory - customer account must exist for certificates and QR codes
+        customerUserId = await createOrUpdateCustomerAccount(
+          customerName,
+          customerEmail,
+          firstItem.customerProfilePicture,
+          firstItem.customerPhone
+        );
+        logPaymentEvent('customer_account_created_or_updated', {
+          customerEmail: customerEmail,
+          customerUserId,
+          dealerId: session.user.id,
+          accountCreated: true
+        });
+        console.log(`[PAYMENT_CREATE] Successfully created/updated customer account for ${customerEmail}. Customer ID: ${customerUserId}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logError('Failed to create/update customer account', error instanceof Error ? error : new Error(String(error)), {
+          customerEmail: customerEmail,
+          dealerId: session.user.id,
+          errorMessage
+        });
+        
+        // Try to recover by using existing customer account if it exists
+        try {
+          const existingUser = await User.findOne({ email: customerEmail.toLowerCase() });
+          if (existingUser) {
+            customerUserId = String(existingUser._id);
+            logPaymentEvent('using_existing_customer_account_after_error', {
+              customerEmail: customerEmail,
+              customerUserId,
+              dealerId: session.user.id
+            });
+            console.log(`[PAYMENT_CREATE] Using existing customer account for ${customerEmail}. Customer ID: ${customerUserId}`);
+          } else {
+            // Account creation is mandatory for dealer orders
+            // Customer account is required for certificates and QR codes
+            // If we can't create it, we should fail the order creation
+            logError('Customer account creation failed and no existing account found', error instanceof Error ? error : new Error(String(error)), {
+              customerEmail: customerEmail,
+              dealerId: session.user.id,
+              errorMessage
+            });
+            return NextResponse.json(
+              { 
+                success: false, 
+                error: `Failed to create customer account. Please try again. If the problem persists, contact support. Error: ${errorMessage}` 
+              },
+              { 
+                status: 500,
+                headers: {
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                },
+              }
+            );
+          }
+        } catch (lookupError) {
+          // If lookup also fails, we cannot proceed without a customer account
+          logError('Failed to lookup existing customer account and account creation failed', lookupError instanceof Error ? lookupError : new Error(String(lookupError)), {
+            customerEmail: customerEmail,
+            dealerId: session.user.id,
+            originalError: errorMessage
+          });
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: `Failed to create or find customer account. Please try again. If the problem persists, contact support.` 
+            },
+            { 
+              status: 500,
+              headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              },
+            }
+          );
+        }
+      }
+      
+      // Ensure customerUserId is set before proceeding
+      if (!customerUserId) {
+        logError('Customer account ID is missing after creation attempt', new Error('customerUserId is undefined'), {
+          customerEmail: customerEmail,
+          dealerId: session.user.id
+        });
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Failed to create customer account. Please try again.' 
+          },
+          { 
+            status: 500,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+    }
+
     // Create a placeholder order in database first (status: pending)
-    const userName = session.user.name || 'User';
     const firstThreeLetters = userName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
     const fiveNumbers = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
     const orderId = `${firstThreeLetters}${fiveNumbers}`;
@@ -330,8 +562,9 @@ export async function POST(request: NextRequest) {
       orderId,
       userId: String(session.user.id), // Ensure userId is stored as string
       userEmail: session.user.email,
-      userName: session.user.name || 'User',
+      userName: userName,
       userType: session.user.userType,
+      customerUserId: customerUserId ? String(customerUserId) : undefined, // Link to customer account for dealer orders (ensure string format)
       items: orderItems,
       totalAmount,
       couponCode: couponCode || undefined,
@@ -348,6 +581,25 @@ export async function POST(request: NextRequest) {
     });
 
     await order.save();
+    
+    // Verify customerUserId was saved correctly for dealer orders
+    if (session.user.userType === 'dealer' && customerUserId) {
+      const savedOrder = await Order.findById(order._id).select('customerUserId').lean();
+      console.log('[PAYMENT_CREATE] Verified order saved with customerUserId:', {
+        orderId: order.orderId,
+        customerUserId: savedOrder?.customerUserId,
+        customerUserIdType: typeof savedOrder?.customerUserId,
+        expectedCustomerUserId: String(customerUserId)
+      });
+      
+      if (!savedOrder?.customerUserId || String(savedOrder.customerUserId) !== String(customerUserId)) {
+        console.error('[PAYMENT_CREATE] WARNING: customerUserId mismatch in saved order!', {
+          orderId: order.orderId,
+          saved: savedOrder?.customerUserId,
+          expected: String(customerUserId)
+        });
+      }
+    }
 
     // Create Razorpay order
     logPaymentEvent('razorpay_order_creation_started', { 
@@ -397,7 +649,14 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (_error) {
-    logError('Error creating payment order', _error as Error);
+    const error = _error as Error;
+    const errorMessage = error?.message || 'Unknown error';
+    const errorStack = error?.stack;
+    
+    logError('Error creating payment order', error, {
+      errorMessage,
+      errorStack: errorStack?.substring(0, 500) // Limit stack trace length
+    });
     
     // Check if it's a Razorpay specific error
     if (_error && typeof _error === 'object' && 'statusCode' in _error) {
@@ -420,10 +679,34 @@ export async function POST(request: NextRequest) {
           }
         );
       }
+      
+      // Return Razorpay error details
+      return NextResponse.json(
+        { success: false, error: razorpayError.error?.description || 'Razorpay payment gateway error' },
+        { 
+          status: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
     }
     
+    // Return more detailed error message for debugging
+    const userFriendlyMessage = errorMessage.includes('Tree not found') 
+      ? 'One or more trees are no longer available. Please refresh and try again.'
+      : errorMessage.includes('customer account')
+      ? errorMessage
+      : errorMessage.includes('Customer name and email')
+      ? errorMessage
+      : errorMessage.includes('No items')
+      ? errorMessage
+      : 'Failed to create payment order. Please try again or contact support if the problem persists.';
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to create payment order' },
+      { success: false, error: userFriendlyMessage },
       { 
         status: 500,
         headers: {

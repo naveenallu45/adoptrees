@@ -73,7 +73,7 @@ export default function LoginForm() {
             // Regular users - redirect based on userType
             if (sessionData?.user?.userType === 'individual') {
               router.push('/dashboard/individual/trees');
-            } else if (sessionData?.user?.userType === 'company') {
+            } else if (sessionData?.user?.userType === 'company' || sessionData?.user?.userType === 'dealer') {
               router.push('/dashboard/company/trees');
             } else {
               router.push('/');

@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICoupon extends Document {
   code: string;
-  category: 'individual' | 'company';
+  category: 'individual' | 'company' | 'dealer';
   discountPercentage: number;
   usageLimitType: 'unlimited' | 'custom';
   totalUsageLimit?: number; // Only used when usageLimitType is 'custom'
@@ -26,7 +26,7 @@ const CouponSchema = new Schema<ICoupon>(
     },
     category: {
       type: String,
-      enum: ['individual', 'company'],
+      enum: ['individual', 'company', 'dealer'],
       required: [true, 'Category is required']
     },
     discountPercentage: {
@@ -76,7 +76,13 @@ const CouponSchema = new Schema<ICoupon>(
 // Note: code index is automatically created by unique: true, so we don't need to add it explicitly
 CouponSchema.index({ category: 1, isActive: 1 });
 
-const Coupon = mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', CouponSchema);
+// Delete existing model from cache to force recompilation with updated enum
+// This ensures 'dealer' is included in the category enum
+if (mongoose.models.Coupon) {
+  delete mongoose.models.Coupon;
+}
+
+const Coupon = mongoose.model<ICoupon>('Coupon', CouponSchema);
 
 export default Coupon;
 

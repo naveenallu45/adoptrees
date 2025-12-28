@@ -325,13 +325,25 @@ export async function GET(request: NextRequest) {
     }
     
     const userId = String(session.user.id).trim();
+    const userIdObjectId = session.user.id; // Keep as ObjectId for comparison
     const userEmail = session.user.email?.toLowerCase().trim();
     
-    // Build query - include orders where user is the buyer OR the gift recipient
+    // Build query - include orders where user is the buyer OR the gift recipient OR the customer (for dealer orders)
+    // For dealers: show all orders where they are the dealer (userId matches)
+    // For customers: show orders where they are the customer (customerUserId matches)
     // MongoDB string fields must match exactly, so ensure proper string conversion
     const queryConditions: Array<Record<string, unknown>> = [
-      { userId: userId }
+      { userId: userId }, // Always include orders where user is the buyer/dealer (string format)
+      { userId: userIdObjectId } // Also check ObjectId format
     ];
+    
+    // For dealers, they already see their orders via userId
+    // For customers (individual users), also include orders where they are the customer
+    // Check both string and ObjectId formats for customerUserId
+    if (session.user.userType !== 'dealer') {
+      queryConditions.push({ customerUserId: userId }); // Include orders where this user is the customer (string format)
+      queryConditions.push({ customerUserId: userIdObjectId }); // Also check ObjectId format
+    }
     
     // Also include gift orders where this user is the recipient (order-level and item-level)
     if (userEmail) {
@@ -347,6 +359,14 @@ export async function GET(request: NextRequest) {
       queryConditions.push({
         'items.recipientEmail': emailRegex
       });
+      
+      // Also include dealer orders where customer email matches (for customers viewing their orders)
+      // Note: Dealers see all their orders via userId, so this is only for customers
+      if (session.user.userType !== 'dealer') {
+        queryConditions.push({
+          'items.customerEmail': emailRegex
+        });
+      }
     }
     
     // Add status filter to all conditions if provided
@@ -361,30 +381,72 @@ export async function GET(request: NextRequest) {
       : queryConditions[0];
 
     // Debug: Log the query being used
-    console.log('[Orders API] Fetching orders for userId:', userId, 'userEmail:', userEmail);
-    console.log('[Orders API] Query:', JSON.stringify(query, null, 2));
+    console.log('[Orders API] Fetching orders for user:', {
+      userId: userId,
+      userIdType: typeof userId,
+      userIdObjectId: userIdObjectId,
+      userEmail: userEmail,
+      userType: session.user.userType,
+      queryConditionsCount: queryConditions.length
+    });
 
     const orders = await Order.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Debug: Log results
+    // Debug: Log results with dealer order details
     console.log('[Orders API] Found', orders.length, 'orders');
     if (orders.length > 0) {
+      const dealerOrders = orders.filter(o => o.userType === 'dealer');
+      if (dealerOrders.length > 0) {
+        console.log('[Orders API] Found dealer orders:', {
+          count: dealerOrders.length,
+          dealerOrders: dealerOrders.map(o => ({
+            orderId: o.orderId,
+            userId: o.userId,
+            customerUserId: o.customerUserId,
+            customerUserIdType: typeof o.customerUserId,
+            customerEmail: o.items?.[0]?.customerEmail,
+            paymentStatus: o.paymentStatus,
+            status: o.status
+          }))
+        });
+      }
+      
       const sampleOrder = orders[0];
-      console.log('[Orders API] Sample order - userId:', sampleOrder.userId, 'userEmail:', sampleOrder.userEmail);
-      console.log('[Orders API] Query userId matches sample?', sampleOrder.userId === userId);
-      console.log('[Orders API] Query userEmail matches sample?', sampleOrder.userEmail === userEmail);
+      console.log('[Orders API] Sample order:', {
+        orderId: sampleOrder.orderId,
+        userId: sampleOrder.userId,
+        userType: sampleOrder.userType,
+        customerUserId: sampleOrder.customerUserId,
+        userEmail: sampleOrder.userEmail,
+        paymentStatus: sampleOrder.paymentStatus
+      });
     } else {
       // If no orders found, check if there are ANY orders in the database
       const totalOrders = await Order.countDocuments({});
-      console.log('[Orders API] Total orders in database:', totalOrders);
-      if (totalOrders > 0) {
-        const sampleOrder = await Order.findOne({}).lean();
-        if (sampleOrder) {
-          console.log('[Orders API] Sample order from DB - userId:', sampleOrder.userId, 'userEmail:', sampleOrder.userEmail);
-        }
+      console.log('[Orders API] No orders found. Total orders in database:', totalOrders);
+      
+      // Check if there are dealer orders with this customerUserId
+      if (session.user.userType !== 'dealer') {
+        const dealerOrdersForCustomer = await Order.find({
+          $or: [
+            { customerUserId: userId },
+            { customerUserId: userIdObjectId },
+            ...(userEmail ? [{ 'items.customerEmail': new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }] : [])
+          ],
+          userType: 'dealer'
+        }).limit(5).lean();
+        
+        console.log('[Orders API] Dealer orders for this customer:', {
+          count: dealerOrdersForCustomer.length,
+          orders: dealerOrdersForCustomer.map((o: { orderId: string; customerUserId?: string; items?: Array<{ customerEmail?: string }> }) => ({
+            orderId: o.orderId,
+            customerUserId: o.customerUserId,
+            customerEmail: o.items?.[0]?.customerEmail
+          }))
+        });
       }
     }
 

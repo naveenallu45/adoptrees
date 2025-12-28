@@ -29,7 +29,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 // Registration schema
 export const registerSchema = z.object({
-  userType: z.enum(['individual', 'company'], {
+  userType: z.enum(['individual', 'company', 'dealer'], {
     message: 'User type is required',
   }),
   name: z.string().optional(),
@@ -51,8 +51,8 @@ export const registerSchema = z.object({
   }
 ).refine(
   (data) => {
-    // For companies, company name is required and must be at least 2 characters
-    if (data.userType === 'company') {
+    // For companies and dealers, company name is required and must be at least 2 characters
+    if (data.userType === 'company' || data.userType === 'dealer') {
       return data.companyName && data.companyName.trim().length >= 2;
     }
     return true;

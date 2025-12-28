@@ -160,7 +160,13 @@ export async function processOrderCompletion(order: IOrder): Promise<{
     // Always generate fresh certificate with latest user data
     if (true) { // Always generate for email
       try {
-        const user = await User.findById(order.userId).select('publicId qrCode image name companyName userType');
+        // For dealer orders, use customer's account (customerUserId) instead of dealer's account
+        // This ensures we use the customer's existing QR code and public ID
+        const userIdToUse = (order.userType === 'dealer' && order.customerUserId) 
+          ? order.customerUserId 
+          : order.userId;
+        
+        const user = await User.findById(userIdToUse).select('publicId qrCode image name companyName userType');
         
         if (user && user.publicId) {
           const oxygenKgs = order.items.reduce((sum: number, item: { oxygenKgs: number; quantity: number; [key: string]: unknown }) => sum + (item.oxygenKgs * item.quantity), 0);
@@ -178,18 +184,29 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             }
           });
 
+          // For dealer orders, always use customer's account info (not dealer's)
+          // We already fetched the customer's account via customerUserId, so use that
           let certificateUserName: string;
-          if (order.isGift && order.giftRecipientName) {
+          let profilePicUrl: string | undefined;
+          
+          if (order.userType === 'dealer' && order.customerUserId) {
+            // For dealer orders, use customer's account name and profile picture
+            // Never use dealer's info - always use customer's account data
+            certificateUserName = user.name || 'Customer';
+            profilePicUrl = user.image || undefined;
+          } else if (order.isGift && order.giftRecipientName) {
+            // For gift orders, use gift recipient name
             certificateUserName = order.giftRecipientName;
+            profilePicUrl = user.image || undefined;
           } else {
-            if (user.userType === 'company') {
-              certificateUserName = user.companyName || user.name || order.userName || 'Company';
+            // For regular orders, use the user's account info
+            if (user.userType === 'company' || user.userType === 'dealer') {
+              certificateUserName = user.companyName || user.name || order.userName || (user.userType === 'dealer' ? 'Dealer' : 'Company');
             } else {
               certificateUserName = user.name || order.userName || 'User';
             }
+            profilePicUrl = user.image || undefined;
           }
-          
-          const profilePicUrl = user.image || undefined;
           
           const certificateBuffer = await generateCertificate({
             userName: certificateUserName,
@@ -198,9 +215,9 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             oxygenKgs,
             co2Kgs,
             treeNames: treeNames.length > 0 ? treeNames : undefined,
-            publicId: user.publicId,
+            publicId: user.publicId, // Use customer's public ID for dealer orders
             orderId: order.orderId,
-            qrCode: user.qrCode,
+            qrCode: user.qrCode, // Use customer's QR code for dealer orders
           });
 
           // Don't store certificate - generate on-demand when needed
@@ -208,12 +225,36 @@ export async function processOrderCompletion(order: IOrder): Promise<{
           result.completed.certificate = true;
 
           // 3. Send thank you email with certificate (non-blocking for better performance)
-          const recipientEmail = order.isGift && order.giftRecipientEmail 
-            ? order.giftRecipientEmail 
-            : order.userEmail;
-          const recipientName = order.isGift && order.giftRecipientName 
-            ? order.giftRecipientName 
-            : order.userName;
+          // For dealer orders, send email to customer instead of dealer
+          let recipientEmail: string;
+          let recipientName: string;
+          let dealerInfo: { dealerName?: string; showroomName?: string; vehicleName?: string } | undefined;
+          
+          if (order.userType === 'dealer' && order.items.length > 0) {
+            // Get customer info from first item
+            const firstItem = order.items[0] as { customerEmail?: string; customerName?: string; vehicleName?: string };
+            if (firstItem.customerEmail && firstItem.customerName) {
+              recipientEmail = firstItem.customerEmail;
+              recipientName = firstItem.customerName;
+              
+              // Prepare dealer information for email
+              dealerInfo = {
+                dealerName: order.dealerName,
+                showroomName: order.showroomName,
+                vehicleName: firstItem.vehicleName
+              };
+            } else {
+              // Fallback to dealer email if customer info not available
+              recipientEmail = order.userEmail;
+              recipientName = order.userName;
+            }
+          } else if (order.isGift && order.giftRecipientEmail) {
+            recipientEmail = order.giftRecipientEmail;
+            recipientName = order.giftRecipientName || order.userName;
+          } else {
+            recipientEmail = order.userEmail;
+            recipientName = order.userName;
+          }
           
           // Validate certificate buffer before sending email
           if (!certificateBuffer || certificateBuffer.length === 0) {
@@ -229,7 +270,8 @@ export async function processOrderCompletion(order: IOrder): Promise<{
                 recipientName,
                 order.orderId,
                 treesCount,
-                certificateBuffer
+                certificateBuffer,
+                dealerInfo // Pass dealer info for dealer orders
               );
               
               if (emailSent) {
@@ -300,6 +342,7 @@ export async function processOrderCompletion(order: IOrder): Promise<{
 
     // Award credits: 10% of tree price (not discounted) for individual/company adoptions (not forest)
     // Only award if credits haven't been awarded yet (idempotent)
+    // For dealer orders: award credits to the customer, not the dealer
     if (!order.creditsEarned || order.creditsEarned === 0) {
       try {
         // Calculate credits based on tree price (not discounted price)
@@ -315,8 +358,14 @@ export async function processOrderCompletion(order: IOrder): Promise<{
         });
 
         if (creditsToAward > 0) {
+          // For dealer orders, award credits to the customer (customerUserId), not the dealer
+          // For regular orders, award credits to the buyer (userId)
+          const userIdToAward = (order.userType === 'dealer' && order.customerUserId) 
+            ? order.customerUserId 
+            : order.userId;
+          
           // Update user credits
-          const user = await User.findById(order.userId);
+          const user = await User.findById(userIdToAward);
           if (user) {
             const currentCredits = user.credits || 0;
             user.credits = currentCredits + creditsToAward;
@@ -328,9 +377,18 @@ export async function processOrderCompletion(order: IOrder): Promise<{
 
             logPaymentEvent('credits_awarded', {
               orderId: order.orderId,
-              userId: order.userId,
+              userId: userIdToAward,
               creditsAwarded: creditsToAward,
-              newBalance: user.credits
+              newBalance: user.credits,
+              isDealerOrder: order.userType === 'dealer',
+              customerUserId: order.customerUserId,
+              dealerUserId: order.userId
+            });
+          } else {
+            logError('User not found for credit award', new Error('User not found'), {
+              orderId: order.orderId,
+              userIdToAward,
+              isDealerOrder: order.userType === 'dealer'
             });
           }
         }

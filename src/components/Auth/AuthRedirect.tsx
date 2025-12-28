@@ -30,7 +30,7 @@ export default function AuthRedirect({ children }: AuthRedirectProps) {
           router.push('/wellwisher');
         } else if (session.user.userType === 'individual') {
           router.push('/dashboard/individual/trees');
-        } else if (session.user.userType === 'company') {
+        } else if (session.user.userType === 'company' || session.user.userType === 'dealer') {
           router.push('/dashboard/company/trees');
         } else {
           router.push('/');

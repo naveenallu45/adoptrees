@@ -13,7 +13,7 @@ import { useCouponMutations } from '@/hooks/useAdminMutations';
 interface Coupon {
   _id: string;
   code: string;
-  category: 'individual' | 'company';
+  category: 'individual' | 'company' | 'dealer';
   discountPercentage: number;
   usageLimitType: 'unlimited' | 'custom';
   totalUsageLimit?: number;
@@ -55,7 +55,7 @@ export default function CouponsManagement() {
   const submitting = createCoupon.isPending || updateCoupon.isPending;
   const [formData, setFormData] = useState({
     code: '',
-    category: 'individual' as 'individual' | 'company',
+    category: 'individual' as 'individual' | 'company' | 'dealer',
     discountPercentage: '',
     usageLimitType: 'unlimited' as 'unlimited' | 'custom',
     totalUsageLimit: '',
@@ -71,7 +71,7 @@ export default function CouponsManagement() {
 
     const payload: {
       code: string;
-      category: 'individual' | 'company';
+      category: 'individual' | 'company' | 'dealer';
       discountPercentage: number;
       usageLimitType: 'unlimited' | 'custom';
       perUserUsageLimit: number;
@@ -205,9 +205,11 @@ export default function CouponsManagement() {
           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
             row.original.category === 'individual' 
               ? 'bg-blue-100 text-blue-800' 
-              : 'bg-purple-100 text-purple-800'
+              : row.original.category === 'company'
+              ? 'bg-purple-100 text-purple-800'
+              : 'bg-indigo-100 text-indigo-800'
           }`}>
-            {row.original.category === 'individual' ? 'Individual' : 'Company'}
+            {row.original.category === 'individual' ? 'Individual' : row.original.category === 'company' ? 'Company' : 'Dealer'}
           </span>
         ),
       },
@@ -381,12 +383,13 @@ export default function CouponsManagement() {
                     </label>
                     <select
                       value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value as 'individual' | 'company' })}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value as 'individual' | 'company' | 'dealer' })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       required
                     >
                       <option value="individual">Individual</option>
                       <option value="company">Company</option>
+                      <option value="dealer">Dealer</option>
                     </select>
                   </div>
 

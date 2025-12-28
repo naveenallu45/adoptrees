@@ -7,9 +7,9 @@ import User from '@/models/User';
 import { env } from '@/lib/env';
 import { loginSchema } from '@/lib/validations/auth';
 
-interface ExtendedUser extends NextAuthUser {
+interface ExtendedUser extends Omit<NextAuthUser, 'userType'> {
   role: 'user' | 'admin' | 'wellwisher';
-  userType: 'individual' | 'company';
+  userType: 'individual' | 'company' | 'dealer';
   image?: string;
 }
 
@@ -18,7 +18,7 @@ interface UserWithPassword {
   email: string;
   passwordHash: string;
   role: 'user' | 'admin' | 'wellwisher';
-  userType: 'individual' | 'company';
+  userType: 'individual' | 'company' | 'dealer';
   name?: string;
   companyName?: string;
   image?: string;
@@ -90,7 +90,7 @@ export const authOptions = {
             role: user.role,
             userType: user.userType,
             image: user.image || undefined,
-          } as ExtendedUser;
+          } as ExtendedUser as NextAuthUser;
         } catch (_error) {
           if (process.env.NODE_ENV === 'development') {
           }
@@ -144,7 +144,7 @@ export const authOptions = {
           name: (token.name as string | undefined) || session.user.name,
           email: (token.email as string | undefined) || session.user.email,
           role: token.role as 'admin' | 'user' | 'wellwisher',
-          userType: token.userType as 'individual' | 'company',
+          userType: token.userType as 'individual' | 'company' | 'dealer',
           image: token.image as string | undefined,
         },
       };

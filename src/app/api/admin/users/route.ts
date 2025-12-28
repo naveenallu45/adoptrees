@@ -4,7 +4,7 @@ import User from '@/models/User';
 import { requireAdmin } from '@/lib/api-auth';
 
 /**
- * GET /api/admin/users?type=individual|company
+ * GET /api/admin/users?type=individual|company|dealer
  * Fetch users by type
  */
 export async function GET(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
     const usePagination = searchParams.get('paginate') === 'true';
 
-    if (!type || !['individual', 'company'].includes(type)) {
+    if (!type || !['individual', 'company', 'dealer'].includes(type)) {
       return NextResponse.json(
         { success: false, error: 'Invalid or missing user type parameter' },
         { status: 400 }

@@ -81,6 +81,11 @@ interface OrderItem {
   giftMessage?: string;
   forestName?: string;
   occasion?: string;
+  // Dealer customer fields
+  customerName?: string;
+  customerEmail?: string;
+  vehicleName?: string;
+  customerProfilePicture?: string;
 }
 
 interface WellwisherTask {
@@ -124,6 +129,7 @@ interface Order {
   orderId?: string;
   userId?: string;
   userEmail?: string;
+  userType?: 'individual' | 'company' | 'dealer';
   items: OrderItem[];
   totalAmount: number;
   couponCode?: string;
@@ -138,6 +144,11 @@ interface Order {
   giftMessage?: string;
   assignedWellwisher?: string;
   wellwisherTasks?: WellwisherTask[];
+  // Dealer/Showroom specific fields
+  dealerName?: string;
+  showroomName?: string;
+  showroomLocation?: string;
+  customerUserId?: string; // For dealer orders, the customer's user ID
   createdAt: string;
   updatedAt: string;
 }
@@ -197,6 +208,11 @@ export default function UserTreesList({ userType, publicId, showForestOnly = fal
     };
     
     return occasionMap[occasion.toLowerCase()] || `For ${capitalizeFirstLetter(occasion)}`;
+  };
+
+  const getVehicleNameText = (vehicleName: string) => {
+    if (!vehicleName) return '';
+    return `Occasion of buying ${capitalizeFirstLetter(vehicleName)}`;
   };
 
   useEffect(() => {
@@ -429,7 +445,7 @@ useEffect(() => {
           const currentUserId = String(session.user.id).trim();
           const currentUserEmail = session.user.email?.toLowerCase().trim();
           
-          // Filter orders to only include those belonging to the current user OR where user is a gift recipient
+          // Filter orders to only include those belonging to the current user OR where user is a gift recipient OR customer (for dealer orders)
           ordersData = ordersData.filter((order: Order) => {
             const orderUserId = String(order.userId || '').trim();
             const orderUserEmail = (order.userEmail || '').toLowerCase().trim();
@@ -439,7 +455,7 @@ useEffect(() => {
             const userIdMatches = orderUserId && orderUserId === currentUserId;
             const emailMatches = !orderUserId && currentUserEmail && orderUserEmail && orderUserEmail === currentUserEmail;
             
-            // Also check if user is a gift recipient (order-level or item-level)
+            // Check if user is a gift recipient (order-level or item-level)
             const isGiftRecipient = currentUserEmail && (
               (order.isGift && order.giftRecipientEmail?.toLowerCase().trim() === currentUserEmail) ||
               order.items.some((item: OrderItem) => 
@@ -447,7 +463,17 @@ useEffect(() => {
               )
             );
             
-            const matches = userIdMatches || emailMatches || isGiftRecipient;
+            // Check if user is the customer for dealer orders (by customerUserId or customerEmail in items)
+            const isDealerCustomer = order.userType === 'dealer' && (
+              // Check if order has customerUserId matching current user
+              (order.customerUserId && String(order.customerUserId).trim() === currentUserId) ||
+              // Or check by customerEmail in items
+              (currentUserEmail && order.items.some((item: OrderItem) => 
+                item.customerEmail?.toLowerCase().trim() === currentUserEmail
+              ))
+            );
+            
+            const matches = userIdMatches || emailMatches || isGiftRecipient || isDealerCustomer;
             
             if (!matches) {
               console.warn('[UserTreesList] Filtered out order not belonging to current user:', {
@@ -457,7 +483,9 @@ useEffect(() => {
                 currentUserEmail,
                 userIdMatches,
                 emailMatches,
-                isGiftRecipient
+                isGiftRecipient,
+                isDealerCustomer,
+                orderUserType: order.userType
               });
             }
             
@@ -648,7 +676,11 @@ useEffect(() => {
     : (userType === 'individual' ? 'Your Adopted Trees' : 'Company Adopted Trees');
 
   const ctaText = isForestView ? 'Create New Forest' : 'Adopt New Tree';
-  const ctaHref = isForestView ? '/create-forest' : (userType === 'individual' ? '/individuals' : '/companies');
+  const ctaHref = isForestView 
+    ? '/create-forest' 
+    : (userType === 'individual' 
+      ? '/individuals' 
+      : (session?.user?.userType === 'dealer' ? '/dealers' : '/companies'));
   const emptyTitle = isForestView ? 'No forests created yet' : 'No trees adopted yet';
   const emptySubtitle = isForestView
     ? 'Start a forest for a special moment and watch it grow over time.'
@@ -770,21 +802,84 @@ useEffect(() => {
                                 </p>
                               )}
                               
+                              {/* Vehicle Name for dealer orders - show if viewing public profile or if user is the customer */}
+                              {item.vehicleName && primaryOrder.userType === 'dealer' && (() => {
+                                const isDealerItem = !!(item.customerName || item.customerEmail);
+                                
+                                // If viewing public profile, show vehicle name for dealer items
+                                // If logged in, check if current user is the customer
+                                if (isDealerItem) {
+                                  if (publicId) {
+                                    // Public profile view - show vehicle name for dealer items
+                                    return (
+                                      <p className="text-sm text-emerald-700 mb-2">
+                                        {getVehicleNameText(item.vehicleName)}
+                                      </p>
+                                    );
+                                  } else {
+                                    // Logged in view - check if user is the customer
+                                    const currentUserEmail = session?.user?.email?.toLowerCase().trim();
+                                    const recipientEmail = item.customerEmail?.toLowerCase().trim();
+                                    const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
+                                    
+                                    if (isRecipient) {
+                                      return (
+                                        <p className="text-sm text-emerald-700 mb-2">
+                                          {getVehicleNameText(item.vehicleName)}
+                                        </p>
+                                      );
+                                    }
+                                  }
+                                }
+                                return null;
+                              })()}
+                              
                               <div className="flex flex-wrap items-center justify-start gap-2 mb-2">
                                 <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 font-medium rounded-full border border-green-200/50 text-xs whitespace-nowrap">
                                   <SparklesIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                                   {item.oxygenKgs} kg/year O₂
                                 </span>
                                 {item.adoptionType === 'gift' && (() => {
-                                  // Check if current user is the recipient
+                                  // For dealer items, use customerName instead of recipientName
+                                  const isDealerItem = !!(item.customerName || item.customerEmail);
+                                  const isDealerOrder = primaryOrder.userType === 'dealer';
+                                  
+                                  // Check if current user is the recipient/customer
                                   const currentUserEmail = session?.user?.email?.toLowerCase().trim();
-                                  const recipientEmail = (item.recipientEmail || primaryOrder.giftRecipientEmail)?.toLowerCase().trim();
+                                  const recipientEmail = isDealerItem
+                                    ? (item.customerEmail?.toLowerCase().trim())
+                                    : ((item.recipientEmail || primaryOrder.giftRecipientEmail)?.toLowerCase().trim());
                                   const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
+                                  
+                                  // For dealer orders where customer is viewing their own trees
+                                  if (isDealerOrder && isRecipient && isDealerItem) {
+                                    const dealerName = primaryOrder.dealerName || primaryOrder.showroomName || primaryOrder.userName || 'Dealer';
+                                    const vehicleName = item.vehicleName;
+                                    
+                                    return (
+                                      <div className="flex flex-col gap-1.5">
+                                        <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
+                                          <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                          Gift from {dealerName}
+                                        </span>
+                                        {vehicleName && (
+                                          <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-emerald-50 text-emerald-700 font-medium rounded-full border border-emerald-200 text-xs whitespace-nowrap">
+                                            {getVehicleNameText(vehicleName)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  // For regular gift items or dealer viewing
+                                  const displayName = isDealerItem 
+                                    ? (item.customerName || 'Customer')
+                                    : (item.recipientName || primaryOrder.giftRecipientName);
                                   
                                   return (
                                     <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
                                       <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                      {isRecipient ? `Gifted by ${primaryOrder.userName || 'Someone'}` : `Gift for ${item.recipientName || primaryOrder.giftRecipientName}`}
+                                      {isRecipient ? `Gifted by ${primaryOrder.userName || 'Someone'}` : `Gift for ${displayName || 'Customer'}`}
                                     </span>
                                   );
                                 })()}
@@ -1062,14 +1157,44 @@ useEffect(() => {
                               {item.oxygenKgs} kg/year O₂
                             </p>
                             {item.adoptionType === 'gift' && (() => {
-                              // Check if current user is the recipient
+                              // For dealer items, use customerName instead of recipientName
+                              const isDealerItem = !!(item.customerName || item.customerEmail);
+                              const isDealerOrder = order.userType === 'dealer';
+                              
+                              // Check if current user is the recipient/customer
                               const currentUserEmail = session?.user?.email?.toLowerCase().trim();
-                              const recipientEmail = (item.recipientEmail || order.giftRecipientEmail)?.toLowerCase().trim();
+                              const recipientEmail = isDealerItem
+                                ? (item.customerEmail?.toLowerCase().trim())
+                                : ((item.recipientEmail || order.giftRecipientEmail)?.toLowerCase().trim());
                               const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
+                              
+                              // For dealer orders where customer is viewing their own trees
+                              if (isDealerOrder && isDealerItem) {
+                                const dealerName = order.dealerName || order.showroomName || order.userName || 'Dealer';
+                                const vehicleName = item.vehicleName;
+                                
+                                return (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-600 truncate">
+                                      Gift from: {dealerName}
+                                    </p>
+                                    {vehicleName && (
+                                      <p className="text-xs text-emerald-700 truncate">
+                                        {getVehicleNameText(vehicleName)}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              
+                              // For regular gift items or dealer viewing
+                              const displayName = isDealerItem 
+                                ? (item.customerName || 'Customer')
+                                : (item.recipientName || order.giftRecipientName);
                               
                               return (
                                 <p className="text-xs text-purple-600 truncate">
-                                  {isRecipient ? `Gifted by: ${order.userName || 'Someone'}` : `Gift for: ${item.recipientName || order.giftRecipientName}`}
+                                  {isRecipient ? `Gifted by: ${order.userName || 'Someone'}` : `Gift for: ${displayName || 'Customer'}`}
                                 </p>
                               );
                             })()}

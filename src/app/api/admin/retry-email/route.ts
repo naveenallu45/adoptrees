@@ -170,13 +170,25 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        // Prepare dealer information if this is a dealer order
+        let dealerInfo: { dealerName?: string; showroomName?: string; vehicleName?: string } | undefined;
+        if (order.userType === 'dealer' && order.items.length > 0) {
+          const firstItem = order.items[0] as { vehicleName?: string };
+          dealerInfo = {
+            dealerName: order.dealerName,
+            showroomName: order.showroomName,
+            vehicleName: firstItem.vehicleName
+          };
+        }
+        
         // Send email
         const emailSent = await sendThankYouEmailWithCertificate(
           recipientEmail,
           recipientName,
           order.orderId,
           treesCount,
-          certificateBuffer
+          certificateBuffer,
+          dealerInfo // Pass dealer info for dealer orders
         );
 
         if (emailSent) {

@@ -167,6 +167,13 @@ export async function PUT(
       { new: true, runValidators: true }
     ).select('-passwordHash');
 
+    if (!updatedWellWisher) {
+      return NextResponse.json(
+        { success: false, error: 'Well-wisher not found' },
+        { status: 404 }
+      );
+    }
+
     // OPTIMIZED: Send update email asynchronously (non-blocking)
     const passwordChanged = !!(password && password.trim() !== '');
     

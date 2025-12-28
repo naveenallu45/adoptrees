@@ -1,6 +1,6 @@
 import { Schema, models, model, Query } from 'mongoose';
 
-export type UserType = 'individual' | 'company';
+export type UserType = 'individual' | 'company' | 'dealer';
 
 export interface IUser {
   name?: string;
@@ -59,7 +59,7 @@ const UserSchema = new Schema<IUser>(
     },
     dateOfBirthLastUpdated: { type: Date },
     passwordHash: { type: String, required: true, select: false },
-    userType: { type: String, enum: ['individual', 'company'], required: true },
+    userType: { type: String, enum: ['individual', 'company', 'dealer'], required: true },
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
     publicId: { 
       type: String,
@@ -230,7 +230,13 @@ UserSchema.pre('updateOne', protectImmutableFields);
 UserSchema.pre('updateMany', protectImmutableFields);
 UserSchema.pre('findOneAndUpdate', protectImmutableFields);
 
-const User = (models?.User || model<IUser>('User', UserSchema));
+// Delete existing model from cache to force recompilation with updated enum
+// This ensures 'dealer' is included in the userType enum
+if (models?.User) {
+  delete models.User;
+}
+
+const User = model<IUser>('User', UserSchema);
 
 export default User;
 

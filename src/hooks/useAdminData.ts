@@ -133,6 +133,29 @@ export async function fetchCompanyUsers(): Promise<CompanyUser[]> {
   return users;
 }
 
+// Dealer User Type
+export interface DealerUser {
+  _id: string;
+  companyName: string;
+  email: string;
+  phone?: string;
+  gstNumber?: string;
+  createdAt: string;
+  role: string;
+  userType: string;
+}
+
+// Dealer Users API Function
+export async function fetchDealerUsers(): Promise<DealerUser[]> {
+  const response = await fetch('/api/admin/users?type=dealer', {
+    cache: 'no-store', // Always fetch fresh data from server
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message);
+  const users: DealerUser[] = data.data || [];
+  return users;
+}
+
 // WellWisher Type
 export interface WellWisher {
   _id: string;

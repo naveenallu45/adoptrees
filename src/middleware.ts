@@ -119,7 +119,7 @@ export async function middleware(request: NextRequest) {
       }
     }
     
-    if (pathname.startsWith('/dashboard/company') && userType !== 'company') {
+    if (pathname.startsWith('/dashboard/company') && userType !== 'company' && userType !== 'dealer') {
       if (userType === 'individual') {
         const url = new URL('/dashboard/individual/trees', request.url);
         return NextResponse.redirect(url);
@@ -127,6 +127,12 @@ export async function middleware(request: NextRequest) {
         const url = new URL('/', request.url);
         return NextResponse.redirect(url);
       }
+    }
+    
+    // Redirect dealers trying to access individual dashboard
+    if (pathname.startsWith('/dashboard/individual') && userType === 'dealer') {
+      const url = new URL('/dashboard/company/trees', request.url);
+      return NextResponse.redirect(url);
     }
   }
 

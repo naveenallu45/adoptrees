@@ -394,8 +394,9 @@ export default function CartContent() {
     }
 
     // Validate gifted trees have recipient email
+    // Skip dealer items - they have their own validation with customerName/customerEmail
     for (const item of cartItems) {
-      if (item.adoptionType === 'gift') {
+      if (item.adoptionType === 'gift' && item.type !== 'dealer') {
         if (!item.recipientEmail || !item.recipientEmail.trim()) {
           toast.error(`Recipient email is required for "${item.name}" as it's a gift`);
           // Find and scroll to the item
@@ -417,6 +418,73 @@ export default function CartContent() {
         }
         if (!item.recipientName || !item.recipientName.trim()) {
           toast.error(`Recipient name is required for "${item.name}" as it's a gift`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+      }
+    }
+
+    // Validate dealer items have customer information
+    for (const item of cartItems) {
+      if (item.type === 'dealer') {
+        if (!item.customerName || !item.customerName.trim()) {
+          toast.error(`Customer name is required for "${item.name}"`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        if (!item.customerEmail || !item.customerEmail.trim()) {
+          toast.error(`Customer email is required for "${item.name}"`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(item.customerEmail.trim())) {
+          toast.error(`Please enter a valid customer email for "${item.name}"`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        if (!item.customerPhone || !item.customerPhone.trim()) {
+          toast.error(`Customer phone number is required for "${item.name}"`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        // Validate phone number format (10 digits, optionally with +91 or 0 prefix)
+        const phoneRegex = /^(\+91|0)?[6-9]\d{9}$/;
+        const cleanedPhone = item.customerPhone.replace(/[\s\-\(\)]/g, '');
+        if (!phoneRegex.test(cleanedPhone) && !/^[6-9]\d{9}$/.test(cleanedPhone)) {
+          toast.error(`Please enter a valid 10-digit phone number for "${item.name}"`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        if (!item.vehicleName || !item.vehicleName.trim()) {
+          toast.error(`Vehicle name is required for "${item.name}"`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+        // Profile picture is mandatory for dealer orders
+        if (!item.customerProfilePicture || !item.customerProfilePicture.trim()) {
+          toast.error(`Customer profile picture is required for "${item.name}"`);
           const itemElement = document.getElementById(`cart-item-${item.id}`);
           if (itemElement) {
             itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -458,12 +526,20 @@ export default function CartContent() {
           giftMessage: item.giftMessage,
           forestName: item.forestName,
           occasion: item.occasion,
-          treeTypeOverride: item.type
+          // Map 'dealer' to 'individual' since Order model treeType enum doesn't include 'dealer'
+          // Dealer trees are adopted for individual customers
+          treeTypeOverride: item.type === 'dealer' ? 'individual' : item.type,
+          customerName: item.customerName,
+          customerEmail: item.customerEmail,
+          customerPhone: item.customerPhone,
+          vehicleName: item.vehicleName,
+          customerProfilePicture: item.customerProfilePicture
         })),
-        isGift: cartItems.some(item => item.adoptionType === 'gift'),
-        giftRecipientName: cartItems.find(item => item.adoptionType === 'gift')?.recipientName,
-        giftRecipientEmail: cartItems.find(item => item.adoptionType === 'gift')?.recipientEmail,
-        giftMessage: cartItems.find(item => item.adoptionType === 'gift')?.giftMessage,
+        // Exclude dealer items from gift calculation - dealer items use customerName/customerEmail, not recipientName/recipientEmail
+        isGift: cartItems.some(item => item.adoptionType === 'gift' && item.type !== 'dealer'),
+        giftRecipientName: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.recipientName,
+        giftRecipientEmail: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.recipientEmail,
+        giftMessage: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.giftMessage,
         couponCode: appliedCoupon?.code || null,
         couponDiscount: appliedCoupon ? appliedCoupon.discountAmount : 0,
         creditsUsed: creditsToUse,
@@ -759,6 +835,54 @@ export default function CartContent() {
                           item={item} 
                           onUpdate={(updates) => updateCartItem(item.id, updates)} 
                         />
+                      </div>
+                    )}
+
+                    {/* Customer Information for Dealer Items */}
+                    {item.type === 'dealer' && (
+                      <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+                          <p className="text-sm font-semibold text-purple-900 mb-2">Customer Information (Gift Tree)</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Customer Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={item.customerName || ''}
+                            onChange={(e) => updateCartItem(item.id, { customerName: e.target.value })}
+                            placeholder="Enter customer full name"
+                            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Customer Email <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={item.customerEmail || ''}
+                            onChange={(e) => updateCartItem(item.id, { customerEmail: e.target.value.toLowerCase().trim() })}
+                            placeholder="customer@example.com"
+                            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Vehicle Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={item.vehicleName || ''}
+                            onChange={(e) => updateCartItem(item.id, { vehicleName: e.target.value })}
+                            placeholder="e.g., Honda City, Toyota Innova"
+                            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                          />
+                        </div>
                       </div>
                     )}
 

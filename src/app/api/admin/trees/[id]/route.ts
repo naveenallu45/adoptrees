@@ -93,11 +93,14 @@ export async function PUT(
     }
 
     // Validate numeric fields
-    if (isNaN(price) || price <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Price must be a valid positive number' },
-        { status: 400 }
-      );
+    // Price is required for individual and dealer trees
+    if (treeType === 'individual' || treeType === 'dealer') {
+      if (isNaN(price) || price <= 0) {
+        return NextResponse.json(
+          { success: false, error: 'Price must be a valid positive number' },
+          { status: 400 }
+        );
+      }
     }
 
     if (isNaN(oxygenKgs) || oxygenKgs < 0) {
@@ -107,20 +110,20 @@ export async function PUT(
       );
     }
 
-    // Validate package fields for company trees
-    if (treeType === 'company') {
+    // Validate package fields for company and forest trees
+    if (treeType === 'company' || treeType === 'forest') {
       if (!packageQuantityStr || packageQuantity <= 0) {
-      return NextResponse.json(
-          { success: false, error: 'Package quantity is required and must be greater than 0 for company trees' },
-        { status: 400 }
-      );
-    }
+        return NextResponse.json(
+          { success: false, error: `Package quantity is required and must be greater than 0 for ${treeType} trees` },
+          { status: 400 }
+        );
+      }
       if (!packagePriceStr || !packagePrice || packagePrice <= 0) {
-      return NextResponse.json(
-          { success: false, error: 'Package price is required and must be greater than 0 for company trees' },
-        { status: 400 }
-      );
-    }
+        return NextResponse.json(
+          { success: false, error: `Package price is required and must be greater than 0 for ${treeType} trees` },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate optional numeric fields

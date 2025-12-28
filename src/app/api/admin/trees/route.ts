@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     const missingFields: string[] = [];
     if (!name || name.trim() === '') missingFields.push('name');
-    // Price is only required for individual trees, company/forest use packagePrice
+    // Price is required for individual and dealer trees, company/forest use packagePrice
     if (treeType !== 'company' && treeType !== 'forest' && (!priceStr || priceStr.trim() === '')) {
       missingFields.push('price');
     }

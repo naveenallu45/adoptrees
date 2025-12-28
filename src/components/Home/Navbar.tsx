@@ -17,7 +17,7 @@ export default function Navbar() {
   const { getTotalItems } = useCart();
 
   // Pages that should always have white navbar background
-  const fixedWhitePages = ['/individuals', '/companies', '/about', '/eco-pavilion', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies', '/create-forest'];
+  const fixedWhitePages = ['/individuals', '/companies', '/dealers', '/about', '/eco-pavilion', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies', '/create-forest'];
   
   // Check if current path starts with /trees (for tree info pages)
   const isTreeInfoPage = pathname?.startsWith('/trees/');
@@ -53,6 +53,7 @@ export default function Navbar() {
   const navItems = [
     { name: 'For Individuals', href: '/individuals' },
     { name: 'For Companies', href: '/companies' },
+    { name: 'For Dealers', href: '/dealers' },
     { name: 'Create Forest', href: '/create-forest' },
     { name: 'Eco Pavilion', href: '/eco-pavilion' },
     { name: 'About Us', href: '/about' }
@@ -115,7 +116,7 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Action Buttons */}
-          <div className="hidden md:flex items-center gap-2 lg:gap-3 xl:gap-4">
+          <div className="hidden md:flex items-center gap-2 lg:gap-3 xl:gap-4" style={{ transform: 'translateX(2vw)' }}>
             {/* Auth Buttons */}
             {session ? (
               <Link 

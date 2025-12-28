@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check category match
-    if (coupon.category !== userType) {
+    // Dealers can use company coupons, but also have their own coupons
+    const isValidCategory = coupon.category === userType || 
+                            (userType === 'dealer' && coupon.category === 'company');
+    
+    if (!isValidCategory) {
       return NextResponse.json(
         { success: false, error: `This coupon is only valid for ${coupon.category} users` },
         { status: 400 }
@@ -113,7 +117,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const userType = searchParams.get('userType');
 
-    if (!userType || (userType !== 'individual' && userType !== 'company')) {
+    if (!userType || (userType !== 'individual' && userType !== 'company' && userType !== 'dealer')) {
       return NextResponse.json(
         { success: false, error: 'Valid userType is required' },
         { status: 400 }
@@ -121,8 +125,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Get active coupons for this user type (exclude hidden coupons from list)
+    // Dealers can see both company and dealer coupons
+    const categoryFilter = userType === 'dealer' 
+      ? { category: { $in: ['company', 'dealer'] } }
+      : { category: userType };
+    
     const coupons = await Coupon.find({
-      category: userType,
+      ...categoryFilter,
       isActive: true,
       isHidden: false
     }).select('code discountPercentage').lean();

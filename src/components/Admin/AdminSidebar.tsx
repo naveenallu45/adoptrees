@@ -13,6 +13,7 @@ import {
   GlobeAltIcon,
   CalendarDaysIcon,
   EnvelopeIcon,
+  TruckIcon,
 } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -28,8 +29,10 @@ const navItems: NavItem[] = [
   { name: 'Trees', href: '/admin/trees', icon: TreeIcon },
   { name: 'Adoptions', href: '/admin/adoptions', icon: ClipboardDocumentListIcon },
   { name: 'Forest Adoptions', href: '/admin/forest-adoptions', icon: GlobeAltIcon },
+  { name: 'Dealer Adoptions', href: '/admin/dealer-adoptions', icon: TruckIcon },
   { name: 'Individual Users', href: '/admin/users/individuals', icon: UserIcon },
   { name: 'Company Users', href: '/admin/users/companies', icon: BuildingOfficeIcon },
+  { name: 'Dealer Users', href: '/admin/users/dealers', icon: TruckIcon },
   { name: 'Well-Wishers', href: '/admin/wellwishers', icon: HeartIcon },
   { name: 'Coupons', href: '/admin/coupons', icon: TicketIcon },
   { name: 'Marketing', href: '/admin/marketing', icon: EnvelopeIcon },

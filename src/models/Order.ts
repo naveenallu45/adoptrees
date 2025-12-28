@@ -5,7 +5,9 @@ export interface IOrder extends Document {
   userId: string;
   userEmail: string;
   userName: string;
-  userType: 'individual' | 'company';
+  userType: 'individual' | 'company' | 'dealer';
+  // Customer user ID for dealer orders (links order to customer account)
+  customerUserId?: string;
   items: {
     treeId: string;
     treeName: string;
@@ -21,6 +23,12 @@ export interface IOrder extends Document {
     giftMessage?: string;
     forestName?: string;
     occasion?: string;
+    // Dealer customer fields
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    vehicleName?: string;
+    customerProfilePicture?: string;
   }[];
   totalAmount: number;
   couponCode?: string;
@@ -38,6 +46,10 @@ export interface IOrder extends Document {
   giftRecipientName?: string;
   giftRecipientEmail?: string;
   giftMessage?: string;
+  // Dealer/Showroom specific fields
+  dealerName?: string;
+  showroomName?: string;
+  showroomLocation?: string;
   // Wellwisher assignment
   assignedWellwisher?: string;
   wellwisherTasks?: {
@@ -119,8 +131,13 @@ const OrderSchema: Schema = new Schema({
   },
   userType: {
     type: String,
-    enum: ['individual', 'company'],
+    enum: ['individual', 'company', 'dealer'],
     required: [true, 'User type is required']
+  },
+  // Customer user ID for dealer orders (links order to customer account)
+  customerUserId: {
+    type: String,
+    index: true
   },
   items: [{
     treeId: {
@@ -184,6 +201,26 @@ const OrderSchema: Schema = new Schema({
     occasion: {
       type: String,
       maxlength: [100, 'Occasion cannot exceed 100 characters']
+    },
+    // Dealer customer fields
+    customerName: {
+      type: String,
+      maxlength: [200, 'Customer name cannot exceed 200 characters']
+    },
+    customerEmail: {
+      type: String,
+      maxlength: [200, 'Customer email cannot exceed 200 characters']
+    },
+    customerPhone: {
+      type: String,
+      maxlength: [20, 'Customer phone cannot exceed 20 characters']
+    },
+    vehicleName: {
+      type: String,
+      maxlength: [200, 'Vehicle name cannot exceed 200 characters']
+    },
+    customerProfilePicture: {
+      type: String
     }
   }],
   totalAmount: {
@@ -246,6 +283,18 @@ const OrderSchema: Schema = new Schema({
   giftMessage: {
     type: String,
     maxlength: [500, 'Gift message cannot exceed 500 characters']
+  },
+  dealerName: {
+    type: String,
+    maxlength: [200, 'Dealer name cannot exceed 200 characters']
+  },
+  showroomName: {
+    type: String,
+    maxlength: [200, 'Showroom name cannot exceed 200 characters']
+  },
+  showroomLocation: {
+    type: String,
+    maxlength: [500, 'Showroom location cannot exceed 500 characters']
   },
   assignedWellwisher: {
     type: String,

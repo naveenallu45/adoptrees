@@ -17,7 +17,7 @@ interface Tree {
   oxygenKgs: number;
   imageUrl: string;
   isActive: boolean;
-  treeType: 'individual' | 'company' | 'forest';
+  treeType: 'individual' | 'company' | 'forest' | 'dealer';
   packageQuantity?: number;
   packagePrice?: number;
   scientificSpecies?: string;
@@ -174,12 +174,14 @@ export default function TreeInfoPage() {
   const isForestTree = tree?.treeType === 'forest';
   const isCompanyTree = tree?.treeType === 'company';
   const isIndividualTree = tree?.treeType === 'individual';
+  const isDealerTree = tree?.treeType === 'dealer';
   const isForestEligibleUser = userType === 'individual' || userType === 'company';
 
   const canCurrentUserAdopt = !session || !tree ? true : (
     (isIndividualTree && userType === 'individual') ||
     (isCompanyTree && userType === 'company') ||
-    (isForestTree && isForestEligibleUser)
+    (isForestTree && isForestEligibleUser) ||
+    isDealerTree // Dealer trees can be adopted by anyone
   );
 
   const handleAddToCart = (event?: React.MouseEvent<HTMLButtonElement>) => {

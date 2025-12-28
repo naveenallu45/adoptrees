@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
-type UserType = 'individual' | 'company' | '';
+type UserType = 'individual' | 'company' | 'dealer' | '';
 
 export default function RegisterForm() {
   const [userType, setUserType] = useState<UserType>('');
@@ -43,6 +43,7 @@ export default function RegisterForm() {
   const getUserTypeLabel = () => {
     if (userType === 'individual') return 'Individual';
     if (userType === 'company') return 'Company';
+    if (userType === 'dealer') return 'Dealer';
     return 'Select';
   };
 
@@ -96,6 +97,9 @@ export default function RegisterForm() {
           // Successfully logged in - redirect to dashboard based on user type with newUser flag
           // Redirect immediately to show profile picture suggestion
           if (userType === 'company') {
+            router.push('/dashboard/company?newUser=true');
+          } else if (userType === 'dealer') {
+            // For now, redirect dealers to company dashboard (can be changed later if dealer dashboard is created)
             router.push('/dashboard/company?newUser=true');
           } else {
             router.push('/dashboard/individual?newUser=true');
@@ -161,6 +165,13 @@ export default function RegisterForm() {
                 >
                   Company
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectUserType('dealer')}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-green-50 text-gray-900 transition-colors border-t border-gray-100 text-sm sm:text-base"
+                >
+                  Dealer
+                </button>
               </div>
             )}
           </div>
@@ -181,15 +192,17 @@ export default function RegisterForm() {
             </div>
           )}
 
-          {userType === 'company' && (
+          {(userType === 'company' || userType === 'dealer') && (
             <div className="md:col-span-1">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Company name</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                {userType === 'dealer' ? 'Dealer name' : 'Company name'}
+              </label>
               <input
                 type="text"
                 required
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="Acme Inc."
+                placeholder={userType === 'dealer' ? 'Dealer Business Name' : 'Acme Inc.'}
                 className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 text-sm sm:text-base"
               />
             </div>

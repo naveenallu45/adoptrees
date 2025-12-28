@@ -183,7 +183,7 @@ export function useTreeMutations() {
 interface Coupon {
   _id: string;
   code: string;
-  category: 'individual' | 'company';
+  category: 'individual' | 'company' | 'dealer';
   discountPercentage: number;
   usageLimitType: 'unlimited' | 'custom';
   totalUsageLimit?: number;

@@ -41,7 +41,7 @@ interface Adoption {
   userId: string;
   userEmail: string;
   userName: string;
-  userType: 'individual' | 'company';
+  userType: 'individual' | 'company' | 'dealer';
   items: {
     treeId: string;
     treeName: string;
@@ -56,6 +56,12 @@ interface Adoption {
     giftMessage?: string;
     forestName?: string;
     occasion?: string;
+    // Dealer customer fields
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    vehicleName?: string;
+    customerProfilePicture?: string;
   }[];
   totalAmount: number;
   couponCode?: string;
@@ -67,6 +73,11 @@ interface Adoption {
   giftRecipientName?: string;
   giftRecipientEmail?: string;
   giftMessage?: string;
+  // Dealer/Showroom specific fields
+  dealerName?: string;
+  showroomName?: string;
+  showroomLocation?: string;
+  customerUserId?: string;
   createdAt: string;
   updatedAt: string;
   adminNotes?: string;
@@ -109,6 +120,7 @@ const paymentStatusColors = {
 export default function AdminAdoptionsPage() {
   const pathname = usePathname();
   const isForestPage = pathname?.includes('/admin/forest-adoptions');
+  const isDealerPage = pathname?.includes('/admin/dealer-adoptions');
 
   const [filters, setFilters] = useState<AdoptionFilters>({
     search: '',
@@ -177,6 +189,14 @@ export default function AdminAdoptionsPage() {
       );
     }
     
+    if (isDealerPage) {
+      // Dealer adoptions page: show only dealer adoptions
+      filtered = filtered.filter((adoption: Adoption) => adoption.userType === 'dealer');
+    } else {
+      // Regular adoptions page: exclude dealer adoptions
+      filtered = filtered.filter((adoption: Adoption) => adoption.userType !== 'dealer');
+    }
+    
     // Status filter
     if (filters.status) {
       filtered = filtered.filter((adoption: Adoption) => adoption.status === filters.status);
@@ -224,7 +244,7 @@ export default function AdminAdoptionsPage() {
     }
     
     return filtered;
-  }, [allData, filters, sorting, isForestPage]);
+  }, [allData, filters, sorting, isForestPage, isDealerPage]);
 
   // Pagination for filtered results
   const paginatedAdoptions = useMemo(() => {
@@ -347,8 +367,8 @@ export default function AdminAdoptionsPage() {
   }, [deleteAdoption]);
 
   // Define columns
-  const columns = useMemo(
-    () => [
+  const columns = useMemo(() => {
+    const cols = [
       columnHelper.accessor('orderId', {
         header: 'Order ID',
         cell: (_info) => {
@@ -397,25 +417,53 @@ export default function AdminAdoptionsPage() {
         },
       }),
       columnHelper.accessor('userName', {
-        header: 'Customer',
-        cell: (_info) => (
-          <div>
-            <div className="font-medium text-gray-900">{_info.getValue()}</div>
-            <div className="text-sm text-gray-500">{_info.row.original.userEmail}</div>
-          </div>
-        ),
-      }),
-      columnHelper.accessor('userType', {
-        header: 'Type',
-        cell: (_info) => (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            _info.getValue() === 'company' 
-              ? 'bg-blue-100 text-blue-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
-            {_info.getValue() === 'company' ? 'Company' : 'Individual'}
-          </span>
-        ),
+        header: isDealerPage ? 'Dealer' : 'Customer',
+        cell: (_info) => {
+          const adoption = _info.row.original;
+          const isDealerOrder = adoption.userType === 'dealer';
+          
+          if (isDealerOrder && adoption.items.length > 0) {
+            // For dealer orders, show dealer info and customer info
+            const firstItem = adoption.items[0];
+            const customerName = firstItem.customerName;
+            const customerEmail = firstItem.customerEmail;
+            const customerPhone = firstItem.customerPhone;
+            const vehicleName = firstItem.vehicleName;
+            const dealerName = adoption.dealerName || adoption.showroomName || adoption.userName;
+            
+            return (
+              <div className="space-y-2">
+                <div>
+                  <div className="font-medium text-gray-900">{dealerName}</div>
+                  <div className="text-sm text-gray-500">{adoption.userEmail}</div>
+                  <div className="text-xs text-purple-600 font-medium mt-1">Dealer</div>
+                </div>
+                {customerName && (
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="font-medium text-gray-900">{customerName}</div>
+                    {customerEmail && (
+                      <div className="text-sm text-gray-500">{customerEmail}</div>
+                    )}
+                    {customerPhone && (
+                      <div className="text-sm text-gray-500">📞 {customerPhone}</div>
+                    )}
+                    {vehicleName && (
+                      <div className="text-xs text-blue-600 font-medium mt-1">🚗 {vehicleName}</div>
+                    )}
+                    <div className="text-xs text-green-600 font-medium mt-1">Customer</div>
+                  </div>
+                )}
+              </div>
+            );
+          }
+          
+          return (
+            <div>
+              <div className="font-medium text-gray-900">{_info.getValue()}</div>
+              <div className="text-sm text-gray-500">{adoption.userEmail}</div>
+            </div>
+          );
+        },
       }),
       columnHelper.accessor('items', {
         header: 'Trees',
@@ -551,18 +599,6 @@ export default function AdminAdoptionsPage() {
           );
         },
       }),
-      columnHelper.accessor('isGift', {
-        header: 'Gift',
-        cell: (_info) => (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            _info.getValue() 
-              ? 'bg-purple-100 text-purple-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
-            {_info.getValue() ? 'Yes' : 'No'}
-          </span>
-        ),
-      }),
       columnHelper.accessor('createdAt', {
         header: 'Date',
         cell: (_info) => (
@@ -629,9 +665,61 @@ export default function AdminAdoptionsPage() {
           );
         },
       }),
-    ],
-    [handleDelete, handleDownloadCertificate, downloadingCertificate, updateAdoption]
-  ) as ColumnDef<Adoption>[];
+    ];
+    
+    // Add Type and Gift columns only if not on dealer page
+    if (!isDealerPage) {
+      // Insert Type column after userName
+      const userNameIndex = cols.findIndex(col => {
+        const accessorKey = (col as { accessorKey?: string }).accessorKey;
+        return accessorKey === 'userName';
+      });
+      
+      cols.splice(userNameIndex + 1, 0, columnHelper.accessor('userType', {
+        header: 'Type',
+        cell: (_info) => {
+          const userType = _info.getValue();
+          const typeColors = {
+            company: 'bg-blue-100 text-blue-800',
+            dealer: 'bg-purple-100 text-purple-800',
+            individual: 'bg-green-100 text-green-800',
+          };
+          const typeLabels = {
+            company: 'Company',
+            dealer: 'Dealer',
+            individual: 'Individual',
+          };
+          
+          return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[userType] || typeColors.individual}`}>
+              {typeLabels[userType] || 'Individual'}
+            </span>
+          );
+        },
+      }) as ColumnDef<Adoption>);
+      
+      // Insert Gift column after paymentStatus
+      const paymentStatusIndex = cols.findIndex(col => {
+        const accessorKey = (col as { accessorKey?: string }).accessorKey;
+        return accessorKey === 'paymentStatus';
+      });
+      
+      cols.splice(paymentStatusIndex + 1, 0, columnHelper.accessor('isGift', {
+        header: 'Gift',
+        cell: (_info) => (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            _info.getValue() 
+              ? 'bg-purple-100 text-purple-800' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {_info.getValue() ? 'Yes' : 'No'}
+          </span>
+        ),
+      }) as ColumnDef<Adoption>);
+    }
+    
+    return cols as ColumnDef<Adoption>[];
+  }, [handleDelete, handleDownloadCertificate, downloadingCertificate, updateAdoption, isDealerPage]);
 
   const table = useReactTable({
     data: adoptions,
@@ -706,8 +794,16 @@ export default function AdminAdoptionsPage() {
     );
   }
 
-  const pageTitle = isForestPage ? 'Forest Adoption Management' : 'Adoption Management';
-  const pageSubtitle = isForestPage ? 'Manage and track all forest adoptions' : 'Manage and track all tree adoptions';
+  const pageTitle = isDealerPage 
+    ? 'Dealer Adoption Management' 
+    : isForestPage 
+    ? 'Forest Adoption Management' 
+    : 'Adoption Management';
+  const pageSubtitle = isDealerPage 
+    ? 'Manage and track all dealer adoptions for customers' 
+    : isForestPage 
+    ? 'Manage and track all forest adoptions' 
+    : 'Manage and track all tree adoptions';
 
   return (
     <div className="p-6 space-y-8">

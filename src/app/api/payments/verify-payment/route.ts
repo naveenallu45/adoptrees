@@ -153,7 +153,12 @@ export async function POST(request: NextRequest) {
           // Fetch latest user profile picture and name from database
           // Users frequently change their profile picture, so we always fetch the latest one
           // This ensures certificate always shows the most up-to-date profile
-          const user = await User.findById(order.userId).select('publicId qrCode image name');
+          // For dealer orders, use customer's account (customerUserId) instead of dealer's account
+          // This ensures we use the customer's existing QR code and public ID
+          const userIdToUse = (order.userType === 'dealer' && order.customerUserId) 
+            ? order.customerUserId 
+            : order.userId;
+          const user = await User.findById(userIdToUse).select('publicId qrCode image name companyName userType');
           if (user && user.publicId) {
             const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
             const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
@@ -174,14 +179,30 @@ export async function POST(request: NextRequest) {
               }
             });
             
-            // Use latest user name and profile picture from database
-            // Users frequently change their profile picture, so we always fetch the latest one
-            // This ensures certificate always shows the most up-to-date profile
-            const certificateUserName = order.isGift && order.giftRecipientName 
-              ? order.giftRecipientName 
-              : (user.name || order.userName);
-            // Always fetch fresh from database to ensure certificate uses current profile picture
-            const profilePicUrl = user.image || undefined;
+            // For dealer orders, always use customer's account info (not dealer's)
+            // We already fetched the customer's account via customerUserId, so use that
+            let certificateUserName: string;
+            let profilePicUrl: string | undefined;
+            
+            if (order.userType === 'dealer' && order.customerUserId) {
+              // For dealer orders, use customer's account name and profile picture
+              // Never use dealer's info - always use customer's account data
+              certificateUserName = user.name || 'Customer';
+              profilePicUrl = user.image || undefined;
+            } else if (order.isGift && order.giftRecipientName) {
+              // For gift orders, use gift recipient name
+              certificateUserName = order.giftRecipientName;
+              profilePicUrl = user.image || undefined;
+            } else {
+              // For regular orders, use the user's account info
+              if (user.userType === 'company' || user.userType === 'dealer') {
+                certificateUserName = user.companyName || user.name || order.userName || (user.userType === 'dealer' ? 'Dealer' : 'Company');
+              } else {
+                certificateUserName = user.name || order.userName || 'User';
+              }
+              // Always fetch fresh from database to ensure certificate uses current profile picture
+              profilePicUrl = user.image || undefined;
+            }
             
             const certificateBuffer = await generateCertificate({
               userName: certificateUserName,
@@ -318,10 +339,29 @@ export async function POST(request: NextRequest) {
       // Get user details for certificate generation (including latest profile picture)
       // Always fetch latest profile picture since users frequently change their profile
       // Include companyName and userType to properly handle company users
+      // For dealer orders, use customer's account (customerUserId) instead of dealer's account
+      // This ensures we use the customer's existing QR code and public ID
+      const userIdToUse = (order.userType === 'dealer' && order.customerUserId) 
+        ? order.customerUserId 
+        : order.userId;
+      
       const userResult = await Promise.allSettled([
-        User.findById(order.userId).select('publicId qrCode image name companyName userType')
+        User.findById(userIdToUse).select('publicId qrCode image name companyName userType')
       ]);
       const user = userResult[0];
+      
+      // Fallback to dealer account if customer account not found (shouldn't happen, but safety net)
+      if ((user.status === 'rejected' || !user.value) && order.userType === 'dealer' && order.customerUserId) {
+        const dealerUserResult = await Promise.allSettled([
+          User.findById(order.userId).select('publicId qrCode image name companyName userType')
+        ]);
+        const dealerUser = dealerUserResult[0];
+        if (dealerUser.status === 'fulfilled' && dealerUser.value) {
+          // Use dealer account as fallback
+          user.status = 'fulfilled';
+          user.value = dealerUser.value;
+        }
+      }
 
       // Create wellwisher tasks - assign using equal distribution
       if (!order.assignedWellwisher || !order.wellwisherTasks || order.wellwisherTasks.length === 0) {
@@ -412,24 +452,37 @@ export async function POST(request: NextRequest) {
               }
             });
 
-            // Use latest user name and profile picture from database (not from order)
-            // This ensures certificate always shows the most up-to-date profile
-            // Users frequently change their profile picture, so we always fetch the latest one
+            // For dealer orders, always use customer's account info (not dealer's)
+            // We already fetched the customer's account via customerUserId, so use that
             let certificateUserName: string;
-            if (order.isGift && order.giftRecipientName) {
+            let profilePicUrl: string | undefined;
+            
+            if (order.userType === 'dealer' && order.customerUserId && user.status === 'fulfilled' && user.value) {
+              // For dealer orders, use customer's account name and profile picture
+              // Never use dealer's info - always use customer's account data
+              certificateUserName = user.value.name || 'Customer';
+              profilePicUrl = user.value.image || undefined;
+            } else if (order.isGift && order.giftRecipientName) {
+              // For gift orders, use gift recipient name
               certificateUserName = order.giftRecipientName;
+              profilePicUrl = (user.status === 'fulfilled' && user.value) ? user.value.image : undefined;
             } else {
-              // For company users, prefer companyName; for individuals, use name
-              if (user.value.userType === 'company') {
-                certificateUserName = user.value.companyName || user.value.name || order.userName || 'Company';
+              // For regular orders, use the user's account info
+              if (user.status === 'fulfilled' && user.value) {
+                if (user.value.userType === 'company' || user.value.userType === 'dealer') {
+                  certificateUserName = user.value.companyName || user.value.name || order.userName || (user.value.userType === 'dealer' ? 'Dealer' : 'Company');
+                } else {
+                  certificateUserName = user.value.name || order.userName || 'User';
+                }
+                // Get latest profile picture from user model (users can change their profile frequently)
+                // Always fetch fresh from database to ensure certificate uses current profile picture
+                profilePicUrl = user.value.image || undefined;
               } else {
-                certificateUserName = user.value.name || order.userName || 'User';
+                // Fallback if user not found
+                certificateUserName = order.userName || 'User';
+                profilePicUrl = undefined;
               }
             }
-            
-            // Get latest profile picture from user model (users can change their profile frequently)
-            // Always fetch fresh from database to ensure certificate uses current profile picture
-            const profilePicUrl = user.value.image || undefined;
             
             console.log('[PAYMENT_VERIFY] Certificate generation data:', {
               userName: certificateUserName,
@@ -459,12 +512,36 @@ export async function POST(request: NextRequest) {
           });
 
           // Send thank you email with certificate (await to ensure it runs)
-            const recipientEmail = order.isGift && order.giftRecipientEmail 
-              ? order.giftRecipientEmail 
-              : order.userEmail;
-            const recipientName = order.isGift && order.giftRecipientName 
-              ? order.giftRecipientName 
-              : order.userName;
+          // For dealer orders, send email to customer instead of dealer
+          let recipientEmail: string;
+          let recipientName: string;
+          let dealerInfo: { dealerName?: string; showroomName?: string; vehicleName?: string } | undefined;
+          
+          if (order.userType === 'dealer' && order.items.length > 0) {
+            // Get customer info from first item
+            const firstItem = order.items[0] as { customerEmail?: string; customerName?: string; vehicleName?: string };
+            if (firstItem.customerEmail && firstItem.customerName) {
+              recipientEmail = firstItem.customerEmail;
+              recipientName = firstItem.customerName;
+              
+              // Prepare dealer information for email
+              dealerInfo = {
+                dealerName: order.dealerName,
+                showroomName: order.showroomName,
+                vehicleName: firstItem.vehicleName
+              };
+            } else {
+              // Fallback to dealer email if customer info not available
+              recipientEmail = order.userEmail;
+              recipientName = order.userName;
+            }
+          } else if (order.isGift && order.giftRecipientEmail) {
+            recipientEmail = order.giftRecipientEmail;
+            recipientName = order.giftRecipientName || order.userName;
+          } else {
+            recipientEmail = order.userEmail;
+            recipientName = order.userName;
+          }
             
             try {
               const emailSent = await sendThankYouEmailWithCertificate(
@@ -472,7 +549,8 @@ export async function POST(request: NextRequest) {
                 recipientName,
                 order.orderId,
                 treesCount,
-                certificateBuffer
+                certificateBuffer,
+                dealerInfo // Pass dealer info for dealer orders
               );
               
               if (emailSent) {

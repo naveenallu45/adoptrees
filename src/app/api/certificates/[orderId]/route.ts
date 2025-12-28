@@ -29,13 +29,35 @@ export async function GET(
     const adminCheck = await requireAdmin();
     const isAdmin = adminCheck.authorized;
 
-    // Find the order - admins can access any order, regular users only their own
-    const orderQuery: { orderId: string; userId?: string } = { orderId };
-    if (!isAdmin) {
-      orderQuery.userId = session.user.id;
+    // Find the order - admins can access any order, regular users only their own or if they are the customer (for dealer orders)
+    let order;
+    if (isAdmin) {
+      // Admins can access any order
+      order = await Order.findOne({ orderId }).select('+certificate');
+    } else {
+      // Regular users can access:
+      // 1. Orders where they are the buyer (userId matches)
+      // 2. Orders where they are the customer (customerUserId matches) - for dealer orders
+      // 3. Orders where they are the gift recipient (giftRecipientEmail matches)
+      const userIdString = String(session.user.id);
+      const userEmail = session.user.email?.toLowerCase().trim();
+      
+      order = await Order.findOne({
+        orderId,
+        $or: [
+          { userId: userIdString },
+          { userId: session.user.id }, // Also check ObjectId format
+          { customerUserId: userIdString }, // For dealer orders where user is the customer
+          { customerUserId: session.user.id }, // Also check ObjectId format
+          ...(userEmail ? [
+            { userEmail: new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            { giftRecipientEmail: new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            { 'items.customerEmail': new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            { 'items.recipientEmail': new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+          ] : [])
+        ]
+      }).select('+certificate');
     }
-
-    const order = await Order.findOne(orderQuery).select('+certificate');
 
     if (!order) {
       return NextResponse.json(
@@ -56,9 +78,15 @@ export async function GET(
     // The stored certificate in Cloudinary is only for email attachment
     // When user downloads, we want to show their current profile
     try {
+      // For dealer orders, use customer's account (customerUserId) instead of dealer's account
+      // This ensures we use the customer's existing QR code and public ID
+      const userIdToUse = (order.userType === 'dealer' && order.customerUserId) 
+        ? order.customerUserId 
+        : order.userId;
+      
       // Get user details including publicId, qrCode, profile image, name, companyName, and userType
       // Always fetch latest profile data to ensure certificate shows current profile
-      const user = await User.findById(order.userId).select('publicId qrCode image name companyName userType');
+      const user = await User.findById(userIdToUse).select('publicId qrCode image name companyName userType');
       if (!user || !user.publicId) {
         return NextResponse.json(
           { success: false, error: 'User publicId not found. Cannot generate certificate.' },
@@ -154,42 +182,49 @@ export async function GET(
         }
       });
 
-      // Get latest profile image URL from user model (users frequently change their profile)
-      // Always fetch fresh from database to ensure certificate uses current profile picture
-      const profilePicUrl = user.image || session.user.image || undefined;
-      
-      console.log('[CERTIFICATE] User profile data:', {
-        userId: user._id,
-        hasImage: !!user.image,
-        imageUrl: user.image ? user.image.substring(0, 50) + '...' : 'none',
-        userName: user.name,
-        companyName: user.companyName,
-        userType: user.userType
-      });
-
-      // For gift orders, use gift recipient name; otherwise use current user name
-      // Use current user name from User model or session (not the old order.userName)
-      // For company users, prefer companyName; for individuals, use name
-      // This ensures the certificate always shows the latest updated name
+      // For dealer orders, always use customer's account info (not dealer's)
+      // We already fetched the customer's account via customerUserId, so use that
       let currentUserName: string;
-      if (order.isGift && order.giftRecipientName) {
+      let currentProfilePicUrl: string | undefined;
+      
+      if (order.userType === 'dealer' && order.customerUserId) {
+        // For dealer orders, use customer's account name and profile picture
+        // Never use dealer's info - always use customer's account data
+        currentUserName = user.name || 'Customer';
+        currentProfilePicUrl = user.image || undefined;
+      } else if (order.isGift && order.giftRecipientName) {
+        // For gift orders, use gift recipient name
         currentUserName = order.giftRecipientName;
+        currentProfilePicUrl = user.image || session.user.image || undefined;
       } else {
+        // For regular orders, use the user's account info
         // Prefer userType-specific name: companyName for companies, name for individuals
-        if (user.userType === 'company') {
-          currentUserName = user.companyName || user.name || session.user.name || order.userName || 'Company';
+        if (user.userType === 'company' || user.userType === 'dealer') {
+          currentUserName = user.companyName || user.name || session.user.name || order.userName || (user.userType === 'dealer' ? 'Dealer' : 'Company');
         } else {
           currentUserName = user.name || session.user.name || order.userName || 'User';
         }
+        currentProfilePicUrl = user.image || session.user.image || undefined;
       }
       
-      console.log('[CERTIFICATE] Using userName:', currentUserName, 'profilePicUrl:', profilePicUrl ? 'present' : 'missing');
+      console.log('[CERTIFICATE] User profile data:', {
+        userId: user._id,
+        userType: user.userType,
+        orderUserType: order.userType,
+        isDealerOrder: order.userType === 'dealer',
+        hasImage: !!currentProfilePicUrl,
+        imageUrl: currentProfilePicUrl ? currentProfilePicUrl.substring(0, 50) + '...' : 'none',
+        userName: currentUserName,
+        companyName: user.companyName
+      });
+      
+      console.log('[CERTIFICATE] Using userName:', currentUserName, 'profilePicUrl:', currentProfilePicUrl ? 'present' : 'missing');
 
       // Generate certificate - use QR code with correct origin (matches dashboard)
       const { generateCertificate } = await import('@/lib/certificate');
       const certificateBuffer = await generateCertificate({
         userName: currentUserName,
-        profilePicUrl: profilePicUrl,
+        profilePicUrl: currentProfilePicUrl,
         treesCount,
         oxygenKgs,
         co2Kgs: co2Kgs, // Always pass CO2 (calculated from items or oxygen)
@@ -207,7 +242,7 @@ export async function GET(
         treeNamesCount: treeNames.length,
         treeNames: treeNames.slice(0, 3), // Log first 3 tree names
         userName: currentUserName,
-        hasProfilePic: !!profilePicUrl
+        hasProfilePic: !!currentProfilePicUrl
       });
 
       // Return the freshly generated certificate with latest user details

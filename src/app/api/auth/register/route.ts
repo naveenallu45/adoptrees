@@ -37,11 +37,64 @@ export async function POST(req: NextRequest) {
 
     // Check for existing user (case-insensitive)
     const existing = await User.findOne({ email: email.toLowerCase() });
+    
+    // If user exists and has publicId/QR code (likely created by dealer), allow them to claim the account
+    // by updating their password and other details, preserving the existing publicId and QR code
     if (existing) {
-      return NextResponse.json(
-        { success: false, error: 'Email already in use' },
-        { status: 409 }
-      );
+      // If account has publicId and QR code, allow user to claim it by updating password
+      if (existing.publicId && existing.qrCode) {
+        // Update password and other details, but preserve existing publicId and QR code
+        const passwordHash = await bcrypt.hash(password, 12);
+        
+        // Update user details but preserve publicId and QR code
+        existing.passwordHash = passwordHash;
+        if (userType === 'individual' && name) {
+          existing.name = sanitizeInput(name);
+        }
+        if ((userType === 'company' || userType === 'dealer') && companyName) {
+          existing.companyName = sanitizeInput(companyName);
+        }
+        if (phone) {
+          existing.phone = sanitizeInput(phone);
+        }
+        existing.userType = userType;
+        
+        try {
+          await existing.save();
+          
+          // Send welcome email (don't fail if email fails)
+          try {
+            const userName = userType === 'individual' ? name : companyName;
+            await sendWelcomeEmail(existing.email, userName || '', userType);
+          } catch (emailError) {
+            console.error('Error sending welcome email during registration:', emailError);
+          }
+          
+          return NextResponse.json(
+            {
+              success: true,
+              data: {
+                id: existing._id,
+                email: existing.email,
+              },
+              message: 'Account claimed successfully. Your existing publicId and QR code have been preserved.',
+            },
+            { status: 200 }
+          );
+        } catch (updateError) {
+          console.error('Error updating existing user:', updateError);
+          return NextResponse.json(
+            { success: false, error: 'Registration failed. Please try again.' },
+            { status: 500 }
+          );
+        }
+      } else {
+        // Account exists but doesn't have publicId/QR - this shouldn't happen, but handle it
+        return NextResponse.json(
+          { success: false, error: 'Email already in use' },
+          { status: 409 }
+        );
+      }
     }
 
     // Hash password with appropriate cost factor
@@ -102,17 +155,30 @@ export async function POST(req: NextRequest) {
 
     // Create user with publicId and qrCode set from the start
     // This avoids issues with immutable fields
-    const user = await User.create({
-      userType,
-      name: userType === 'individual' && name ? sanitizeInput(name) : undefined,
-      companyName: userType === 'company' && companyName ? sanitizeInput(companyName) : undefined,
-      email: email.toLowerCase(),
-      phone: phone ? sanitizeInput(phone) : undefined,
-      passwordHash,
-      role: 'user',
-      publicId, // Set manually to avoid pre-save hook
-      qrCode: qrDataUrl, // Set from the start to avoid immutable field issues
-    });
+    let user;
+    try {
+      user = await User.create({
+        userType,
+        name: userType === 'individual' && name ? sanitizeInput(name) : undefined,
+        companyName: (userType === 'company' || userType === 'dealer') && companyName ? sanitizeInput(companyName) : undefined,
+        email: email.toLowerCase(),
+        phone: phone ? sanitizeInput(phone) : undefined,
+        passwordHash,
+        role: 'user',
+        publicId, // Set manually to avoid pre-save hook
+        qrCode: qrDataUrl, // Set from the start to avoid immutable field issues
+      });
+    } catch (createError) {
+      console.error('Error creating user:', createError);
+      const errorMessage = createError instanceof Error ? createError.message : 'Unknown error';
+      console.error('User creation error details:', {
+        userType,
+        email: email.toLowerCase(),
+        error: errorMessage,
+        stack: createError instanceof Error ? createError.stack : undefined
+      });
+      throw createError; // Re-throw to be caught by outer catch
+    }
 
     // Final verification: Ensure QR code and publicId were saved
     const savedUser = await User.findById(user._id).select('qrCode publicId').lean() as { qrCode?: string; publicId?: string } | null;
@@ -152,9 +218,13 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (_err) {
+  } catch (err) {
+    // Log the actual error for debugging
+    console.error('Registration error:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error details:', errorMessage);
     
-    // Don't expose internal errors
+    // Don't expose internal errors to client, but log them
     return NextResponse.json(
       { success: false, error: 'Registration failed. Please try again later.' },
       { status: 500 }

@@ -70,8 +70,8 @@ export default function TreesManagement() {
       }
     }
     
-    // Validate price only for individual trees
-    if (formData.treeType === 'individual') {
+    // Validate price for individual and dealer trees
+    if (formData.treeType === 'individual' || formData.treeType === 'dealer') {
       const priceValue = parseFloat(formData.price);
       if (isNaN(priceValue) || priceValue <= 0) {
         toast.error('Price must be a valid positive number');
@@ -82,7 +82,7 @@ export default function TreesManagement() {
     const formDataToSend = new FormData();
     formDataToSend.append('name', formData.name);
     // For company/forest trees, calculate price from packagePrice/packageQuantity
-    // For individual trees, use the entered price directly
+    // For individual and dealer trees, use the entered price directly
     let priceToSend = formData.price;
     if (formData.treeType === 'company' || formData.treeType === 'forest') {
       const packagePrice = parseFloat(formData.packagePrice);
@@ -97,8 +97,8 @@ export default function TreesManagement() {
     formDataToSend.append('info', formData.info);
     formDataToSend.append('oxygenKgs', formData.oxygenKgs);
     formDataToSend.append('treeType', formData.treeType);
-    formDataToSend.append('packageQuantity', formData.packageQuantity);
-    formDataToSend.append('packagePrice', formData.packagePrice);
+    formDataToSend.append('packageQuantity', formData.packageQuantity || '');
+    formDataToSend.append('packagePrice', formData.packagePrice || '');
     
     // Additional fields - always send to ensure they're saved/cleared
     formDataToSend.append('scientificSpecies', formData.scientificSpecies || '');
@@ -323,6 +323,7 @@ export default function TreesManagement() {
             company: { label: 'Company', color: 'bg-blue-100 text-blue-800' },
             forest: { label: 'Forest', color: 'bg-emerald-100 text-emerald-800' },
             individual: { label: 'Individual', color: 'bg-green-100 text-green-800' },
+            dealer: { label: 'Dealer', color: 'bg-purple-100 text-purple-800' },
           };
           const config = typeConfig[treeType as keyof typeof typeConfig] || typeConfig.individual;
           return (
@@ -461,9 +462,9 @@ export default function TreesManagement() {
                     setFormData({ 
                       ...formData, 
                       treeType: newTreeType,
-                      // Reset package fields when switching to individual
-                      packageQuantity: newTreeType === 'individual' ? '' : formData.packageQuantity,
-                      packagePrice: newTreeType === 'individual' ? '' : formData.packagePrice,
+                      // Reset package fields when switching to individual or dealer
+                      packageQuantity: (newTreeType === 'individual' || newTreeType === 'dealer') ? '' : formData.packageQuantity,
+                      packagePrice: (newTreeType === 'individual' || newTreeType === 'dealer') ? '' : formData.packagePrice,
                       // Reset price field when switching to company or forest (will use package price)
                       price: (newTreeType === 'company' || newTreeType === 'forest') ? '' : formData.price
                     });
@@ -473,13 +474,16 @@ export default function TreesManagement() {
                   <option value="individual">Individual Tree</option>
                   <option value="company">Company Package</option>
                   <option value="forest">Forest Tree</option>
+                  <option value="dealer">Dealer Tree</option>
                 </select>
                 <p className="mt-1 text-xs text-gray-500">
                   {formData.treeType === 'individual' 
                     ? 'Single tree for individual adoption' 
                     : formData.treeType === 'company'
                     ? 'Package of multiple trees for corporate adoption'
-                    : 'Package of trees for forest creation - users can set forest name at checkout'
+                    : formData.treeType === 'forest'
+                    ? 'Package of trees for forest creation - users can set forest name at checkout'
+                    : 'Single tree for dealers/showrooms to gift to customers at vehicle purchase'
                   }
                 </p>
               </div>
@@ -496,8 +500,8 @@ export default function TreesManagement() {
                     className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                 </div>
-                {/* Only show single tree price for individual trees */}
-                {formData.treeType === 'individual' && (
+                {/* Show single tree price for individual and dealer trees */}
+                {(formData.treeType === 'individual' || formData.treeType === 'dealer') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
                     <input

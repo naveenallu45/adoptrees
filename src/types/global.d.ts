@@ -9,7 +9,7 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       role: 'user' | 'admin' | 'wellwisher';
-      userType: 'individual' | 'company';
+      userType: 'individual' | 'company' | 'dealer';
     };
   }
   
@@ -18,7 +18,7 @@ declare module 'next-auth' {
     email: string;
     name?: string;
     role: 'user' | 'admin' | 'wellwisher';
-    userType: 'individual' | 'company';
+    userType: 'individual' | 'company' | 'dealer';
   }
 }
 
@@ -28,7 +28,7 @@ declare module 'next-auth/jwt' {
     name?: string;
     email?: string;
     role: 'user' | 'admin' | 'wellwisher';
-    userType: 'individual' | 'company';
+    userType: 'individual' | 'company' | 'dealer';
     image?: string;
   }
 }
