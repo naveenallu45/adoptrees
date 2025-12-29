@@ -208,6 +208,15 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             profilePicUrl = user.image || undefined;
           }
           
+          // Get dealer and vehicle info for dealer orders
+          let dealerName: string | undefined;
+          let vehicleName: string | undefined;
+          if (order.userType === 'dealer' && order.items.length > 0) {
+            dealerName = order.dealerName || order.showroomName || order.userName;
+            const firstItem = order.items[0] as { vehicleName?: string };
+            vehicleName = firstItem.vehicleName;
+          }
+
           const certificateBuffer = await generateCertificate({
             userName: certificateUserName,
             profilePicUrl: profilePicUrl,
@@ -218,6 +227,8 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             publicId: user.publicId, // Use customer's public ID for dealer orders
             orderId: order.orderId,
             qrCode: user.qrCode, // Use customer's QR code for dealer orders
+            dealerName, // Dealer name for dealer orders
+            vehicleName, // Vehicle name for dealer orders
           });
 
           // Don't store certificate - generate on-demand when needed

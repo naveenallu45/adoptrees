@@ -220,6 +220,15 @@ export async function GET(
       
       console.log('[CERTIFICATE] Using userName:', currentUserName, 'profilePicUrl:', currentProfilePicUrl ? 'present' : 'missing');
 
+      // Get dealer and vehicle info for dealer orders
+      let dealerName: string | undefined;
+      let vehicleName: string | undefined;
+      if (order.userType === 'dealer' && order.items.length > 0) {
+        dealerName = order.dealerName || order.showroomName || order.userName;
+        const firstItem = order.items[0] as { vehicleName?: string };
+        vehicleName = firstItem.vehicleName;
+      }
+
       // Generate certificate - use QR code with correct origin (matches dashboard)
       const { generateCertificate } = await import('@/lib/certificate');
       const certificateBuffer = await generateCertificate({
@@ -232,6 +241,8 @@ export async function GET(
         publicId: user.publicId,
         orderId: order.orderId,
         qrCode: qrCodeToUse, // Use QR code with current request origin
+        dealerName, // Dealer name for dealer orders
+        vehicleName, // Vehicle name for dealer orders
       });
       
       // Debug logging

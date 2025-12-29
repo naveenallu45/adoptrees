@@ -148,6 +148,15 @@ export async function POST(request: NextRequest) {
 
         const profilePicUrl = user.image || undefined;
 
+        // Get dealer and vehicle info for dealer orders
+        let dealerName: string | undefined;
+        let vehicleName: string | undefined;
+        if (order.userType === 'dealer' && order.items.length > 0) {
+          dealerName = order.dealerName || order.showroomName || order.userName;
+          const firstItem = order.items[0] as { vehicleName?: string };
+          vehicleName = firstItem.vehicleName;
+        }
+
         let certificateBuffer: Buffer;
         try {
           certificateBuffer = await generateCertificate({
@@ -160,6 +169,8 @@ export async function POST(request: NextRequest) {
             publicId: user.publicId,
             orderId: order.orderId,
             qrCode: user.qrCode,
+            dealerName, // Dealer name for dealer orders
+            vehicleName, // Vehicle name for dealer orders
           });
         } catch (certError) {
           results.failed++;

@@ -124,6 +124,8 @@ interface CertificateData {
   publicId: string;
   orderId: string;
   qrCode?: string; // Existing QR code as data URL (e.g., 'data:image/png;base64,...')
+  dealerName?: string; // Dealer name for dealer orders
+  vehicleName?: string; // Vehicle name for dealer orders
 }
 
 /**
@@ -526,6 +528,57 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       width: qrSize,
       height: qrSize,
     });
+
+    // Draw dealer gift message at bottom (4% from bottom) (for dealer orders)
+    if (data.dealerName || data.vehicleName) {
+      const messageFontSize = 22.23; // Font size for the gift message (decreased by 5% from 23.4)
+      
+      // Capitalize first letter of dealer name
+      const dealerName = data.dealerName 
+        ? data.dealerName.charAt(0).toUpperCase() + data.dealerName.slice(1).toLowerCase()
+        : '';
+      
+      // Capitalize first letter of vehicle name
+      const vehicleName = data.vehicleName
+        ? data.vehicleName.charAt(0).toUpperCase() + data.vehicleName.slice(1).toLowerCase()
+        : '';
+      
+      // Position message at bottom (9% from bottom of page)
+      // Use the same center X as stats for alignment
+      const statsCenterX = centerX - (pageWidth * 0.05); // Same as stats center
+      const messageY = pageHeight * 0.09; // Position at 9% from bottom
+      
+      // Draw gift message (only show message, not duplicate dealer/vehicle names)
+      if (dealerName && vehicleName) {
+        const giftMessage = `This tree adoption is gifted by ${dealerName} on the occasion of purchasing ${vehicleName}`;
+        
+        // Calculate text width for centering, then move 2% to the left
+        const messageWidth = giftMessage.length * (messageFontSize * 0.5);
+        const messageX = statsCenterX - messageWidth / 2 - (pageWidth * 0.02);
+        
+        // Draw the gift message (centered, bold for better visibility)
+        page.drawText(giftMessage, {
+          x: messageX,
+          y: messageY,
+          size: messageFontSize,
+          font: robotoBoldFont,
+          color: rgb(0, 0, 0), // Black color
+        });
+      } else if (dealerName) {
+        // Only dealer name available
+        const giftMessage = `This tree adoption is gifted by ${dealerName}`;
+        const messageWidth = giftMessage.length * (messageFontSize * 0.5);
+        const messageX = statsCenterX - messageWidth / 2 - (pageWidth * 0.02);
+        
+        page.drawText(giftMessage, {
+          x: messageX,
+          y: messageY,
+          size: messageFontSize,
+          font: robotoBoldFont,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
 
     // Draw order ID (small text at bottom)
     const orderIdText = `Order: ${data.orderId}`;

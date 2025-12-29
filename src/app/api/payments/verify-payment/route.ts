@@ -204,6 +204,15 @@ export async function POST(request: NextRequest) {
               profilePicUrl = user.image || undefined;
             }
             
+            // Get dealer and vehicle info for dealer orders
+            let dealerName: string | undefined;
+            let vehicleName: string | undefined;
+            if (order.userType === 'dealer' && order.items.length > 0) {
+              dealerName = order.dealerName || order.showroomName || order.userName;
+              const firstItem = order.items[0] as { vehicleName?: string };
+              vehicleName = firstItem.vehicleName;
+            }
+
             const certificateBuffer = await generateCertificate({
               userName: certificateUserName,
               profilePicUrl: profilePicUrl,
@@ -214,6 +223,8 @@ export async function POST(request: NextRequest) {
               publicId: user.publicId,
               orderId: order.orderId,
               qrCode: user.qrCode, // Use stored QR code from user
+              dealerName, // Dealer name for dealer orders
+              vehicleName, // Vehicle name for dealer orders
             });
             
             // Don't store certificate - generate on-demand when needed
@@ -491,6 +502,15 @@ export async function POST(request: NextRequest) {
               userType: user.value.userType
             });
 
+            // Get dealer and vehicle info for dealer orders
+            let dealerName: string | undefined;
+            let vehicleName: string | undefined;
+            if (order.userType === 'dealer' && order.items.length > 0) {
+              dealerName = order.dealerName || order.showroomName || order.userName;
+              const firstItem = order.items[0] as { vehicleName?: string };
+              vehicleName = firstItem.vehicleName;
+            }
+
             // Generate certificate (this is the slowest operation)
             const certificateBuffer = await generateCertificate({
               userName: certificateUserName,
@@ -502,6 +522,8 @@ export async function POST(request: NextRequest) {
               publicId: user.value.publicId,
               orderId: order.orderId,
               qrCode: user.value.qrCode,
+              dealerName, // Dealer name for dealer orders
+              vehicleName, // Vehicle name for dealer orders
             });
 
           // Don't store certificate - generate on-demand when needed

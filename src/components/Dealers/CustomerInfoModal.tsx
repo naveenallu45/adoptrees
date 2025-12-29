@@ -425,8 +425,11 @@ export default function CustomerInfoModal({ isOpen, onClose, onConfirm, treeName
               className={`w-full px-4 py-2.5 rounded-lg border ${
                 errors.vehicleName ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-green-500'
               } focus:outline-none focus:ring-2 focus:ring-green-200 text-gray-900`}
-              placeholder="e.g., Honda City, Toyota Innova"
+              placeholder="e.g., Toyota Car, Honda Bike"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Format: Brand + Vehicle Type (e.g., Toyota Car, Honda Bike, Maruti Car)
+            </p>
             {errors.vehicleName && (
               <p className="mt-1 text-sm text-red-600">{errors.vehicleName}</p>
             )}
