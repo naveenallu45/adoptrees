@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -21,6 +21,7 @@ export default function CustomerInfoModal({ isOpen, onClose, onConfirm, treeName
   const [isCheckingAccount, setIsCheckingAccount] = useState(false);
   const [accountExists, setAccountExists] = useState(false);
   const [errors, setErrors] = useState<{ customerName?: string; customerEmail?: string; customerPhone?: string; vehicleName?: string; profilePicture?: string }>({});
+  const checkAccountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -79,6 +80,31 @@ export default function CustomerInfoModal({ isOpen, onClose, onConfirm, treeName
       setIsCheckingAccount(false);
     }
   };
+
+  // Debounced account check for better mobile UX
+  useEffect(() => {
+    // Clear any existing timeout
+    if (checkAccountTimeoutRef.current) {
+      clearTimeout(checkAccountTimeoutRef.current);
+    }
+
+    // Only check if email is valid
+    if (customerEmail && validateEmail(customerEmail)) {
+      // Set a timeout to check account after user stops typing (better for mobile)
+      checkAccountTimeoutRef.current = setTimeout(() => {
+        checkCustomerAccount(customerEmail).catch(console.error);
+      }, 800); // 800ms debounce
+    } else {
+      setAccountExists(false);
+    }
+
+    // Cleanup timeout on unmount or email change
+    return () => {
+      if (checkAccountTimeoutRef.current) {
+        clearTimeout(checkAccountTimeoutRef.current);
+      }
+    };
+  }, [customerEmail]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -247,21 +273,25 @@ export default function CustomerInfoModal({ isOpen, onClose, onConfirm, treeName
                 type="email"
                 id="customerEmail"
                 value={customerEmail}
-                onChange={async (e) => {
+                onChange={(e) => {
                   const emailValue = e.target.value;
                   setCustomerEmail(emailValue);
                   if (errors.customerEmail) setErrors({ ...errors, customerEmail: undefined });
                   
-                  // Check for existing account when email is valid
-                  if (validateEmail(emailValue)) {
-                    await checkCustomerAccount(emailValue);
-                  } else {
-                    setAccountExists(false);
-                  }
+                  // Reset account status immediately when email changes
+                  setAccountExists(false);
+                  // The useEffect hook will handle the debounced check
                 }}
                 onBlur={async () => {
+                  // Also check on blur for immediate feedback (especially on mobile)
                   if (customerEmail && validateEmail(customerEmail)) {
+                    // Clear any pending timeout and check immediately
+                    if (checkAccountTimeoutRef.current) {
+                      clearTimeout(checkAccountTimeoutRef.current);
+                    }
                     await checkCustomerAccount(customerEmail);
+                  } else {
+                    setAccountExists(false);
                   }
                 }}
                 className={`w-full px-4 py-2.5 rounded-lg border ${
@@ -279,14 +309,16 @@ export default function CustomerInfoModal({ isOpen, onClose, onConfirm, treeName
               )}
               {accountExists && !isCheckingAccount && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <span className="text-xs text-green-600 font-medium">✓ Account exists</span>
+                  <span className="text-xs text-green-600 font-medium whitespace-nowrap">✓ Account exists</span>
                 </div>
               )}
             </div>
-            {accountExists && (
-              <p className="mt-1 text-xs text-green-600">
-                Customer account found. Name and profile will be used from existing account.
-              </p>
+            {accountExists && !isCheckingAccount && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs sm:text-sm text-green-700 font-medium leading-relaxed">
+                  ✓ Customer account found. Name and profile will be used from existing account.
+                </p>
+              </div>
             )}
             {!accountExists && customerEmail && validateEmail(customerEmail) && !isCheckingAccount && (
               <div className="mt-2 p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-lg shadow-sm">

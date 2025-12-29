@@ -81,8 +81,9 @@ export async function POST(request: NextRequest) {
     const amountAfterCoupon = finalAmount !== undefined ? finalAmount : totalAmount;
     
     // Validate and process credits usage
+    // Dealers don't use credits - credits are given to customers instead
     let creditsToUse = 0;
-    if (creditsUsed && creditsUsed > 0) {
+    if (creditsUsed && creditsUsed > 0 && session.user.userType !== 'dealer') {
       // Fetch user to check available credits
       const user = await User.findById(session.user.id);
       if (!user) {

@@ -673,7 +673,9 @@ useEffect(() => {
 
   const headerTitle = isForestView
     ? (userType === 'individual' ? 'Your Forest Collections' : 'Company Forest Programs')
-    : (userType === 'individual' ? 'Your Adopted Trees' : 'Company Adopted Trees');
+    : (userType === 'individual' 
+      ? 'Your Adopted Trees' 
+      : (session?.user?.userType === 'dealer' ? 'Adopted trees for customers' : 'Company Adopted Trees'));
 
   const ctaText = isForestView ? 'Create New Forest' : 'Adopt New Tree';
   const ctaHref = isForestView 
@@ -851,16 +853,22 @@ useEffect(() => {
                                     : ((item.recipientEmail || primaryOrder.giftRecipientEmail)?.toLowerCase().trim());
                                   const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
                                   
-                                  // For dealer orders, always show dealer name (for both logged-in and public views)
+                                  // For dealer orders, show different text based on who is viewing
                                   if (isDealerOrder && isDealerItem) {
                                     const dealerName = primaryOrder.dealerName || primaryOrder.showroomName || primaryOrder.userName || 'Dealer';
+                                    const customerName = item.customerName || 'Customer';
                                     const vehicleName = item.vehicleName;
+                                    
+                                    // Check if current user is the dealer (viewing their own orders)
+                                    const isDealerViewing = session?.user?.userType === 'dealer' && 
+                                                           (session?.user?.id === primaryOrder.userId || 
+                                                            session?.user?.email?.toLowerCase().trim() === primaryOrder.userEmail?.toLowerCase().trim());
                                     
                                     return (
                                       <div className="flex flex-col gap-1.5">
                                         <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-purple-50 text-purple-700 font-medium rounded-full border border-purple-200 text-xs whitespace-nowrap">
                                           <GiftIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                                          Gift from {dealerName}
+                                          {isDealerViewing ? `Gift for ${customerName}` : `Gift from ${dealerName}`}
                                         </span>
                                         {vehicleName && (
                                           <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-emerald-50 text-emerald-700 font-medium rounded-full border border-emerald-200 text-xs whitespace-nowrap">
@@ -1168,15 +1176,21 @@ useEffect(() => {
                                 : ((item.recipientEmail || order.giftRecipientEmail)?.toLowerCase().trim());
                               const isRecipient = currentUserEmail && recipientEmail && currentUserEmail === recipientEmail;
                               
-                              // For dealer orders where customer is viewing their own trees
+                              // For dealer orders, show different text based on who is viewing
                               if (isDealerOrder && isDealerItem) {
                                 const dealerName = order.dealerName || order.showroomName || order.userName || 'Dealer';
+                                const customerName = item.customerName || 'Customer';
                                 const vehicleName = item.vehicleName;
+                                
+                                // Check if current user is the dealer (viewing their own orders)
+                                const isDealerViewing = session?.user?.userType === 'dealer' && 
+                                                       (session?.user?.id === order.userId || 
+                                                        session?.user?.email?.toLowerCase().trim() === order.userEmail?.toLowerCase().trim());
                                 
                                 return (
                                   <div className="space-y-1">
                                     <p className="text-xs text-purple-600 truncate">
-                                      Gift from: {dealerName}
+                                      {isDealerViewing ? `Gift for: ${customerName}` : `Gift from: ${dealerName}`}
                                     </p>
                                     {vehicleName && (
                                       <p className="text-xs text-emerald-700 truncate">

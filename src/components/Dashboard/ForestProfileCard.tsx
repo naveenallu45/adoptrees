@@ -549,8 +549,8 @@ export default function ForestProfileCard({ userType, publicId, focus = 'all' }:
       transition={{ duration: 0.5 }}
     >
       <div className="p-4 sm:p-5 md:p-6 text-white relative">
-        {/* Green Credits Display - Top Right */}
-        {!publicId && session?.user?.id && (
+        {/* Green Credits Display - Top Right - Hidden for dealers (credits go to customers) */}
+        {!publicId && session?.user?.id && session?.user?.userType !== 'dealer' && (
           <div className="absolute top-4 right-4 sm:top-5 sm:right-5 md:top-6 md:right-6 z-10">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20 shadow-lg">
               <div className="flex items-center gap-2">

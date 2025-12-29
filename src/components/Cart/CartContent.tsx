@@ -542,7 +542,7 @@ export default function CartContent() {
         giftMessage: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.giftMessage,
         couponCode: appliedCoupon?.code || null,
         couponDiscount: appliedCoupon ? appliedCoupon.discountAmount : 0,
-        creditsUsed: creditsToUse,
+        creditsUsed: session?.user?.userType === 'dealer' ? 0 : creditsToUse, // Dealers don't use credits
         finalAmount: total
       };
 
@@ -1088,8 +1088,8 @@ export default function CartContent() {
                   </div>
                 </div>
 
-                {/* Credits Section */}
-                {session && userCredits > 0 && (
+                {/* Credits Section - Hidden for dealers (credits go to customers) */}
+                {session && userCredits > 0 && session.user.userType !== 'dealer' && (
                   <div className="mb-4 sm:mb-6 pb-4 border-b border-green-100">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">

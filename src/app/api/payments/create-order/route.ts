@@ -223,8 +223,9 @@ export async function POST(request: NextRequest) {
       : (user.name || 'User');
 
     // Validate and process credits usage
+    // Dealers don't use credits - credits are given to customers instead
     let creditsToUse = 0;
-    if (creditsUsed && creditsUsed > 0) {
+    if (creditsUsed && creditsUsed > 0 && session.user.userType !== 'dealer') {
 
       const availableCredits = user.credits || 0;
       const maxCreditsUsage = Math.round(amountAfterCoupon * 0.25); // Max 25% of order
