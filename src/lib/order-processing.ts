@@ -211,10 +211,25 @@ export async function processOrderCompletion(order: IOrder): Promise<{
           // Get dealer and vehicle info for dealer orders
           let dealerName: string | undefined;
           let vehicleName: string | undefined;
+          let dealerImageUrl: string | undefined;
           if (order.userType === 'dealer' && order.items.length > 0) {
             dealerName = order.dealerName || order.showroomName || order.userName;
             const firstItem = order.items[0] as { vehicleName?: string };
             vehicleName = firstItem.vehicleName;
+            
+            // Fetch dealer profile information
+            try {
+              const dealer = await User.findById(order.userId).select('name companyName image').lean();
+              if (dealer) {
+                // Use companyName for dealers if available, otherwise name
+                if (!dealerName) {
+                  dealerName = dealer.companyName || dealer.name || order.userName;
+                }
+                dealerImageUrl = dealer.image || undefined;
+              }
+            } catch (dealerError) {
+              console.warn('[ORDER-PROCESSING] Error fetching dealer profile:', dealerError);
+            }
           }
 
           const certificateBuffer = await generateCertificate({
@@ -229,6 +244,7 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             qrCode: user.qrCode, // Use customer's QR code for dealer orders
             dealerName, // Dealer name for dealer orders
             vehicleName, // Vehicle name for dealer orders
+            dealerImageUrl, // Dealer profile image for dealer orders
           });
 
           // Don't store certificate - generate on-demand when needed

@@ -126,6 +126,7 @@ interface CertificateData {
   qrCode?: string; // Existing QR code as data URL (e.g., 'data:image/png;base64,...')
   dealerName?: string; // Dealer name for dealer orders
   vehicleName?: string; // Vehicle name for dealer orders
+  dealerImageUrl?: string; // Dealer profile image URL for dealer orders
 }
 
 /**
@@ -517,68 +518,347 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       color: rgb(0, 0, 0),
     });
 
-    // Draw QR code (bottom right area)
+    // Draw QR code (bottom right area) with green border matching profile picture style
     const qrSize = 250;
     const qrX = pageWidth - qrSize - 250;
     const qrY = 1000;
+    const borderWidth = 4;
+    const borderPadding = 5;
+    const borderRadius = 12; // Rounded corners radius
     
+    // Helper function to create rounded rectangle image using canvas
+    const createRoundedRectImage = async (
+      width: number,
+      height: number,
+      radius: number,
+      fillColor: { r: number; g: number; b: number } | null,
+      borderColor?: { r: number; g: number; b: number },
+      borderWidth?: number
+    ): Promise<PDFImage> => {
+      const canvas = createCanvas(width, height);
+      const ctx = canvas.getContext('2d');
+      
+      // Clear canvas with transparent background
+      ctx.clearRect(0, 0, width, height);
+      
+      // Reset any default styles to avoid black borders
+      ctx.strokeStyle = 'transparent';
+      ctx.fillStyle = 'transparent';
+      
+      // Draw rounded rectangle path
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(width - radius, 0);
+      ctx.quadraticCurveTo(width, 0, width, radius);
+      ctx.lineTo(width, height - radius);
+      ctx.quadraticCurveTo(width, height, width - radius, height);
+      ctx.lineTo(radius, height);
+      ctx.quadraticCurveTo(0, height, 0, height - radius);
+      ctx.lineTo(0, radius);
+      ctx.quadraticCurveTo(0, 0, radius, 0);
+      ctx.closePath();
+      
+      // Fill if color provided
+      if (fillColor) {
+        ctx.fillStyle = `rgb(${Math.round(fillColor.r * 255)}, ${Math.round(fillColor.g * 255)}, ${Math.round(fillColor.b * 255)})`;
+        ctx.fill();
+      }
+      
+      // Stroke if border specified - explicitly set to green
+      if (borderColor && borderWidth) {
+        // Explicitly set green border color (same as profile picture: rgb(0.2, 0.5, 0.2))
+        const r = Math.round(borderColor.r * 255);
+        const g = Math.round(borderColor.g * 255);
+        const b = Math.round(borderColor.b * 255);
+        ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`; // Green color
+        ctx.lineWidth = borderWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+      
+      const buffer = canvas.toBuffer('image/png');
+      return await pdfDoc.embedPng(buffer);
+    };
+    
+    // Step 1: Draw outer green rounded rectangle background (like profile picture)
+    const outerWidth = qrSize + (borderPadding * 2);
+    const outerHeight = qrSize + (borderPadding * 2);
+    const outerRadius = borderRadius + borderPadding;
+    const outerGreenRect = await createRoundedRectImage(
+      outerWidth,
+      outerHeight,
+      outerRadius,
+      { r: 0.2, g: 0.5, b: 0.2 } // Light green background (same as profile)
+    );
+    page.drawImage(outerGreenRect, {
+      x: qrX - borderPadding,
+      y: qrY - borderPadding,
+      width: outerWidth,
+      height: outerHeight,
+    });
+    
+    // Step 2: Draw white rounded rectangle (creates the frame border)
+    const whiteWidth = qrSize + 2;
+    const whiteHeight = qrSize + 2;
+    const whiteRadius = borderRadius + 1;
+    const whiteRect = await createRoundedRectImage(
+      whiteWidth,
+      whiteHeight,
+      whiteRadius,
+      { r: 1, g: 1, b: 1 } // White
+    );
+    page.drawImage(whiteRect, {
+      x: qrX - 1,
+      y: qrY - 1,
+      width: whiteWidth,
+      height: whiteHeight,
+    });
+    
+    // Step 3: Draw the QR code image
     page.drawImage(qrImage, {
       x: qrX,
       y: qrY,
       width: qrSize,
       height: qrSize,
     });
+    
+    // Step 4: Draw the light green rounded border (completes the frame like profile picture)
+    // Use transparent fill so QR code shows through
+    const borderRect = await createRoundedRectImage(
+      qrSize,
+      qrSize,
+      borderRadius,
+      null, // No fill - transparent
+      { r: 0.2, g: 0.5, b: 0.2 }, // Light green border (same as profile)
+      borderWidth
+    );
+    page.drawImage(borderRect, {
+      x: qrX,
+      y: qrY,
+      width: qrSize,
+      height: qrSize,
+    });
 
-    // Draw dealer gift message at bottom (4% from bottom) (for dealer orders)
-    if (data.dealerName || data.vehicleName) {
-      const messageFontSize = 22.23; // Font size for the gift message (decreased by 5% from 23.4)
+    // Draw dealer profile below QR code (for dealer orders)
+    if (data.dealerName) {
+      const dealerProfileSize = 336; // Doubled from 168 (168 * 2)
+      const dealerProfileSpacing = 30; // Space between QR code and dealer profile
+      const upwardOffset = (dealerProfileSpacing + dealerProfileSize) * 0.5; // Move up by 50% (20% + 15% + 15%)
+      const dealerProfileY = qrY - qrSize - dealerProfileSpacing - dealerProfileSize + upwardOffset;
+      const dealerProfileX = qrX + (qrSize / 2) - (dealerProfileSize / 2); // Center below QR code
       
-      // Capitalize first letter of dealer name
-      const dealerName = data.dealerName 
-        ? data.dealerName.charAt(0).toUpperCase() + data.dealerName.slice(1).toLowerCase()
-        : '';
+      // Embed dealer profile picture if available
+      let dealerProfilePic: PDFImage | null = null;
+      if (data.dealerImageUrl) {
+        try {
+          console.log('[CERTIFICATE] Fetching dealer profile image from URL:', data.dealerImageUrl.substring(0, 80) + '...');
+          const dealerPicResponse = await fetch(data.dealerImageUrl);
+          if (dealerPicResponse.ok) {
+            const dealerPicBytes = await dealerPicResponse.arrayBuffer();
+            const dealerImg = await loadImage(Buffer.from(dealerPicBytes));
+            
+            // Create circular version
+            const dealerCanvas = createCanvas(dealerProfileSize, dealerProfileSize);
+            const dealerCtx = dealerCanvas.getContext('2d');
+            
+            // Create circular clipping path
+            dealerCtx.beginPath();
+            dealerCtx.arc(dealerProfileSize / 2, dealerProfileSize / 2, dealerProfileSize / 2, 0, Math.PI * 2);
+            dealerCtx.closePath();
+            dealerCtx.clip();
+            
+            // Draw the image centered and scaled to fit
+            const dealerScale = Math.min(dealerProfileSize / dealerImg.width, dealerProfileSize / dealerImg.height);
+            const dealerScaledWidth = dealerImg.width * dealerScale;
+            const dealerScaledHeight = dealerImg.height * dealerScale;
+            const dealerOffsetX = (dealerProfileSize - dealerScaledWidth) / 2;
+            const dealerOffsetY = (dealerProfileSize - dealerScaledHeight) / 2;
+            
+            dealerCtx.drawImage(dealerImg, dealerOffsetX, dealerOffsetY, dealerScaledWidth, dealerScaledHeight);
+            
+            const dealerCircularBuffer = dealerCanvas.toBuffer('image/png');
+            dealerProfilePic = await pdfDoc.embedPng(dealerCircularBuffer);
+            console.log('[CERTIFICATE] Dealer profile image created successfully');
+          }
+        } catch (dealerPicError) {
+          console.warn('[CERTIFICATE] Error fetching dealer profile image:', dealerPicError);
+        }
+      }
       
-      // Capitalize first letter of vehicle name
-      const vehicleName = data.vehicleName
-        ? data.vehicleName.charAt(0).toUpperCase() + data.vehicleName.slice(1).toLowerCase()
-        : '';
+      const dealerProfileRadius = dealerProfileSize / 2;
+      const dealerProfileCenterX = dealerProfileX + dealerProfileRadius;
+      const dealerProfileCenterY = dealerProfileY + dealerProfileRadius;
       
-      // Position message at bottom (9% from bottom of page)
-      // Use the same center X as stats for alignment
-      const statsCenterX = centerX - (pageWidth * 0.05); // Same as stats center
-      const messageY = pageHeight * 0.09; // Position at 9% from bottom
-      
-      // Draw gift message (only show message, not duplicate dealer/vehicle names)
-      if (dealerName && vehicleName) {
-        const giftMessage = `This tree adoption is gifted by ${dealerName} on the occasion of purchasing ${vehicleName}`;
-        
-        // Calculate text width for centering, then move 2% to the left
-        const messageWidth = giftMessage.length * (messageFontSize * 0.5);
-        const messageX = statsCenterX - messageWidth / 2 - (pageWidth * 0.02);
-        
-        // Draw the gift message (centered, bold for better visibility)
-        page.drawText(giftMessage, {
-          x: messageX,
-          y: messageY,
-          size: messageFontSize,
-          font: robotoBoldFont,
-          color: rgb(0, 0, 0), // Black color
+      if (dealerProfilePic) {
+        // Draw circular dealer profile picture with circular frame
+        // Step 1: Draw outer green circle background
+        page.drawCircle({
+          x: dealerProfileCenterX,
+          y: dealerProfileCenterY,
+          size: dealerProfileRadius + 3,
+          color: rgb(0.2, 0.5, 0.2), // Light green background
         });
-      } else if (dealerName) {
-        // Only dealer name available
-        const giftMessage = `This tree adoption is gifted by ${dealerName}`;
-        const messageWidth = giftMessage.length * (messageFontSize * 0.5);
-        const messageX = statsCenterX - messageWidth / 2 - (pageWidth * 0.02);
         
-        page.drawText(giftMessage, {
-          x: messageX,
-          y: messageY,
-          size: messageFontSize,
+        // Step 2: Draw white circle (creates the frame border)
+        page.drawCircle({
+          x: dealerProfileCenterX,
+          y: dealerProfileCenterY,
+          size: dealerProfileRadius - 1,
+          color: rgb(1, 1, 1), // White
+        });
+        
+        // Step 3: Draw the circular dealer profile image
+        page.drawImage(dealerProfilePic, {
+          x: dealerProfileX,
+          y: dealerProfileY,
+          width: dealerProfileSize,
+          height: dealerProfileSize,
+        });
+        
+        // Step 4: Draw the light green circular border
+        page.drawCircle({
+          x: dealerProfileCenterX,
+          y: dealerProfileCenterY,
+          size: dealerProfileRadius,
+          borderColor: rgb(0.2, 0.5, 0.2), // Light green border
+          borderWidth: 3,
+        });
+      } else {
+        // Draw placeholder circle with initials
+        const dealerInitials = data.dealerName
+          .split(' ')
+          .map(n => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+        
+        // Draw circle background
+        page.drawCircle({
+          x: dealerProfileCenterX,
+          y: dealerProfileCenterY,
+          size: dealerProfileRadius,
+          color: rgb(0.2, 0.5, 0.2),
+        });
+        
+        // Draw initials (font size doubled proportionally: 42 * 2 = 84)
+        page.drawText(dealerInitials, {
+          x: dealerProfileCenterX - 22,
+          y: dealerProfileCenterY - 16,
+          size: 84,
           font: robotoBoldFont,
-          color: rgb(0, 0, 0),
+          color: rgb(1, 1, 1),
+        });
+      }
+      
+      // Draw dealer quote text below dealer profile (matching image style)
+      if (data.vehicleName) {
+        const quoteTextY = dealerProfileY - 100; // Position below dealer profile
+        const quoteCenterX = dealerProfileCenterX; // Center aligned with dealer profile
+        
+        // Black color for text
+        const textColor = rgb(0, 0, 0);
+        const quoteFontSize = 30; // Increased by 25% from 24
+        const vehicleNameFontSize = 35; // Increased by 25% from 28
+        const lineSpacing = 55; // Increased spacing between lines
+        
+        // Calculate text dimensions for background (with double quotes)
+        const firstLineBaseText = "This tree is planted to mark the delivery of your new";
+        const firstLineText = `"${firstLineBaseText}`; // Add opening double quote
+        const vehicleNameText = data.vehicleName;
+        const lastLineBaseText = "And the legacy it begins.";
+        const lastLineText = `${lastLineBaseText}"`; // Add closing double quote
+        
+        const firstLineWidth = robotoRegularFont.widthOfTextAtSize(firstLineText, quoteFontSize);
+        const vehicleNameWidth = robotoBoldFont.widthOfTextAtSize(vehicleNameText, vehicleNameFontSize);
+        const lastLineWidth = robotoRegularFont.widthOfTextAtSize(lastLineText, quoteFontSize);
+        
+        const maxTextWidth = Math.max(firstLineWidth, vehicleNameWidth, lastLineWidth);
+        const lineY = quoteTextY - lineSpacing - 5;
+        const bottomY = lineY - lineSpacing;
+        
+        // Calculate background dimensions
+        const padding = 40; // Padding around text
+        const rightGap = 80; // Gap on the right side
+        const backgroundWidth = maxTextWidth + (padding * 2);
+        const backgroundHeight = quoteTextY - bottomY + (padding * 2);
+        // Shift background left to create gap on right side
+        const backgroundX = quoteCenterX - backgroundWidth / 2 - rightGap / 2;
+        const backgroundY = bottomY - padding;
+        const borderRadius = Math.min(backgroundWidth, backgroundHeight) * 0.02; // 2% of smaller dimension
+        // Adjust text center to match shifted background
+        const textCenterX = quoteCenterX - rightGap / 2;
+        
+        // Draw solid white rectangle background first (guaranteed to show white)
+        page.drawRectangle({
+          x: backgroundX,
+          y: backgroundY,
+          width: backgroundWidth,
+          height: backgroundHeight,
+          color: rgb(1, 1, 1), // Pure white background
+        });
+        
+        // Overlay rounded rectangle for rounded corners
+        const whiteBackground = await createRoundedRectImage(
+          backgroundWidth,
+          backgroundHeight,
+          borderRadius,
+          { r: 1, g: 1, b: 1 } // White background
+        );
+        page.drawImage(whiteBackground, {
+          x: backgroundX,
+          y: backgroundY,
+          width: backgroundWidth,
+          height: backgroundHeight,
+        });
+        
+        // First line: "This tree is planted to mark the delivery of your new
+        page.drawText(firstLineText, {
+          x: textCenterX - firstLineWidth / 2,
+          y: quoteTextY,
+          size: quoteFontSize,
+          font: robotoRegularFont,
+          color: textColor,
+        });
+        
+        // Draw dashed line
+        const dashLength = 8;
+        const dashGap = 4;
+        const lineStartX = textCenterX - 150; // Line width of 300
+        const lineEndX = textCenterX + 150;
+        let currentX = lineStartX;
+        while (currentX < lineEndX) {
+          const dashEndX = Math.min(currentX + dashLength, lineEndX);
+          page.drawLine({
+            start: { x: currentX, y: lineY },
+            end: { x: dashEndX, y: lineY },
+            thickness: 2,
+            color: textColor,
+          });
+          currentX += dashLength + dashGap;
+        }
+        
+        // Vehicle name above the dashed line
+        page.drawText(vehicleNameText, {
+          x: textCenterX - vehicleNameWidth / 2,
+          y: lineY + 15, // Position above the dashed line with more spacing
+          size: vehicleNameFontSize,
+          font: robotoBoldFont,
+          color: textColor,
+        });
+        
+        // Last line: And the legacy it begins."
+        page.drawText(lastLineText, {
+          x: textCenterX - lastLineWidth / 2,
+          y: lineY - lineSpacing,
+          size: quoteFontSize,
+          font: robotoRegularFont,
+          color: textColor,
         });
       }
     }
+
+    // Dealer gift message removed - not needed for customer certificates
 
     // Draw order ID (small text at bottom)
     const orderIdText = `Order: ${data.orderId}`;

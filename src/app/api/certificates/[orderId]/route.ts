@@ -223,10 +223,25 @@ export async function GET(
       // Get dealer and vehicle info for dealer orders
       let dealerName: string | undefined;
       let vehicleName: string | undefined;
+      let dealerImageUrl: string | undefined;
       if (order.userType === 'dealer' && order.items.length > 0) {
         dealerName = order.dealerName || order.showroomName || order.userName;
         const firstItem = order.items[0] as { vehicleName?: string };
         vehicleName = firstItem.vehicleName;
+        
+        // Fetch dealer profile information
+        try {
+          const dealer = await User.findById(order.userId).select('name companyName image').lean();
+          if (dealer) {
+            // Use companyName for dealers if available, otherwise name
+            if (!dealerName) {
+              dealerName = dealer.companyName || dealer.name || order.userName;
+            }
+            dealerImageUrl = dealer.image || undefined;
+          }
+        } catch (dealerError) {
+          console.warn('[CERTIFICATE] Error fetching dealer profile:', dealerError);
+        }
       }
 
       // Generate certificate - use QR code with correct origin (matches dashboard)
@@ -243,6 +258,7 @@ export async function GET(
         qrCode: qrCodeToUse, // Use QR code with current request origin
         dealerName, // Dealer name for dealer orders
         vehicleName, // Vehicle name for dealer orders
+        dealerImageUrl, // Dealer profile image for dealer orders
       });
       
       // Debug logging
