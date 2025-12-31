@@ -537,7 +537,7 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       pageHeight
     });
     
-    // Column 1: Tree name (first field) - FIXED position (moved 4.5% to the left total, left-aligned)
+    // Column 1: Tree name (first field) - FIXED position (moved 6.5% to the left total, left-aligned)
     // Use absolute fixed X position - no centering to prevent position shifts
     // Always show tree name - use first tree name or fallback, with title case
     const treeNameText = (data.treeNames && data.treeNames.length > 0) 
@@ -551,8 +551,8 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       // For dealer template, moved 48% total to the left from original position (1.5 + 0.3 + 0.18 = 1.98)
       col1X = statsCenterX - gapBetweenStats * 1.98;
     } else {
-      // Regular template - use original complex positioning
-      col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005) - (pageWidth * 0.005);
+      // Regular template - use original complex positioning, moved 2% to the left
+      col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005) - (pageWidth * 0.005) - (pageWidth * 0.02);
     }
       
       page.drawText(treeNameText, {
