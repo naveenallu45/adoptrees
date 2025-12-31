@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { createCanvas, loadImage } from 'canvas';
 
 const CERTIFICATE_TEMPLATE_URL = 'https://res.cloudinary.com/dmhdhzr6y/image/upload/v1764239375/adoptrees2025-2_cm79e2.png';
+const DEALER_CERTIFICATE_TEMPLATE_URL = 'https://res.cloudinary.com/dpepzphqf/image/upload/v1767113253/Adoptrees_Dealer_Certificate_fkwhuv.png';
 
 // Roboto font URLs - using Google Fonts CDN (TTF format)
 const ROBOTO_REGULAR_TTF = 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf';
@@ -78,23 +79,29 @@ async function getRobotoBold(): Promise<ArrayBuffer | null> {
   return robotoBoldPromise;
 }
 
-// Cache template image in memory to avoid fetching every time
+// Cache template images in memory to avoid fetching every time
 let cachedTemplateImageBytes: ArrayBuffer | null = null;
+let cachedDealerTemplateImageBytes: ArrayBuffer | null = null;
 let templateCachePromise: Promise<ArrayBuffer> | null = null;
+let dealerTemplateCachePromise: Promise<ArrayBuffer> | null = null;
 
-async function getTemplateImage(): Promise<ArrayBuffer> {
+async function getTemplateImage(isDealer: boolean = false): Promise<ArrayBuffer> {
+  const templateUrl = isDealer ? DEALER_CERTIFICATE_TEMPLATE_URL : CERTIFICATE_TEMPLATE_URL;
+  const cachedBytes = isDealer ? cachedDealerTemplateImageBytes : cachedTemplateImageBytes;
+  const cachePromise = isDealer ? dealerTemplateCachePromise : templateCachePromise;
+  
   // Return cached template if available
-  if (cachedTemplateImageBytes) {
-    return cachedTemplateImageBytes;
+  if (cachedBytes) {
+    return cachedBytes;
   }
   
   // If already fetching, wait for that promise
-  if (templateCachePromise) {
-    return templateCachePromise;
+  if (cachePromise) {
+    return cachePromise;
   }
   
   // Fetch and cache template
-  templateCachePromise = fetch(CERTIFICATE_TEMPLATE_URL)
+  const promise = fetch(templateUrl)
     .then(response => {
       if (!response.ok) {
         throw new Error(`Failed to fetch certificate template: ${response.status} ${response.statusText}`);
@@ -102,16 +109,31 @@ async function getTemplateImage(): Promise<ArrayBuffer> {
       return response.arrayBuffer();
     })
     .then(bytes => {
+      if (isDealer) {
+        cachedDealerTemplateImageBytes = bytes;
+        dealerTemplateCachePromise = null;
+      } else {
       cachedTemplateImageBytes = bytes;
       templateCachePromise = null;
+      }
       return bytes;
     })
     .catch(error => {
+      if (isDealer) {
+        dealerTemplateCachePromise = null;
+      } else {
       templateCachePromise = null;
+      }
       throw error;
     });
   
-  return templateCachePromise;
+  if (isDealer) {
+    dealerTemplateCachePromise = promise;
+  } else {
+    templateCachePromise = promise;
+  }
+  
+  return promise;
 }
 
 interface CertificateData {
@@ -130,10 +152,25 @@ interface CertificateData {
 }
 
 /**
+ * Converts text to title case (capitalizes first letter of each word)
+ * Example: "allu naveen" -> "Allu Naveen"
+ */
+function toTitleCase(text: string): string {
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/**
  * Generates a certificate PDF with user details
  */
 export async function generateCertificate(data: CertificateData): Promise<Buffer> {
   try {
+    // Determine if this is a dealer order
+    const isDealerOrder = !!data.dealerName;
+    
     // Debug logging
     console.log('[CERTIFICATE] Generating certificate with data:', {
       userName: data.userName,
@@ -143,11 +180,13 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       oxygenKgs: data.oxygenKgs,
       co2Kgs: data.co2Kgs,
       treeNamesCount: data.treeNames?.length || 0,
-      treeNames: data.treeNames?.slice(0, 3)
+      treeNames: data.treeNames?.slice(0, 3),
+      isDealerOrder,
+      dealerName: data.dealerName
     });
     
-    // Use cached template image (much faster)
-    const templateImageBytes = await getTemplateImage();
+    // Use cached template image (much faster) - use dealer template for dealer orders
+    const templateImageBytes = await getTemplateImage(isDealerOrder);
 
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
@@ -167,6 +206,16 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     // Use the template's original dimensions for the PDF page
     const pageWidth = templateWidth;
     const pageHeight = templateHeight;
+    
+    // Log template dimensions for debugging
+    console.log('[CERTIFICATE] Template dimensions:', {
+      isDealerOrder,
+      pageWidth,
+      pageHeight,
+      treesCount: data.treesCount,
+      treeNames: data.treeNames,
+      hasTreeNames: !!(data.treeNames && data.treeNames.length > 0)
+    });
     
     // Create a page with the template image as background at full size
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -337,11 +386,14 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     const profileX = 540 - (pageWidth * 0.10); // Shift 10% to the left (decreased by 2%)
     const nameFontSize = 50; // Font size for name (needed for calculation)
     const nameSpacing = 180; // Space below profile picture
-    const bottomPadding = pageHeight * 0.36; // 36% padding from bottom
+    // Bottom padding: only change for dealer certificates, keep original for regular certificates
+    const bottomPadding = isDealerOrder 
+      ? pageHeight * 0.28 // 28% padding from bottom (moved down 8% from 36%) for dealer certificates
+      : pageHeight * 0.36; // Original 36% padding from bottom for regular certificates
     
-    // Calculate positions to ensure 36% bottom padding below name
+    // Calculate positions to ensure proper bottom padding below name
     // Text baseline is at nameY, text extends upward, so bottom of text ≈ nameY - (fontSize * 0.7)
-    const nameY = bottomPadding + (nameFontSize * 0.7); // Position name so bottom has 36% padding
+    const nameY = bottomPadding + (nameFontSize * 0.7); // Position name based on bottom padding
     const profileY = nameY + nameSpacing; // Profile is above the name
     
     const profileRadius = profileSize / 2;
@@ -413,8 +465,8 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
 
     // Draw user name (centered below profile picture)
     // Use FIXED position - don't calculate based on name length to prevent position shifts
-    // Capitalize first letter of user name
-    const capitalizedUserName = data.userName.charAt(0).toUpperCase() + data.userName.slice(1).toLowerCase();
+    // Capitalize first letter of each word (title case)
+    const capitalizedUserName = toTitleCase(data.userName);
     
     // Fixed center position for name (profile center X) - prevents position shifts
     const nameCenterX = profileCenterX;
@@ -449,43 +501,87 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       treesCount: data.treesCount
     });
     
-    // Position stats - use COMPLETELY FIXED positions to prevent any shifts
-    // All positions are hardcoded and independent of dynamic values
-    const statsStartY = 280; // Fixed Y position for all stats (never changes)
-    const gapBetweenStats = pageWidth * 0.13; // 13% gap between stat columns (fixed)
+    // Position stats - adjust positions based on template type (dealer vs regular)
+    // For dealer certificates, positions may need adjustment based on template dimensions
+    let statsStartY: number;
+    let gapBetweenStats: number;
+    let fixedProfileSizeForStats: number;
+    let originalProfileX: number;
+    let statsCenterX: number;
     
-    // Fixed stats center X - use FIXED profileSize value (328) for calculation to prevent shifts
-    // Don't use actual profileSize variable which can vary (328 vs 273)
-    const fixedProfileSizeForStats = 328; // Always use this fixed value
-    const originalProfileX = 540; // Fixed X position
-    const centerX = originalProfileX + fixedProfileSizeForStats / 2; // Fixed calculation
-    const statsCenterX = centerX - (pageWidth * 0.05); // Fixed stats center
+    if (isDealerOrder) {
+      // Dealer certificate template - adjust positions for dealer template layout
+      // Use center-based positioning that should work with most template layouts
+      statsStartY = pageHeight * 0.11; // Position stats at 11% from bottom (moved down 7% from 18%)
+      gapBetweenStats = pageWidth * 0.072; // Equal gap between all four columns
+      fixedProfileSizeForStats = 328; // Same profile size
+      // Center the stats area on the page, then move 30% to the left
+      originalProfileX = pageWidth * 0.50 - fixedProfileSizeForStats / 2; // Center profile
+      const centerX = originalProfileX + fixedProfileSizeForStats / 2;
+      statsCenterX = centerX - (pageWidth * 0.30); // Move stats 30% to the left from center
+    } else {
+      // Regular certificate template - use ORIGINAL fixed positions (unchanged)
+      statsStartY = 280; // Fixed Y position for all stats (never changes)
+      gapBetweenStats = pageWidth * 0.13; // ORIGINAL gap between stat columns (13% of page width)
+      fixedProfileSizeForStats = 328; // Always use this fixed value
+      originalProfileX = 540; // Fixed X position
+      const centerX = originalProfileX + fixedProfileSizeForStats / 2;
+      statsCenterX = centerX - (pageWidth * 0.05); // Fixed stats center
+    }
+    
+    console.log('[CERTIFICATE] Stats positioning:', {
+      isDealerOrder,
+      statsStartY,
+      statsCenterX,
+      pageWidth,
+      pageHeight
+    });
     
     // Column 1: Tree name (first field) - FIXED position (moved 4.5% to the left total, left-aligned)
     // Use absolute fixed X position - no centering to prevent position shifts
-    if (data.treeNames && data.treeNames.length > 0) {
-      // Fixed X position - doesn't depend on profileSize or any dynamic values
-      // Left-aligned at fixed position to prevent shifts when text length changes
-      const col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005) - (pageWidth * 0.005);
-      const treeNameText = data.treeNames[0];
+    // Always show tree name - use first tree name or fallback, with title case
+    const treeNameText = (data.treeNames && data.treeNames.length > 0) 
+      ? toTitleCase(data.treeNames[0])
+      : 'Tree'; // Fallback if no tree names provided
       const treeNameFontSize = 27;
+    
+    // Adjust column 1 X position for dealer vs regular template
+    let col1X: number;
+    if (isDealerOrder) {
+      // For dealer template, moved 48% total to the left from original position (1.5 + 0.3 + 0.18 = 1.98)
+      col1X = statsCenterX - gapBetweenStats * 1.98;
+    } else {
+      // Regular template - use original complex positioning
+      col1X = statsCenterX - gapBetweenStats * 1.5 - (pageWidth * 0.005) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005) - (pageWidth * 0.005);
+    }
       
       page.drawText(treeNameText, {
-        x: col1X, // Fixed left-aligned position (same X for every certificate)
+      x: col1X,
         y: statsStartY,
         size: treeNameFontSize,
         font: robotoBoldFont,
         color: rgb(0, 0, 0),
       });
-    }
     
     // Column 2: Trees count - FIXED position (moved 2% to the left total, left-aligned)
     // Use absolute fixed X position - no centering to prevent position shifts
-    const col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) + (pageWidth * 0.01) + (pageWidth * 0.005);
+    // Always show trees count
     const treesCountText = `${data.treesCount}`;
     const treesCountFontSize = 30;
+    
+    // Adjust column 2 X position for dealer vs regular template
+    let col2X: number;
+    if (isDealerOrder) {
+      // For dealer template, increased gap by 30% total (10% + 20%) between Tree name and Planted trees
+      // Move Column 2 right by 30% of gap to increase spacing (0.5 - 0.3 = 0.2)
+      col2X = statsCenterX - gapBetweenStats * 0.2;
+    } else {
+      // Regular template - use original complex positioning
+      col2X = statsCenterX - gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) + (pageWidth * 0.01) + (pageWidth * 0.005);
+    }
+    
     page.drawText(treesCountText, {
-      x: col2X, // Fixed left-aligned position (same X for every certificate)
+      x: col2X,
       y: statsStartY,
       size: treesCountFontSize,
       font: robotoBoldFont,
@@ -494,11 +590,21 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     
     // Column 3: O2 total value - FIXED position (moved 4% to the left total, left-aligned)
     // Use absolute fixed X position - no centering to prevent position shifts
-    const col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
-    const o2ValueText = `${data.oxygenKgs.toFixed(1)} /year`;
+    const o2ValueText = `${data.oxygenKgs.toFixed(1)} /Year`;
     const o2ValueFontSize = 30;
+    
+    // Adjust column 3 X position for dealer vs regular template
+    let col3X: number;
+    if (isDealerOrder) {
+      // For dealer template, moved 45% total to the right from original position (0.5 + 0.3 + 0.15 = 0.95)
+      col3X = statsCenterX + gapBetweenStats * 0.95;
+    } else {
+      // Regular template - use original complex positioning
+      col3X = statsCenterX + gapBetweenStats * 0.5 - (pageWidth * 0.015) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
+    }
+    
     page.drawText(o2ValueText, {
-      x: col3X, // Fixed left-aligned position (same X for every certificate)
+      x: col3X,
       y: statsStartY,
       size: o2ValueFontSize,
       font: robotoBoldFont,
@@ -507,11 +613,21 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     
     // Column 4: CO2 total value - FIXED position (moved 4% to the left total, left-aligned)
     // Use absolute fixed X position - no centering to prevent position shifts
-    const col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.025) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
-    const co2ValueText = `${co2Value.toFixed(1)} /year`;
+    const co2ValueText = `${co2Value.toFixed(1)} /Year`;
     const co2ValueFontSize = 30;
+    
+    // Adjust column 4 X position for dealer vs regular template
+    let col4X: number;
+    if (isDealerOrder) {
+      // For dealer template, moved 63% total to the right from original position (1.5 + 0.3 + 0.15 + 0.18 = 2.13)
+      col4X = statsCenterX + gapBetweenStats * 2.13;
+    } else {
+      // Regular template - use original complex positioning
+      col4X = statsCenterX + gapBetweenStats * 1.5 - (pageWidth * 0.025) - (pageWidth * 0.01) - (pageWidth * 0.025) - (pageWidth * 0.005);
+    }
+    
     page.drawText(co2ValueText, {
-      x: col4X, // Fixed left-aligned position (same X for every certificate)
+      x: col4X,
       y: statsStartY,
       size: co2ValueFontSize,
       font: robotoBoldFont,
@@ -519,9 +635,18 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
     });
 
     // Draw QR code (bottom right area) with green border matching profile picture style
-    const qrSize = 250;
-    const qrX = pageWidth - qrSize - 250;
-    const qrY = 1000;
+    // QR code size: increase by 15% for dealer certificates, keep original for regular certificates
+    const qrSize = isDealerOrder
+      ? 250 * 1.15 // Increased by 15% for dealer certificates (250 * 1.15 = 287.5, rounded to 288)
+      : 250; // Original size for regular certificates
+    // QR code X position: move 10% total to the left for dealer certificates (5% + 5% = 10%)
+    const qrX = isDealerOrder
+      ? (pageWidth - qrSize - 250) - (pageWidth * 0.10) // Moved 10% total to the left for dealer certificates
+      : pageWidth - qrSize - 250; // Original position for regular certificates
+    // QR code Y position: move down 36% then up 10% total for dealer certificates (5% + 5% = 10%), keep original for regular certificates
+    const qrY = isDealerOrder 
+      ? (1000 - (1000 * 0.36)) + ((1000 - (1000 * 0.36)) * 0.10) // Moved 36% down then 10% total up (toward top) for dealer certificates
+      : 1000; // Original position for regular certificates
     const borderWidth = 4;
     const borderPadding = 5;
     const borderRadius = 12; // Rounded corners radius
@@ -640,13 +765,21 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
       height: qrSize,
     });
 
-    // Draw dealer profile below QR code (for dealer orders)
+    // Draw dealer profile to the right of Column 4 (CO2) for dealer orders
     if (data.dealerName) {
-      const dealerProfileSize = 336; // Doubled from 168 (168 * 2)
-      const dealerProfileSpacing = 30; // Space between QR code and dealer profile
-      const upwardOffset = (dealerProfileSpacing + dealerProfileSize) * 0.5; // Move up by 50% (20% + 15% + 15%)
-      const dealerProfileY = qrY - qrSize - dealerProfileSpacing - dealerProfileSize + upwardOffset;
-      const dealerProfileX = qrX + (qrSize / 2) - (dealerProfileSize / 2); // Center below QR code
+      const dealerProfileSize = 315; // Increased by 10% from 286 (286 * 1.10 = 314.6, rounded to 315)
+      const dealerProfileGap = pageWidth * 0.05; // Gap between Column 4 and dealer profile (5% of page width)
+      
+      // Calculate the right edge of Column 4 (CO2) text (reuse co2ValueText and co2ValueFontSize defined earlier)
+      const co2TextWidth = robotoBoldFont.widthOfTextAtSize(co2ValueText, co2ValueFontSize);
+      const col4RightEdge = col4X + co2TextWidth;
+      
+      // Position dealer profile to the right of Column 4 with gap
+      const dealerProfileX = col4RightEdge + dealerProfileGap;
+      
+      // Vertically center dealer profile with the stats row, then move 15% upward
+      // In PDF coordinates, Y increases upward, so we ADD to move up (toward top)
+      const dealerProfileY = statsStartY - (dealerProfileSize / 2) + (co2ValueFontSize / 2) + (dealerProfileSize * 0.15);
       
       // Embed dealer profile picture if available
       let dealerProfilePic: PDFImage | null = null;
@@ -751,110 +884,64 @@ export async function generateCertificate(data: CertificateData): Promise<Buffer
         });
       }
       
-      // Draw dealer quote text below dealer profile (matching image style)
+      // Draw vehicle name below QR code with gap (for dealer orders)
       if (data.vehicleName) {
-        const quoteTextY = dealerProfileY - 100; // Position below dealer profile
-        const quoteCenterX = dealerProfileCenterX; // Center aligned with dealer profile
+        const vehicleNameGap = 40; // Gap between QR code and vehicle name
+        // Position vehicle name below QR code
+        // In PDF coordinates, Y=0 is at bottom, so subtracting moves down
+        // qrY is the bottom of QR code, so subtract gap to position text below
+        // Then move 29% total further down (toward bottom) from original position (10% + 19% = 29%)
+        // Then move 1% up (toward top) from current position, then move 8% total down (toward bottom) (3% + 5% = 8%)
+        const baseVehicleTextY = (qrY - vehicleNameGap) - ((qrY - vehicleNameGap) * 0.29);
+        const vehicleTextY = baseVehicleTextY + (baseVehicleTextY * 0.01) - (baseVehicleTextY * 0.08);
+        // Center vehicle name horizontally with QR code (use original QR size 250 for positioning, not the larger size)
+        // This keeps vehicle name position unchanged when QR code size increases
+        const originalQrSize = 250;
+        const qrCenterX = qrX + (originalQrSize / 2);
         
         // Black color for text
         const textColor = rgb(0, 0, 0);
-        const quoteFontSize = 30; // Increased by 25% from 24
-        const vehicleNameFontSize = 35; // Increased by 25% from 28
-        const lineSpacing = 55; // Increased spacing between lines
+        const vehicleNameFontSize = 40; // Font size for vehicle name
         
-        // Calculate text dimensions for background (with double quotes)
-        const firstLineBaseText = "This tree is planted to mark the delivery of your new";
-        const firstLineText = `"${firstLineBaseText}`; // Add opening double quote
-        const vehicleNameText = data.vehicleName;
-        const lastLineBaseText = "And the legacy it begins.";
-        const lastLineText = `${lastLineBaseText}"`; // Add closing double quote
-        
-        const firstLineWidth = robotoRegularFont.widthOfTextAtSize(firstLineText, quoteFontSize);
+        const vehicleNameText = toTitleCase(data.vehicleName);
         const vehicleNameWidth = robotoBoldFont.widthOfTextAtSize(vehicleNameText, vehicleNameFontSize);
-        const lastLineWidth = robotoRegularFont.widthOfTextAtSize(lastLineText, quoteFontSize);
         
-        const maxTextWidth = Math.max(firstLineWidth, vehicleNameWidth, lastLineWidth);
-        const lineY = quoteTextY - lineSpacing - 5;
-        const bottomY = lineY - lineSpacing;
+        // Calculate X position: center below QR code, then move 10% to the left, then move 15% to the right, then move 3% to the left (2% + 1% = 3%)
+        const vehicleTextX = (qrCenterX - vehicleNameWidth / 2) - (pageWidth * 0.10) + (pageWidth * 0.15) - (pageWidth * 0.02) - (pageWidth * 0.01);
         
-        // Calculate background dimensions
-        const padding = 40; // Padding around text
-        const rightGap = 80; // Gap on the right side
-        const backgroundWidth = maxTextWidth + (padding * 2);
-        const backgroundHeight = quoteTextY - bottomY + (padding * 2);
-        // Shift background left to create gap on right side
-        const backgroundX = quoteCenterX - backgroundWidth / 2 - rightGap / 2;
-        const backgroundY = bottomY - padding;
-        const borderRadius = Math.min(backgroundWidth, backgroundHeight) * 0.02; // 2% of smaller dimension
-        // Adjust text center to match shifted background
-        const textCenterX = quoteCenterX - rightGap / 2;
-        
-        // Draw solid white rectangle background first (guaranteed to show white)
-        page.drawRectangle({
-          x: backgroundX,
-          y: backgroundY,
-          width: backgroundWidth,
-          height: backgroundHeight,
-          color: rgb(1, 1, 1), // Pure white background
-        });
-        
-        // Overlay rounded rectangle for rounded corners
-        const whiteBackground = await createRoundedRectImage(
-          backgroundWidth,
-          backgroundHeight,
-          borderRadius,
-          { r: 1, g: 1, b: 1 } // White background
-        );
-        page.drawImage(whiteBackground, {
-          x: backgroundX,
-          y: backgroundY,
-          width: backgroundWidth,
-          height: backgroundHeight,
-        });
-        
-        // First line: "This tree is planted to mark the delivery of your new
-        page.drawText(firstLineText, {
-          x: textCenterX - firstLineWidth / 2,
-          y: quoteTextY,
-          size: quoteFontSize,
-          font: robotoRegularFont,
-          color: textColor,
-        });
-        
-        // Draw dashed line
-        const dashLength = 8;
-        const dashGap = 4;
-        const lineStartX = textCenterX - 150; // Line width of 300
-        const lineEndX = textCenterX + 150;
-        let currentX = lineStartX;
-        while (currentX < lineEndX) {
-          const dashEndX = Math.min(currentX + dashLength, lineEndX);
-          page.drawLine({
-            start: { x: currentX, y: lineY },
-            end: { x: dashEndX, y: lineY },
-            thickness: 2,
-            color: textColor,
-          });
-          currentX += dashLength + dashGap;
-        }
-        
-        // Vehicle name above the dashed line
+        // Draw vehicle name below QR code, moved 1% more to the left from previous position
         page.drawText(vehicleNameText, {
-          x: textCenterX - vehicleNameWidth / 2,
-          y: lineY + 15, // Position above the dashed line with more spacing
+          x: vehicleTextX,
+          y: vehicleTextY,
           size: vehicleNameFontSize,
           font: robotoBoldFont,
           color: textColor,
         });
         
-        // Last line: And the legacy it begins."
-        page.drawText(lastLineText, {
-          x: textCenterX - lastLineWidth / 2,
-          y: lineY - lineSpacing,
-          size: quoteFontSize,
-          font: robotoRegularFont,
+        // Draw dealer name below vehicle name with 30% gap
+        if (data.dealerName) {
+          const dealerNameGap = vehicleNameFontSize * 0.30; // 30% gap based on vehicle name font size
+          const dealerNameFontSize = vehicleNameFontSize; // Same font size as vehicle name (40)
+          // Capitalize first letter of each word (title case)
+          const dealerNameText = toTitleCase(data.dealerName);
+          
+          // Position dealer name below vehicle name
+          // In PDF coordinates, Y=0 is at bottom, so subtracting moves down
+          // Then move 71% total further down (toward bottom) from original position (30% + 28% + 5% + 5% + 3% = 71%)
+          const dealerNameY = (vehicleTextY - dealerNameGap - dealerNameFontSize) - ((vehicleTextY - dealerNameGap - dealerNameFontSize) * 0.71);
+          
+          // Move dealer name 9% to the right from vehicle name position (10% + 15% - 8% - 15% + 4% + 2% + 1% = 9%)
+          const dealerNameX = vehicleTextX + (pageWidth * 0.10) + (pageWidth * 0.15) - (pageWidth * 0.08) - (pageWidth * 0.15) + (pageWidth * 0.04) + (pageWidth * 0.02) + (pageWidth * 0.01);
+          
+          // Draw dealer name below vehicle name, moved 1% more to the right from previous position
+          page.drawText(dealerNameText, {
+            x: dealerNameX,
+            y: dealerNameY,
+            size: dealerNameFontSize,
+          font: robotoBoldFont,
           color: textColor,
         });
+        }
       }
     }
 
