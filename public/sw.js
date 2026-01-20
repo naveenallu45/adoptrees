@@ -179,8 +179,8 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     const options = {
       body: data.body,
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png',
+      icon: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/w_192,h_192,c_fill,r_max/v1763716774/WhatsApp_Image_2025-11-21_at_10.35.39_AM_wvwvdy_e_background_removal_f_png.jpg_szp33f.png',
+      badge: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/w_72,h_72,c_fill,r_max/v1763716774/WhatsApp_Image_2025-11-21_at_10.35.39_AM_wvwvdy_e_background_removal_f_png.jpg_szp33f.png',
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),
@@ -190,12 +190,12 @@ self.addEventListener('push', (event) => {
         {
           action: 'explore',
           title: 'View Details',
-          icon: '/icon-192x192.png'
+          icon: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/w_192,h_192,c_fill,r_max/v1763716774/WhatsApp_Image_2025-11-21_at_10.35.39_AM_wvwvdy_e_background_removal_f_png.jpg_szp33f.png'
         },
         {
           action: 'close',
           title: 'Close',
-          icon: '/icon-192x192.png'
+          icon: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/w_192,h_192,c_fill,r_max/v1763716774/WhatsApp_Image_2025-11-21_at_10.35.39_AM_wvwvdy_e_background_removal_f_png.jpg_szp33f.png'
         }
       ]
     };

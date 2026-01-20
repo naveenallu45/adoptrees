@@ -5,6 +5,8 @@ import AuthProvider from "@/components/Auth/AuthProvider";
 import QueryProvider from "@/components/QueryProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ServiceWorkerRegistration from "@/components/PWA/ServiceWorkerRegistration";
+import PWAMetaTags from "@/components/PWA/PWAMetaTags";
 import { inter, jetbrainsMono, workSans, nunitoSans } from "@/lib/fonts";
 
 export const metadata: Metadata = {
@@ -67,6 +69,17 @@ export const metadata: Metadata = {
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION,
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Adoptrees',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+  },
 };
 
 export default function RootLayout({
@@ -79,6 +92,8 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} ${workSans.variable} ${nunitoSans.variable} antialiased`}
       >
+        <PWAMetaTags />
+        <ServiceWorkerRegistration />
         <QueryProvider>
           <AuthProvider>
             <CartProvider>
