@@ -71,8 +71,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Find the order first to determine which Razorpay account to use
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      logPaymentEvent('payment_verification_failed', { 
+        reason: 'order_not_found',
+        orderId 
+      });
+      return NextResponse.json(
+        { success: false, error: 'Order not found' },
+        { 
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    }
+
     // PRODUCTION: Validate Razorpay secret is configured
-    const razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
+    // Use company account secret for company users, regular secret for others
+    let razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (order.userType === 'company' && process.env.RAZORPAY_COMPANY_KEY_SECRET) {
+      razorpaySecret = process.env.RAZORPAY_COMPANY_KEY_SECRET;
+    }
+    
     if (!razorpaySecret) {
       logError('Razorpay key secret not configured', new Error('RAZORPAY_KEY_SECRET is missing'));
       return NextResponse.json(
@@ -124,26 +150,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the order
-    const order = await Order.findOne({ orderId });
-
-    if (!order) {
-      logPaymentEvent('payment_verification_failed', { 
-        reason: 'order_not_found',
-        orderId 
-      });
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { 
-          status: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          },
-        }
-      );
-    }
+    // Order already fetched above for signature verification
 
     // Check if order already processed
     if (order.paymentStatus === 'paid') {

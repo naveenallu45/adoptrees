@@ -27,7 +27,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: HomeIcon },
   { name: 'Trees', href: '/admin/trees', icon: TreeIcon },
-  { name: 'Adoptions', href: '/admin/adoptions', icon: ClipboardDocumentListIcon },
+  { name: 'Individual Adoptions', href: '/admin/adoptions', icon: ClipboardDocumentListIcon },
+  { name: 'CSR Adoptions', href: '/admin/csr-adoptions', icon: ClipboardDocumentListIcon },
   { name: 'Forest Adoptions', href: '/admin/forest-adoptions', icon: GlobeAltIcon },
   { name: 'Dealer Adoptions', href: '/admin/dealer-adoptions', icon: TruckIcon },
   { name: 'Individual Users', href: '/admin/users/individuals', icon: UserIcon },

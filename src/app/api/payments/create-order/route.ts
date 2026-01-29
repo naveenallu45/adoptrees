@@ -10,7 +10,23 @@ import { logPaymentEvent, logError } from '@/lib/logger';
 import { createOrUpdateCustomerAccount } from '@/lib/customer-account';
 
 // Lazy initialization of Razorpay to avoid module load errors
-function getRazorpayInstance() {
+// userType: 'company' uses company account, others use regular account
+function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer') {
+  // For company users, use company Razorpay account if configured
+  if (userType === 'company') {
+    const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
+    const companyKeySecret = process.env.RAZORPAY_COMPANY_KEY_SECRET;
+    
+    if (companyKeyId && companyKeySecret) {
+      return new Razorpay({
+        key_id: companyKeyId,
+        key_secret: companyKeySecret,
+      });
+    }
+    // Fallback to regular account if company account not configured
+  }
+  
+  // Default: use regular Razorpay account for individual/dealer users
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     throw new Error('Razorpay credentials not configured');
   }
@@ -18,6 +34,17 @@ function getRazorpayInstance() {
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
+}
+
+// Get the appropriate Razorpay Key ID based on user type
+function getRazorpayKeyId(userType?: 'individual' | 'company' | 'dealer'): string {
+  if (userType === 'company') {
+    const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
+    if (companyKeyId) {
+      return companyKeyId;
+    }
+  }
+  return process.env.RAZORPAY_KEY_ID!;
 }
 
 // Handle CORS preflight requests
@@ -62,7 +89,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check Razorpay credentials
+    // Check Razorpay credentials (will check user-specific credentials later based on userType)
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
       logError('Razorpay credentials missing', new Error('Missing credentials'));
       return NextResponse.json(
@@ -322,7 +349,7 @@ export async function POST(request: NextRequest) {
         
         if (!razorpayOrderId) {
           // Create Razorpay order for existing order
-          const razorpay = getRazorpayInstance();
+          const razorpay = getRazorpayInstance(user.userType);
           const razorpayOrder = await razorpay.orders.create({
             amount: amountInPaise,
             currency: 'INR',
@@ -350,7 +377,7 @@ export async function POST(request: NextRequest) {
             orderId: existingPendingOrder.orderId,
             amount: amountInPaise,
             currency: 'INR',
-            razorpayKeyId: process.env.RAZORPAY_KEY_ID!
+            razorpayKeyId: getRazorpayKeyId(user.userType)
           }
         }, {
           headers: {
@@ -606,10 +633,11 @@ export async function POST(request: NextRequest) {
     logPaymentEvent('razorpay_order_creation_started', { 
       orderId, 
       amount: amountInPaise,
-      userId: session.user.id 
+      userId: session.user.id,
+      userType: user.userType
     });
     
-    const razorpay = getRazorpayInstance();
+    const razorpay = getRazorpayInstance(user.userType);
     const razorpayOrder = await razorpay.orders.create({
       amount: amountInPaise,
       currency: 'INR',
@@ -618,14 +646,16 @@ export async function POST(request: NextRequest) {
         orderId,
         userId: session.user.id,
         userEmail: session.user.email || '',
-        itemsCount: orderItems.length
+        itemsCount: orderItems.length,
+        userType: user.userType
       }
     });
 
     logPaymentEvent('razorpay_order_created', { 
       orderId, 
       razorpayOrderId: razorpayOrder.id,
-      amount: amountInPaise 
+      amount: amountInPaise,
+      userType: user.userType
     });
 
     // Store Razorpay order ID in the order
@@ -639,7 +669,7 @@ export async function POST(request: NextRequest) {
         orderId,
         amount: amountInPaise,
         currency: 'INR',
-        razorpayKeyId: process.env.RAZORPAY_KEY_ID!
+        razorpayKeyId: getRazorpayKeyId(user.userType)
       }
     }, {
       headers: {

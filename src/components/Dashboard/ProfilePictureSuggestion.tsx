@@ -169,7 +169,7 @@ export default function ProfilePictureSuggestion() {
                   {pathname?.includes('/profile') ? 'Add Your Profile Picture' : 'Welcome to Adoptrees! 🌳'}
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  {pathname?.includes('/profile') 
+                  {pathname?.includes('/profile')
                     ? 'Click on your profile picture above to upload a photo. It will appear on your adoption certificates and public profile.'
                     : 'Complete your profile by adding a profile picture. It will appear on your adoption certificates and public profile.'}
                 </p>
@@ -180,7 +180,7 @@ export default function ProfilePictureSuggestion() {
                     onClick={handleGoToProfile}
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
                   >
-                    {pathname?.includes('/profile') ? 'Got It!' : 'Upload Profile Picture'}
+                    {pathname?.includes('/profile') ? 'Got It!' : 'Upload now'}
                   </button>
                   <button
                     onClick={handleDismiss}

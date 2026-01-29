@@ -13,10 +13,15 @@ const envSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(32, 'NEXTAUTH_SECRET must be at least 32 characters'),
   NEXTAUTH_URL: z.string().url('NEXTAUTH_URL must be a valid URL').optional(),
   
-  // Razorpay
+  // Razorpay (for individual users)
   RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
   RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1, 'RAZORPAY_WEBHOOK_SECRET is required'),
+  
+  // Razorpay Company Account (for company users - optional, falls back to regular account if not set)
+  RAZORPAY_COMPANY_KEY_ID: z.string().optional(),
+  RAZORPAY_COMPANY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_COMPANY_WEBHOOK_SECRET: z.string().optional(),
   
   // Redis
   REDIS_HOST: z.string().optional(),
@@ -58,6 +63,9 @@ function validateEnv(): Env {
       RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || '',
       RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
       RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+      RAZORPAY_COMPANY_KEY_ID: process.env.RAZORPAY_COMPANY_KEY_ID,
+      RAZORPAY_COMPANY_KEY_SECRET: process.env.RAZORPAY_COMPANY_KEY_SECRET,
+      RAZORPAY_COMPANY_WEBHOOK_SECRET: process.env.RAZORPAY_COMPANY_WEBHOOK_SECRET,
       REDIS_HOST: process.env.REDIS_HOST,
       REDIS_PORT: process.env.REDIS_PORT,
       REDIS_PASSWORD: process.env.REDIS_PASSWORD,
@@ -85,6 +93,9 @@ function validateEnv(): Env {
       RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
       RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
       RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+      RAZORPAY_COMPANY_KEY_ID: process.env.RAZORPAY_COMPANY_KEY_ID,
+      RAZORPAY_COMPANY_KEY_SECRET: process.env.RAZORPAY_COMPANY_KEY_SECRET,
+      RAZORPAY_COMPANY_WEBHOOK_SECRET: process.env.RAZORPAY_COMPANY_WEBHOOK_SECRET,
       REDIS_HOST: process.env.REDIS_HOST,
       REDIS_PORT: process.env.REDIS_PORT,
       REDIS_PASSWORD: process.env.REDIS_PASSWORD,

@@ -121,6 +121,7 @@ export default function AdminAdoptionsPage() {
   const pathname = usePathname();
   const isForestPage = pathname?.includes('/admin/forest-adoptions');
   const isDealerPage = pathname?.includes('/admin/dealer-adoptions');
+  const isCsrPage = pathname?.includes('/admin/csr-adoptions');
 
   const [filters, setFilters] = useState<AdoptionFilters>({
     search: '',
@@ -192,9 +193,12 @@ export default function AdminAdoptionsPage() {
     if (isDealerPage) {
       // Dealer adoptions page: show only dealer adoptions
       filtered = filtered.filter((adoption: Adoption) => adoption.userType === 'dealer');
+    } else if (isCsrPage) {
+      // CSR adoptions page: show only company adoptions
+      filtered = filtered.filter((adoption: Adoption) => adoption.userType === 'company');
     } else {
-      // Regular adoptions page: exclude dealer adoptions
-      filtered = filtered.filter((adoption: Adoption) => adoption.userType !== 'dealer');
+      // Regular adoptions page: show only individual adoptions (exclude company & dealer)
+      filtered = filtered.filter((adoption: Adoption) => adoption.userType === 'individual');
     }
     
     // Status filter
@@ -202,8 +206,8 @@ export default function AdminAdoptionsPage() {
       filtered = filtered.filter((adoption: Adoption) => adoption.status === filters.status);
     }
     
-    // User type filter
-    if (filters.userType) {
+    // User type filter - Only apply on Forest Adoptions page (not needed on Individual/CSR/Dealer pages)
+    if (isForestPage && filters.userType) {
       filtered = filtered.filter((adoption: Adoption) => adoption.userType === filters.userType);
     }
     
@@ -244,7 +248,7 @@ export default function AdminAdoptionsPage() {
     }
     
     return filtered;
-  }, [allData, filters, sorting, isForestPage, isDealerPage]);
+  }, [allData, filters, sorting, isForestPage, isDealerPage, isCsrPage]);
 
   // Pagination for filtered results
   const paginatedAdoptions = useMemo(() => {
@@ -798,12 +802,16 @@ export default function AdminAdoptionsPage() {
     ? 'Dealer Adoption Management' 
     : isForestPage 
     ? 'Forest Adoption Management' 
-    : 'Adoption Management';
+    : isCsrPage
+    ? 'CSR Adoption Management'
+    : 'Individual Adoption Management';
   const pageSubtitle = isDealerPage 
     ? 'Manage and track all dealer adoptions for customers' 
     : isForestPage 
     ? 'Manage and track all forest adoptions' 
-    : 'Manage and track all tree adoptions';
+    : isCsrPage
+    ? 'Manage and track all CSR/company adoptions'
+    : 'Manage and track all individual tree adoptions';
 
   return (
     <div className="p-6 space-y-8">
@@ -960,29 +968,31 @@ export default function AdminAdoptionsPage() {
             </ToggleGroup>
           </div>
 
-          {/* User Type Toggle */}
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-700">Type:</span>
-            <ToggleGroup
-              type="single"
-              value={filters.userType || ''}
-              onValueChange={(value) => handleFilterChange('userType', value || '')}
-              variant="outline"
-              size="sm"
-              className="[&_[data-state=on]]:!bg-black [&_[data-state=on]]:!text-white [&_[data-state=on]]:!border-black"
-              defaultValue=""
-            >
-              <ToggleGroupItem value="" className="text-xs data-[state=on]:!bg-black data-[state=on]:!text-white">
-                All
-              </ToggleGroupItem>
-              <ToggleGroupItem value="individual" className="text-xs data-[state=on]:!bg-black data-[state=on]:!text-white">
-                Individual
-              </ToggleGroupItem>
-              <ToggleGroupItem value="company" className="text-xs data-[state=on]:!bg-black data-[state=on]:!text-white">
-                Company
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
+          {/* User Type Toggle - Only show on Forest Adoptions page */}
+          {isForestPage && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-700">Type:</span>
+              <ToggleGroup
+                type="single"
+                value={filters.userType || ''}
+                onValueChange={(value) => handleFilterChange('userType', value || '')}
+                variant="outline"
+                size="sm"
+                className="[&_[data-state=on]]:!bg-black [&_[data-state=on]]:!text-white [&_[data-state=on]]:!border-black"
+                defaultValue=""
+              >
+                <ToggleGroupItem value="" className="text-xs data-[state=on]:!bg-black data-[state=on]:!text-white">
+                  All
+                </ToggleGroupItem>
+                <ToggleGroupItem value="individual" className="text-xs data-[state=on]:!bg-black data-[state=on]:!text-white">
+                  Individual
+                </ToggleGroupItem>
+                <ToggleGroupItem value="company" className="text-xs data-[state=on]:!bg-black data-[state=on]:!text-white">
+                  Company
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          )}
 
           {/* Date Range Filters */}
           <div className="flex items-center space-x-2">
@@ -1027,7 +1037,7 @@ export default function AdminAdoptionsPage() {
         </div>
 
         {/* Active Filters */}
-        {(filters.search || filters.status || filters.userType || filters.startDate || filters.endDate) && (
+        {(filters.search || filters.status || (isForestPage && filters.userType) || filters.startDate || filters.endDate) && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">Active filters:</span>
@@ -1070,7 +1080,7 @@ export default function AdminAdoptionsPage() {
                   </button>
                 </span>
               )}
-              {filters.userType && (
+              {isForestPage && filters.userType && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
                   Type: {filters.userType}
                   <button

@@ -4,7 +4,23 @@ import { logPaymentEvent, logError } from '@/lib/logger';
 import { processOrderCompletion } from './order-processing';
 
 // Lazy initialization of Razorpay
-function getRazorpayInstance() {
+// userType: 'company' uses company account, others use regular account
+function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer') {
+  // For company users, use company Razorpay account if configured
+  if (userType === 'company') {
+    const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
+    const companyKeySecret = process.env.RAZORPAY_COMPANY_KEY_SECRET;
+    
+    if (companyKeyId && companyKeySecret) {
+      return new Razorpay({
+        key_id: companyKeyId,
+        key_secret: companyKeySecret,
+      });
+    }
+    // Fallback to regular account if company account not configured
+  }
+  
+  // Default: use regular Razorpay account for individual/dealer users
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     throw new Error('Razorpay credentials not configured');
   }
@@ -17,8 +33,12 @@ function getRazorpayInstance() {
 /**
  * Verify payment status with Razorpay API
  * Returns the actual payment status from Razorpay
+ * userType: Optional user type to determine which Razorpay account to use
  */
-export async function verifyPaymentStatusWithRazorpay(paymentId: string): Promise<{
+export async function verifyPaymentStatusWithRazorpay(
+  paymentId: string,
+  userType?: 'individual' | 'company' | 'dealer'
+): Promise<{
   status: 'authorized' | 'captured' | 'refunded' | 'failed' | 'pending';
   amount: number;
   currency: string;
@@ -27,7 +47,7 @@ export async function verifyPaymentStatusWithRazorpay(paymentId: string): Promis
   error?: string;
 } | null> {
   try {
-    const razorpay = getRazorpayInstance();
+    const razorpay = getRazorpayInstance(userType);
     const payment = await razorpay.payments.fetch(paymentId);
     
     return {
@@ -78,10 +98,11 @@ export async function reconcileOrderPayment(orderId: string): Promise<{
     }
 
     // Try to get payment status from Razorpay
+    // Use order's userType to determine which Razorpay account to query
     let razorpayPaymentStatus = null;
     
     if (order.paymentId) {
-      razorpayPaymentStatus = await verifyPaymentStatusWithRazorpay(order.paymentId);
+      razorpayPaymentStatus = await verifyPaymentStatusWithRazorpay(order.paymentId, order.userType);
     }
 
     // Case 1: Order marked as failed but payment is actually captured

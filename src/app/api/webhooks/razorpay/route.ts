@@ -31,8 +31,11 @@ export async function POST(request: NextRequest) {
     }
 
     // PRODUCTION: Validate webhook secret is configured
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!webhookSecret) {
+    // Try both regular and company webhook secrets
+    const regularWebhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const companyWebhookSecret = process.env.RAZORPAY_COMPANY_WEBHOOK_SECRET;
+    
+    if (!regularWebhookSecret) {
       logError('Razorpay webhook secret not configured', new Error('RAZORPAY_WEBHOOK_SECRET is missing'));
       return NextResponse.json(
         { error: 'Webhook configuration error' },
@@ -40,23 +43,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify webhook signature
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
+    // Verify webhook signature - try both secrets
+    let isCompanyAccount = false;
+    
+    const expectedSignatureRegular = crypto
+      .createHmac('sha256', regularWebhookSecret)
       .update(body)
       .digest('hex');
+    
+    let expectedSignature = expectedSignatureRegular;
+    
+    // If company webhook secret exists, try it too
+    if (companyWebhookSecret) {
+      const expectedSignatureCompany = crypto
+        .createHmac('sha256', companyWebhookSecret)
+        .update(body)
+        .digest('hex');
+      
+      if (signature === expectedSignatureCompany) {
+        expectedSignature = expectedSignatureCompany;
+        isCompanyAccount = true;
+      }
+    }
+    
+    // If regular signature matches, use regular account
+    if (signature === expectedSignatureRegular && !isCompanyAccount) {
+      expectedSignature = expectedSignatureRegular;
+      isCompanyAccount = false;
+    }
 
     if (signature !== expectedSignature) {
       logError('Invalid webhook signature', new Error('Signature mismatch'), {
         webhookId: webhookId || 'unknown',
         signatureLength: signature.length,
-        expectedLength: expectedSignature.length
+        expectedLength: expectedSignature.length,
+        triedCompany: !!companyWebhookSecret
       });
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
       );
     }
+    
+    logPaymentEvent('webhook_signature_verified', {
+      webhookId: webhookId || 'unknown',
+      accountType: isCompanyAccount ? 'company' : 'regular'
+    });
 
     // Parse webhook event body
     let event;
@@ -261,8 +293,9 @@ async function handlePaymentFailed(payment: { id: string; order_id?: string; [ke
 
     // PRODUCTION-SAFE: Verify payment status with Razorpay before marking as failed
     // Edge case: Payment might be marked as failed but money was actually deducted
+    // Use order's userType to determine which Razorpay account to query
     if (payment.id) {
-      const razorpayStatus = await verifyPaymentStatusWithRazorpay(payment.id);
+      const razorpayStatus = await verifyPaymentStatusWithRazorpay(payment.id, order.userType);
       
       if (razorpayStatus) {
         // If payment is actually captured, don't mark as failed
