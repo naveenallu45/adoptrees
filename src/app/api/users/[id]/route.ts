@@ -278,12 +278,12 @@ export async function PUT(
 
     // CRITICAL: Prevent updates to immutable fields (publicId and qrCode are set at registration only)
     // These fields CANNOT be deleted, modified, or cleared
-    if (updateData.publicId !== undefined) {
-      delete updateData.publicId;
+    if ('publicId' in updateData) {
+      delete (updateData as Record<string, unknown>).publicId;
       console.warn('[User Update] Attempted to update immutable field: publicId - blocked');
     }
-    if (updateData.qrCode !== undefined) {
-      delete updateData.qrCode;
+    if ('qrCode' in updateData) {
+      delete (updateData as Record<string, unknown>).qrCode;
       console.warn('[User Update] Attempted to update immutable field: qrCode - blocked');
     }
 
