@@ -235,14 +235,30 @@ export async function POST(request: NextRequest) {
     
     if (wellwisherId) {
       console.log(`[ORDER_CREATE] Assigning well-wisher ${wellwisherId} to order ${order.orderId}`);
-      const wellwisherTasks = orderItems.map((item, index) => ({
-        taskId: `${order.orderId}-${index}`, // Use existing order ID (like WEL60136-0, WEL60136-1)
-        task: `Plant and care for ${item.treeName}`,
-        description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${isGift && giftMessage ? `Gift message: ${giftMessage}` : ''}`,
-        scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000), // Schedule tasks over next few days
-        status: 'pending' as const,
-        location: 'To be determined'
-      }));
+      // Create one task per tree (not per item) so well-wisher can upload separate images/locations for each tree
+      const wellwisherTasks: Array<{
+        taskId: string;
+        task: string;
+        description: string;
+        scheduledDate: Date;
+        status: 'pending';
+        location: string;
+      }> = [];
+      let taskIndex = 0;
+      orderItems.forEach((item) => {
+        // Create a separate task for each tree in the quantity
+        for (let i = 0; i < item.quantity; i++) {
+          wellwisherTasks.push({
+            taskId: `${order.orderId}-${taskIndex}`,
+            task: `Plant and care for ${item.treeName}`,
+            description: `Plant 1 ${item.treeName} tree and provide ongoing care. ${isGift && giftMessage ? `Gift message: ${giftMessage}` : ''}`,
+            scheduledDate: new Date(Date.now() + (taskIndex + 1) * 24 * 60 * 60 * 1000), // Schedule tasks over next few days
+            status: 'pending' as const,
+            location: 'To be determined'
+          });
+          taskIndex++;
+        }
+      });
 
       order.assignedWellwisher = wellwisherId;
       order.wellwisherTasks = wellwisherTasks;

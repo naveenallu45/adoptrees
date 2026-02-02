@@ -196,15 +196,31 @@ async function fixUnassignedOrders() {
         }
 
         // Create tasks if missing or empty
+        // Create one task per tree (not per item) so well-wisher can upload separate images/locations for each tree
         if (!order.wellwisherTasks || order.wellwisherTasks.length === 0) {
-          const wellwisherTasks = order.items.map((item: any, index: number) => ({
-            taskId: `${order.orderId}-${index}`,
-            task: `Plant and care for ${item.treeName}`,
-            description: `Plant ${item.quantity} ${item.treeName} tree(s) and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
-            scheduledDate: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000),
-            status: 'pending' as const,
-            location: 'To be determined',
-          }));
+          const wellwisherTasks: Array<{
+            taskId: string;
+            task: string;
+            description: string;
+            scheduledDate: Date;
+            status: 'pending';
+            location: string;
+          }> = [];
+          let taskIndex = 0;
+          order.items.forEach((item: any) => {
+            // Create a separate task for each tree in the quantity
+            for (let i = 0; i < item.quantity; i++) {
+              wellwisherTasks.push({
+                taskId: `${order.orderId}-${taskIndex}`,
+                task: `Plant and care for ${item.treeName}`,
+                description: `Plant 1 ${item.treeName} tree and provide ongoing care. ${order.isGift && order.giftMessage ? `Gift message: ${order.giftMessage}` : ''}`,
+                scheduledDate: new Date(Date.now() + (taskIndex + 1) * 24 * 60 * 60 * 1000),
+                status: 'pending' as const,
+                location: 'To be determined',
+              });
+              taskIndex++;
+            }
+          });
 
           order.wellwisherTasks = wellwisherTasks;
           console.log(`✅ Created ${wellwisherTasks.length} tasks for order ${order.orderId}`);

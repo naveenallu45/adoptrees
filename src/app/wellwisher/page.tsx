@@ -9,7 +9,8 @@ import {
   CheckCircleIcon,
   HeartIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon as RefreshIcon
+  ArrowPathIcon as RefreshIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { isOnline, getNetworkErrorMessage, retryWithBackoff } from '@/lib/utils/wellwisher';
@@ -166,26 +167,10 @@ export default function WellWisherDashboard() {
 
   if (loading && !stats) {
     return (
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Well-Wisher Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here&apos;s an overview of your activities.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-gray-100 rounded-xl p-6 shadow-sm border border-gray-100 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse"></div>
-            ))}
-          </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-green-200 border-t-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -221,14 +206,31 @@ export default function WellWisherDashboard() {
   }
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto">
+      {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Well-Wisher Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here&apos;s an overview of your activities.</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+              <SparklesIcon className="h-10 w-10 text-green-600" />
+              Well-Wisher Dashboard
+            </h1>
+            <p className="text-lg text-gray-600">Welcome back! Here&apos;s an overview of your activities.</p>
+          </div>
+          <button
+            onClick={() => fetchStats(true)}
+            disabled={loading}
+            className="flex items-center space-x-2 px-5 py-2.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh dashboard"
+          >
+            <RefreshIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="font-medium">Refresh</span>
+          </button>
+        </div>
       </motion.div>
 
       {/* Stats Grid */}
@@ -242,14 +244,14 @@ export default function WellWisherDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               onClick={() => stat.href && router.push(stat.href)}
-              className={`${stat.bgColor} rounded-xl p-6 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all hover:scale-105`}
+              className={`${stat.bgColor} rounded-2xl p-6 shadow-lg border-2 border-gray-100 cursor-pointer hover:shadow-xl transition-all hover:scale-105 active:scale-95`}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-                <Icon className={`h-8 w-8 ${stat.color}`} />
+              <div className="flex items-center justify-between mb-4">
+                <Icon className={`h-10 w-10 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">{stat.name}</p>
+                <p className="text-4xl font-bold text-gray-900">{stat.value}</p>
               </div>
             </motion.div>
           );
@@ -261,16 +263,18 @@ export default function WellWisherDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+        className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6"
       >
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <ClockIcon className="h-6 w-6 text-gray-600" />
+          Recent Activity
+        </h2>
         {stats && stats.recentActivity.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
             {stats.recentActivity.map((activity) => {
               const StatusIcon = getStatusIcon(activity.status);
               const colors = getStatusColor(activity.status);
               
-              // Determine which page to navigate to based on status
               const getActivityHref = (status: string) => {
                 switch (status) {
                   case 'pending':
@@ -288,11 +292,13 @@ export default function WellWisherDashboard() {
                 <div
                   key={activity.id}
                   onClick={() => router.push(getActivityHref(activity.status))}
-                  className={`flex items-center space-x-4 p-4 ${colors.bg} rounded-lg transition-all hover:shadow-md cursor-pointer hover:scale-[1.02]`}
+                  className={`flex items-center space-x-4 p-4 ${colors.bg} rounded-xl transition-all hover:shadow-lg cursor-pointer hover:scale-[1.02] active:scale-95 border-2 border-transparent hover:border-gray-200`}
                 >
-                  <StatusIcon className={`h-6 w-6 ${colors.icon}`} />
+                  <div className={`p-2 rounded-lg bg-white ${colors.icon.replace('text-', 'bg-').replace('-600', '-50')}`}>
+                    <StatusIcon className={`h-6 w-6 ${colors.icon}`} />
+                  </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{activity.task}</p>
+                    <p className="font-semibold text-gray-900 mb-1">{activity.task}</p>
                     <p className="text-sm text-gray-600">
                       {getStatusText(activity.status)} • {activity.timeAgo}
                     </p>
@@ -302,10 +308,12 @@ export default function WellWisherDashboard() {
             })}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No recent activity</p>
-            <p className="text-sm text-gray-500 mt-1">Your recent tasks will appear here</p>
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+              <ClockIcon className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-gray-600 text-lg font-medium">No recent activity</p>
+            <p className="text-sm text-gray-500 mt-2">Your recent tasks will appear here</p>
           </div>
         )}
       </motion.div>

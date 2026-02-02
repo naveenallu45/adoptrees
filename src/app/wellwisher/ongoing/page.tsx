@@ -9,7 +9,9 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   PhotoIcon,
-  XMarkIcon
+  XMarkIcon,
+  SparklesIcon,
+  CameraIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { 
@@ -49,12 +51,12 @@ export default function OngoingPage() {
   const [tasks, setTasks] = useState<WellwisherTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState<string | null>(null); // Track which task is uploading
-  const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set()); // Track tasks with status updates
-  const [taskImages, setTaskImages] = useState<Record<string, File[]>>({}); // Store images per task
-  const [_previewUpdateTrigger, setPreviewUpdateTrigger] = useState(0); // Force re-render when previews change
-  const previewUrlsRef = useRef<Record<string, string>>({}); // Store preview URLs for cleanup
-  const [fastMode] = useState<boolean>(true); // Faster location with lower accuracy
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set());
+  const [taskImages, setTaskImages] = useState<Record<string, File[]>>({});
+  const [_previewUpdateTrigger, setPreviewUpdateTrigger] = useState(0);
+  const previewUrlsRef = useRef<Record<string, string>>({});
+  const [fastMode] = useState<boolean>(true);
   const [prewarmedLocation, setPrewarmedLocation] = useState<{
     latitude?: number;
     longitude?: number;
@@ -74,19 +76,15 @@ export default function OngoingPage() {
     fetchTasks();
   }, []);
 
-  // Pre-warm a quick location fix on page load or when fast mode toggles
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const isSecure = window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (!isSecure) return;
 
-    // Skip if permission is explicitly denied
     (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
       .then(res => {
         if (res && 'state' in res && res.state === 'denied') return;
-
         if (!navigator.geolocation) return;
-        // Fast, low-power get; allow cached location
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             setPrewarmedLocation({
@@ -101,18 +99,13 @@ export default function OngoingPage() {
               source: 'prewarm'
             });
           },
-          () => {
-            // ignore prewarm errors
-          },
+          () => {},
           { enableHighAccuracy: false, timeout: 8000, maximumAge: 1800000 }
         );
       })
-      .catch(() => {
-        // ignore
-      }));
+      .catch(() => {}));
   }, [fastMode]);
 
-  // Cleanup preview URLs on unmount
   useEffect(() => {
     const currentUrls = previewUrlsRef.current;
     return () => {
@@ -178,13 +171,10 @@ export default function OngoingPage() {
     }
 
     setUpdatingStatus(prev => new Set(prev).add(taskId));
-
-    // Optimistic update - update status immediately
     setTasks(prev => prev.map(t => 
       t.id === taskId ? { ...t, status: newStatus } : t
     ));
 
-    // Show toast based on status
     const statusMessages = {
       pending: 'Task moved back to pending',
       in_progress: 'Task status updated to in progress',
@@ -217,7 +207,6 @@ export default function OngoingPage() {
       toast.dismiss(toastId);
       
       if (!result.success) {
-        // Rollback on error
         setTasks(prev => prev.map(t => 
           t.id === taskId ? taskToUpdate : t
         ));
@@ -225,27 +214,23 @@ export default function OngoingPage() {
           duration: 4000,
         });
       } else {
-        // If moved to pending or completed, remove from ongoing list
         if (newStatus === 'pending' || newStatus === 'completed') {
           setTasks(prev => prev.filter(t => t.id !== taskId));
           toast.success(`Task moved to ${newStatus === 'pending' ? 'upcoming' : 'completed'} tasks`, {
             icon: '✅',
             duration: 2000,
           });
-          // Refresh tasks to ensure UI is up to date
           fetchTasks();
         } else {
           toast.success(statusMessages[newStatus], {
             icon: '✅',
             duration: 2000,
           });
-          // Refresh tasks to ensure UI is up to date
           fetchTasks();
         }
       }
     } catch (error) {
       toast.dismiss(toastId);
-      // Rollback on error
       setTasks(prev => prev.map(t => 
         t.id === taskId ? taskToUpdate : t
       ));
@@ -267,30 +252,25 @@ export default function OngoingPage() {
     
     if (files.length === 0) return;
 
-    // Validate images
     const validation = validateWellWisherImages(files);
     
     if (!validation.valid) {
       validation.errors.forEach(error => {
         toast.error(error, { duration: 4000 });
       });
-      // Reset input
       e.target.value = '';
       return;
     }
 
-    // Show loading toast for compression
     const compressToast = toast.loading('Processing images...', { duration: 5000 });
 
     try {
-      // Compress images if needed (in parallel)
       const compressedFiles = await Promise.all(
-        validation.validFiles.map(file => compressImage(file, 2)) // Max 2MB per image
+        validation.validFiles.map(file => compressImage(file, 2))
       );
 
       toast.dismiss(compressToast);
 
-    // Clean up old preview URLs for this task
       Object.keys(previewUrlsRef.current).forEach(key => {
         if (key.startsWith(`${taskId}-`)) {
           URL.revokeObjectURL(previewUrlsRef.current[key]);
@@ -298,7 +278,6 @@ export default function OngoingPage() {
         }
       });
 
-      // Create preview URLs for new images
       compressedFiles.forEach((file, index) => {
         const urlKey = `${taskId}-${index}`;
         previewUrlsRef.current[urlKey] = URL.createObjectURL(file);
@@ -309,7 +288,6 @@ export default function OngoingPage() {
         [taskId]: compressedFiles
       }));
       
-      // Force re-render to show previews
       setPreviewUpdateTrigger(prev => prev + 1);
 
       const totalSize = compressedFiles.reduce((sum, file) => sum + file.size, 0);
@@ -327,25 +305,21 @@ export default function OngoingPage() {
   const removeImage = (taskId: string, index: number) => {
     const images = taskImages[taskId];
     if (images && images[index]) {
-      // Clean up the preview URL for this image
       const urlKey = `${taskId}-${index}`;
       if (previewUrlsRef.current[urlKey]) {
         URL.revokeObjectURL(previewUrlsRef.current[urlKey]);
         delete previewUrlsRef.current[urlKey];
       }
       
-      // Remove the image from the array
       const newImages = images.filter((_, i) => i !== index);
       
-      // Recreate preview URLs for remaining images with new indices
-      // Clean up all URLs for this task
       Object.keys(previewUrlsRef.current).forEach(key => {
         if (key.startsWith(`${taskId}-`)) {
           URL.revokeObjectURL(previewUrlsRef.current[key]);
           delete previewUrlsRef.current[key];
         }
       });
-      // Create new URLs for remaining images
+      
       newImages.forEach((img, newIdx) => {
         const newKey = `${taskId}-${newIdx}`;
         previewUrlsRef.current[newKey] = URL.createObjectURL(img);
@@ -356,7 +330,6 @@ export default function OngoingPage() {
         [taskId]: newImages
       }));
       
-      // Force re-render to update previews
       setPreviewUpdateTrigger(prev => prev + 1);
     }
   };
@@ -379,7 +352,6 @@ export default function OngoingPage() {
       return;
     }
 
-    // Show confirmation
     const confirmed = window.confirm(
       `Are you sure you want to complete this planting task?\n\n` +
       `Task: ${task.task}\n` +
@@ -389,8 +361,6 @@ export default function OngoingPage() {
 
     if (!confirmed) return;
 
-    // Get current device location using browser geolocation API, Google API as fallback
-    // Location is optional - if all methods fail, submission can proceed without location
     const getLocation = (): Promise<{ 
       latitude?: number; 
       longitude?: number; 
@@ -403,7 +373,6 @@ export default function OngoingPage() {
       source?: string;
     }> => {
       return new Promise((resolve) => {
-        // Try browser geolocation first (most accurate)
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -420,7 +389,6 @@ export default function OngoingPage() {
               });
             },
             async () => {
-              // Browser geolocation failed, try Google API
               try {
                 const res = await fetch('/api/geolocation/google', { method: 'POST' });
                 const data = await res.json();
@@ -433,10 +401,7 @@ export default function OngoingPage() {
                     timestamp: Date.now(),
                   });
                 }
-              } catch (_e) {
-                // Google API also failed
-              }
-              // All location methods failed - allow submission without location
+              } catch (_e) {}
               resolve({
                 source: 'location_unavailable',
                 timestamp: Date.now(),
@@ -449,7 +414,6 @@ export default function OngoingPage() {
             }
           );
         } else {
-          // Browser geolocation not available, try Google API
           (async () => {
             try {
               const res = await fetch('/api/geolocation/google', { method: 'POST' });
@@ -463,10 +427,7 @@ export default function OngoingPage() {
                   timestamp: Date.now(),
                 });
               }
-            } catch (_e) {
-              // Google API failed
-            }
-            // All location methods failed - allow submission without location
+            } catch (_e) {}
             resolve({
               source: 'location_unavailable',
               timestamp: Date.now(),
@@ -476,23 +437,19 @@ export default function OngoingPage() {
       });
     };
 
-    // Declare progressToast outside try block so it's accessible in catch
     let progressToast: string | undefined;
 
     try {
       setUploading(task.id);
       
-      // Show progress toast
       progressToast = toast.loading('Getting location and uploading images...', {
         duration: 30000,
       });
       
-      // Check if manual location was selected for this task
       let location;
       let permissionState: string | undefined;
       
       if (manualLocation[task.id]) {
-        // Use manually selected location
         location = {
           latitude: manualLocation[task.id].latitude,
           longitude: manualLocation[task.id].longitude,
@@ -502,9 +459,8 @@ export default function OngoingPage() {
         toast.dismiss(progressToast);
         toast.loading('Uploading images...', { id: progressToast });
       } else {
-        // Use prewarmed location if recent and fast mode is enabled and has valid coordinates
         const now = Date.now();
-        const recentMs = 2 * 60 * 1000; // 2 minutes
+        const recentMs = 2 * 60 * 1000;
         const canUsePrewarm = fastMode && 
           prewarmedLocation && 
           prewarmedLocation.timestamp && 
@@ -512,7 +468,6 @@ export default function OngoingPage() {
           prewarmedLocation.latitude !== undefined &&
           prewarmedLocation.longitude !== undefined;
 
-        // Get current location automatically
         try {
           permissionState = await (navigator.permissions?.query({ name: 'geolocation' as PermissionName })
           .then(res => (res && 'state' in res ? (res.state as 'granted'|'prompt'|'denied') : undefined))
@@ -525,7 +480,6 @@ export default function OngoingPage() {
             toast.loading('Uploading images...', { id: progressToast });
           }
         } catch (_locationError) {
-          // Continue without location
           location = { source: 'location_unavailable', timestamp: Date.now() };
         }
       }
@@ -533,9 +487,8 @@ export default function OngoingPage() {
       const formData = new FormData();
       formData.append('taskId', task.id);
       formData.append('orderId', task.orderId);
-      formData.append('plantingNotes', ''); // Empty notes
+      formData.append('plantingNotes', '');
       
-      // Only add location data if available
       if (location.latitude !== undefined && location.longitude !== undefined) {
         formData.append('latitude', location.latitude.toString());
         formData.append('longitude', location.longitude.toString());
@@ -548,7 +501,6 @@ export default function OngoingPage() {
         if (location.source) formData.append('source', location.source);
         if (permissionState) formData.append('permissionState', permissionState);
       } else {
-        // Log that location is not available but submission will proceed
         console.log('Location not available, proceeding without location data');
         if (location.source) formData.append('source', location.source);
       }
@@ -569,7 +521,7 @@ export default function OngoingPage() {
         }
 
         return await response.json();
-      }, 2, 2000); // 2 retries with 2s initial delay
+      }, 2, 2000);
       
       toast.dismiss(progressToast);
       
@@ -579,13 +531,9 @@ export default function OngoingPage() {
           duration: 3000,
         });
         
-        // Optimistically remove task from UI
         setTasks(prev => prev.filter(t => t.id !== task.id));
-        
-        // Refresh tasks to ensure UI is up to date
         fetchTasks();
         
-        // Clean up preview URLs for this task
         Object.keys(previewUrlsRef.current).forEach(key => {
           if (key.startsWith(`${task.id}-`)) {
             URL.revokeObjectURL(previewUrlsRef.current[key]);
@@ -598,10 +546,8 @@ export default function OngoingPage() {
           return updated;
         });
         
-        // Refresh tasks in background
         fetchTasks();
       } else {
-        // Show detailed error message
         const errorMessage = result.error || 'Failed to upload planting details';
         const details = result.details ? ` - ${result.details.map((d: { message?: string }) => d.message || '').join(', ')}` : '';
         toast.error(`${errorMessage}${details}`, {
@@ -624,9 +570,10 @@ export default function OngoingPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-green-200 border-t-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading your tasks...</p>
         </div>
       </div>
     );
@@ -634,25 +581,25 @@ export default function OngoingPage() {
 
   if (error && !loading) {
     return (
-      <div className="p-8">
-        <div className="mb-8 flex items-center justify-between">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Ongoing Tasks</h1>
             <p className="text-gray-600">Tasks currently in progress</p>
           </div>
           <button
             onClick={() => fetchTasks(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
           >
             <ArrowPathIcon className="h-5 w-5" />
             <span>Retry</span>
           </button>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-start space-x-3">
             <ExclamationTriangleIcon className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="text-red-800 font-semibold mb-1">Error Loading Tasks</h3>
+              <h3 className="text-red-800 font-semibold mb-1 text-lg">Error Loading Tasks</h3>
               <p className="text-red-700">{error}</p>
               {!isOnline() && (
                 <p className="text-red-600 text-sm mt-2">
@@ -667,286 +614,298 @@ export default function OngoingPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 flex items-center justify-between"
+        className="mb-8"
       >
-        <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Ongoing Tasks</h1>
-        <p className="text-gray-600">Tasks currently in progress - Upload planting details to complete</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+              <SparklesIcon className="h-10 w-10 text-green-600" />
+              Ongoing Tasks
+            </h1>
+            <p className="text-lg text-gray-600">Upload planting details to complete your tasks</p>
+          </div>
+          <button
+            onClick={() => fetchTasks(true)}
+            disabled={loading}
+            className="flex items-center space-x-2 px-5 py-2.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh tasks"
+          >
+            <ArrowPathIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="font-medium">Refresh</span>
+          </button>
         </div>
-        <button
-          onClick={() => fetchTasks(true)}
-          disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Refresh tasks"
-        >
-          <ArrowPathIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
       </motion.div>
 
       {tasks.length === 0 ? (
-        <div className="text-center py-12">
-          <ArrowPathIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No ongoing tasks</h3>
-          <p className="text-gray-600">All tasks are either pending or completed</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100"
+        >
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
+            <CheckCircleIcon className="h-10 w-10 text-green-600" />
+          </div>
+          <h3 className="text-2xl font-semibold text-gray-900 mb-2">No ongoing tasks</h3>
+          <p className="text-gray-600 text-lg">All tasks are either pending or completed</p>
+        </motion.div>
       ) : (
-        <div className="grid gap-4">
+        <div className="space-y-6">
           {tasks.map((task, index) => (
             <motion.div
               key={task.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
+              transition={{ delay: index * 0.05 }}
+              className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-yellow-50 rounded-lg">
-                    <ArrowPathIcon className="h-5 w-5 text-yellow-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-900">{task.task}</h3>
-                    <p className="text-xs text-gray-600">Order ID: {task.orderId}</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-                  In Progress
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                <div className="flex items-center space-x-1.5 text-xs text-gray-600">
-                  <MapPinIcon className="h-3.5 w-3.5" />
-                  <span>{task.location}</span>
-                </div>
-                <div className="flex items-center space-x-1.5 text-xs text-gray-600">
-                  <ClockIcon className="h-3.5 w-3.5" />
-                  <span>Scheduled: {new Date(task.scheduledDate).toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-700 mb-3">{task.description}</p>
-
-              {/* Order Details */}
-              <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                <h4 className="text-sm font-medium text-gray-900 mb-1.5">Trees to Plant</h4>
-                <div className="space-y-0.5 text-xs text-gray-600">
-                  {task.orderDetails.items.map((item, idx) => (
-                    <div key={idx}>
-                      <span>{item.treeName} x{item.quantity}</span>
+              {/* Task Header */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="p-3 bg-white rounded-xl shadow-sm">
+                      <ArrowPathIcon className="h-6 w-6 text-green-600" />
                     </div>
-                  ))}
-                </div>
-                {task.orderDetails.isGift && (
-                  <div className="mt-1.5 p-1.5 bg-green-50 rounded border border-green-200">
-                    <p className="text-xs text-green-800">
-                      <strong>Gift for:</strong> {task.orderDetails.giftRecipientName}
-                    </p>
-                    {task.orderDetails.giftMessage && (
-                      <p className="text-xs text-green-700 mt-0.5">
-                        &ldquo;{task.orderDetails.giftMessage}&rdquo;
-                      </p>
-                    )}
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">{task.task}</h3>
+                      <p className="text-sm text-gray-600 mb-2">Order: <span className="font-mono font-semibold">{task.orderId}</span></p>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1.5">
+                          <MapPinIcon className="h-4 w-4" />
+                          <span>{task.location}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <ClockIcon className="h-4 w-4" />
+                          <span>{new Date(task.scheduledDate).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
+                  <span className="px-4 py-1.5 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800 border-2 border-yellow-200 shadow-sm">
+                    In Progress
+                  </span>
+                </div>
               </div>
 
-              {/* Location Selection */}
-              <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Planting Location
-                </label>
-                <div className="flex flex-wrap gap-1.5 items-center">
-                  {manualLocation[task.id] ? (
-                    <div className="flex items-center gap-2 px-2.5 py-1 bg-green-100 text-green-800 rounded-md text-xs">
-                      <MapPinIcon className="h-3 w-3" />
-                      <span>Location Selected</span>
+              <div className="p-6 space-y-6">
+                {/* Description */}
+                <div>
+                  <p className="text-gray-700 leading-relaxed">{task.description}</p>
+                </div>
+
+                {/* Order Details Card */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    Trees to Plant
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {task.orderDetails.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200">
+                        <span className="font-medium text-gray-900">{item.treeName}</span>
+                        <span className="text-sm text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full font-semibold">x{item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {task.orderDetails.isGift && (
+                    <div className="mt-3 p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                      <p className="text-sm font-semibold text-green-900 mb-1">
+                        🎁 Gift for: {task.orderDetails.giftRecipientName}
+                      </p>
+                      {task.orderDetails.giftMessage && (
+                        <p className="text-sm text-green-800 italic">
+                          &ldquo;{task.orderDetails.giftMessage}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Location Selection */}
+                <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    📍 Planting Location
+                  </label>
+                  <div className="flex flex-wrap gap-3 items-center">
+                    {manualLocation[task.id] ? (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm font-semibold border-2 border-green-300 shadow-sm">
+                        <MapPinIcon className="h-4 w-4" />
+                        <span>Location Selected</span>
+                        <button
+                          onClick={() => {
+                            setManualLocation(prev => {
+                              const updated = { ...prev };
+                              delete updated[task.id];
+                              return updated;
+                            });
+                          }}
+                          className="ml-2 text-green-700 hover:text-green-900 transition-colors"
+                          type="button"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         onClick={() => {
-                          setManualLocation(prev => {
-                            const updated = { ...prev };
-                            delete updated[task.id];
-                            return updated;
-                          });
+                          setLocationPickerTaskId(task.id);
+                          setShowLocationPicker(true);
                         }}
-                        className="ml-1 text-green-600 hover:text-green-800"
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
                         type="button"
                       >
-                        <XMarkIcon className="h-3 w-3" />
+                        <MapPinIcon className="h-4 w-4" />
+                        <span>Select Location on Map</span>
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setLocationPickerTaskId(task.id);
-                        setShowLocationPicker(true);
-                      }}
-                      className="px-2.5 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors flex items-center space-x-1"
-                      type="button"
-                    >
-                      <MapPinIcon className="h-3 w-3" />
-                      <span>Select Location on Map</span>
-                    </button>
-                  )}
-                  <p className="text-xs text-gray-500">
-                    {manualLocation[task.id] 
-                      ? 'Location will be used when completing planting'
-                      : 'Optional: Select location manually or use device location'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Status Switcher - Only show valid transitions */}
-              <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Quick Status Change
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => handleStatusChange(task.id, task.orderId, 'completed')}
-                    disabled={updatingStatus.has(task.id)}
-                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-green-100 text-green-800 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                    title="Mark as completed (without uploading images)"
-                  >
-                    {updatingStatus.has(task.id) ? (
-                      <>
-                        <div className="animate-spin rounded-full h-2.5 w-2.5 border-b-2 border-green-800"></div>
-                        <span>Updating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircleIcon className="h-3 w-3" />
-                        <span>Mark Complete</span>
-                      </>
                     )}
-                  </button>
+                    <p className="text-xs text-gray-600">
+                      {manualLocation[task.id] 
+                        ? 'Location will be used when completing planting'
+                        : 'Optional: Select location manually or use device location automatically'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Or upload images below to complete with planting details
-                </p>
-              </div>
 
-              {/* Image Upload Section */}
-              <div className="mt-3 space-y-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">
-                    Upload Planting Images (Max 5)
-                  </label>
-                  
-                  {/* Custom File Input */}
-                  <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    multiple
-                    onChange={(e) => handleImageChange(task.id, e)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    disabled={uploading === task.id}
-                      id={`file-input-${task.id}`}
-                  />
-                    <label
-                      htmlFor={`file-input-${task.id}`}
-                      className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-                        uploading === task.id
-                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                          : 'border-green-300 bg-green-50 hover:bg-green-100 hover:border-green-400'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <PhotoIcon className={`w-8 h-8 mb-2 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`} />
-                        <p className={`text-sm font-medium ${uploading === task.id ? 'text-gray-400' : 'text-green-700'}`}>
-                          {taskImages[task.id] && taskImages[task.id].length > 0
-                            ? `Click to add more images (${taskImages[task.id].length}/5)`
-                            : 'Click to upload or use camera'}
-                        </p>
-                        <p className={`text-xs mt-1 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`}>
-                          PNG, JPG, WEBP up to 5MB each
-                        </p>
-                      </div>
+                {/* Image Upload Section */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-3">
+                      📸 Upload Planting Images
+                      <span className="text-xs font-normal text-gray-500 ml-2">(Max 5 images, up to 5MB each)</span>
                     </label>
+                    
+                    {/* Custom File Input */}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        multiple
+                        onChange={(e) => handleImageChange(task.id, e)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        disabled={uploading === task.id}
+                        id={`file-input-${task.id}`}
+                      />
+                      <label
+                        htmlFor={`file-input-${task.id}`}
+                        className={`flex flex-col items-center justify-center w-full h-40 border-3 border-dashed rounded-xl cursor-pointer transition-all ${
+                          uploading === task.id
+                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                            : taskImages[task.id] && taskImages[task.id].length > 0
+                            ? 'border-green-400 bg-green-50 hover:bg-green-100'
+                            : 'border-green-300 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 hover:border-green-400'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          {taskImages[task.id] && taskImages[task.id].length > 0 ? (
+                            <>
+                              <CameraIcon className={`w-10 h-10 mb-2 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`} />
+                              <p className={`text-base font-semibold ${uploading === task.id ? 'text-gray-400' : 'text-green-700'}`}>
+                                {taskImages[task.id].length}/5 images selected
+                              </p>
+                              <p className={`text-sm mt-1 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`}>
+                                Click to add more images
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <PhotoIcon className={`w-12 h-12 mb-3 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`} />
+                              <p className={`text-lg font-bold ${uploading === task.id ? 'text-gray-400' : 'text-green-700'}`}>
+                                Click to upload or use camera
+                              </p>
+                              <p className={`text-sm mt-2 ${uploading === task.id ? 'text-gray-400' : 'text-green-600'}`}>
+                                PNG, JPG, WEBP up to 5MB each
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Image Previews */}
+                    {taskImages[task.id] && taskImages[task.id].length > 0 && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-sm font-semibold text-green-700">
+                            {taskImages[task.id].length} image(s) ready
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Total: {formatFileSize(taskImages[task.id].reduce((sum, file) => sum + file.size, 0))}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                          {taskImages[task.id].map((image, idx) => {
+                            const urlKey = `${task.id}-${idx}`;
+                            if (!previewUrlsRef.current[urlKey]) {
+                              previewUrlsRef.current[urlKey] = URL.createObjectURL(image);
+                            }
+                            const previewUrl = previewUrlsRef.current[urlKey];
+                            
+                            return (
+                              <div key={idx} className="relative group">
+                                <div className="aspect-square rounded-xl overflow-hidden border-2 border-gray-200 group-hover:border-green-400 transition-colors shadow-sm">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={previewUrl}
+                                    alt={`Preview ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      console.error('Preview image failed to load:', urlKey);
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                                <button
+                                  onClick={() => removeImage(task.id, idx)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-all z-20 flex items-center justify-center"
+                                  type="button"
+                                  disabled={uploading === task.id}
+                                  title="Remove image"
+                                >
+                                  <XMarkIcon className="w-4 h-4" />
+                                </button>
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] px-2 py-1 rounded-b-xl">
+                                  {formatFileSize(image.size)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {taskImages[task.id] && taskImages[task.id].length > 0 && (
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs text-green-600 font-semibold">
-                        {taskImages[task.id].length} image(s) selected
-                      </p>
-                        <p className="text-xs text-gray-500">
-                          Total: {formatFileSize(taskImages[task.id].reduce((sum, file) => sum + file.size, 0))}
-                        </p>
-                      </div>
-                      {/* Image Previews */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                        {taskImages[task.id].map((image, idx) => {
-                          // Create or reuse preview URL
-                          const urlKey = `${task.id}-${idx}`;
-                          if (!previewUrlsRef.current[urlKey]) {
-                            previewUrlsRef.current[urlKey] = URL.createObjectURL(image);
-                          }
-                          const previewUrl = previewUrlsRef.current[urlKey];
-                          
-                          return (
-                          <div key={idx} className="relative group">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={previewUrl}
-                              alt={`Preview ${idx + 1}`}
-                              className="w-full h-20 object-cover rounded-lg border-2 border-gray-200 group-hover:border-green-400 transition-colors"
-                              onError={(e) => {
-                                // Fallback if image fails to load
-                                console.error('Preview image failed to load:', urlKey);
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                              }}
-                            />
-                            <button
-                              onClick={() => removeImage(task.id, idx)}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors z-20"
-                              type="button"
-                              disabled={uploading === task.id}
-                              title="Remove image"
-                            >
-                              <XMarkIcon className="w-3 h-3" />
-                            </button>
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1 py-0.5 rounded-b-lg">
-                              {formatFileSize(image.size)}
-                            </div>
-                          </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  {/* Action Button */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => handleCompletePlanting(task)}
+                      disabled={uploading === task.id || !taskImages[task.id] || taskImages[task.id].length === 0}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                    >
+                      {uploading === task.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          <span>Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="h-5 w-5" />
+                          <span>Complete Planting</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                      Please upload at least one image to complete this task
+                    </p>
+                  </div>
                 </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => handleCompletePlanting(task)}
-                    disabled={uploading === task.id || !taskImages[task.id] || taskImages[task.id].length === 0}
-                    className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium flex items-center space-x-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {uploading === task.id ? (
-                      <>
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                        <span>Uploading...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircleIcon className="h-3.5 w-3.5" />
-                        <span>Complete Planting</span>
-                      </>
-                    )}
-                  </button>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
           ))}
         </div>
       )}
