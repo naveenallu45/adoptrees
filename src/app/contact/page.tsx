@@ -52,8 +52,8 @@ export default function ContactPage() {
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Email</h3>
                   <p className="text-gray-700">
-                    <a href="mailto:support@adoptrees.com" className="text-green-600 hover:text-green-700 font-medium transition-colors underline decoration-2 underline-offset-2">
-                      support@adoptrees.com
+                    <a href="mailto:connect@adoptrees.com" className="text-green-600 hover:text-green-700 font-medium transition-colors underline decoration-2 underline-offset-2">
+                      connect@adoptrees.com
                     </a>
                   </p>
                 </div>
