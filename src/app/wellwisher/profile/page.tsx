@@ -83,6 +83,7 @@ export default function WellWisherProfilePage() {
     if (!sessionUpdateRef.current && session?.user?.image && !profileImage) {
       setProfileImage(session.user.image);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.image, profileImage]);
 
   const validateImageFile = (file: File): string | null => {
@@ -151,7 +152,7 @@ export default function WellWisherProfilePage() {
     }
   };
 
-  const handleImageUploadRequest = async (formDataToSend: FormData, file: File) => {
+  const handleImageUploadRequest = async (formDataToSend: FormData, _file: File) => {
     if (!session?.user?.id) return;
 
     try {
@@ -486,52 +487,21 @@ export default function WellWisherProfilePage() {
       </div>
 
       {/* Image Cropper Modal */}
-      <AnimatePresence>
-        {showCropper && imageToCrop && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={() => {
-              setShowCropper(false);
-              setImageToCrop(null);
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <PhotoIcon className="h-6 w-6" />
-                  Crop Profile Picture
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowCropper(false);
-                    setImageToCrop(null);
-                  }}
-                  className="text-white hover:text-gray-200 transition-colors p-1 rounded-lg hover:bg-white/10"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="p-6">
-                <ImageCropper
-                  imageSrc={imageToCrop}
-                  onCropComplete={handleCropComplete}
-                  aspectRatio={1}
-                  circularCrop={true}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showCropper && imageToCrop && (
+        <ImageCropper
+          image={imageToCrop}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setShowCropper(false);
+            setImageToCrop(null);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+          }}
+          aspect={1}
+          circularCrop={true}
+        />
+      )}
     </div>
   );
 }
