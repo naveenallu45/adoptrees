@@ -62,7 +62,7 @@ export default function Banner() {
           <div className="bg-green-800/50 rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl p-6 sm:p-8 md:p-12 lg:p-16 border border-green-700">
             <p className="text-lg sm:text-xl md:text-2xl text-white leading-relaxed mb-6 sm:mb-8">
               Founded by <strong className="text-white font-bold">Dr. Rohith Reddy</strong>, a humanitarian known for saving lives of students battling despair, 
-              Adoptrees began as a continuation of compassion. Where once he saved lives through guidance and care, 
+              Adoptrees began as a continuation of compassion. Where once  saved lives through guidance and care, 
               now he saves them by nurturing life itself — the life of the planet.
             </p>
             
