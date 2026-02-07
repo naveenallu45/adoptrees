@@ -8,6 +8,7 @@ import {
   CheckCircleIcon,
   ArrowPathIcon,
   ArrowRightOnRectangleIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -23,6 +24,7 @@ const navItems: NavItem[] = [
   { name: 'Ongoing', href: '/wellwisher/ongoing', icon: ArrowPathIcon },
   { name: 'Completed', href: '/wellwisher/completed', icon: CheckCircleIcon },
   { name: 'Updating', href: '/wellwisher/updating', icon: ArrowPathIcon },
+  { name: 'Profile', href: '/wellwisher/profile', icon: UserIcon },
 ];
 
 export default function WellWisherSidebar() {
