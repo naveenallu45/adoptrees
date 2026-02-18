@@ -15,6 +15,11 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const mongoose = require('mongoose');
 
+if (!process.env.MONGODB_URI) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('dotenv').config({ path: '.env' });
+}
+
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {

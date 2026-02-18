@@ -1,4 +1,5 @@
-import { Schema, models, model, Query } from 'mongoose';
+import { Schema, models, model, Query, Model } from 'mongoose';
+import mongoose from 'mongoose';
 
 export type UserType = 'individual' | 'company' | 'dealer';
 
@@ -179,6 +180,7 @@ UserSchema.pre('save', async function(next) {
 // Define the hook function once and register it for each operation
 const protectImmutableFields = async function(this: Query<unknown, IUser>, next: () => void) {
   const update = this.getUpdate() as Record<string, unknown> | null | undefined;
+  const query = this.getQuery();
   
   // Check for $unset operations that try to remove publicId or qrCode
   if (update && typeof update === 'object' && !Array.isArray(update)) {
@@ -197,27 +199,106 @@ const protectImmutableFields = async function(this: Query<unknown, IUser>, next:
       }
     }
     
-    // Check for direct $set operations that try to set publicId or qrCode to null/undefined
+    // Check for direct $set operations that try to modify publicId or qrCode
     if ('$set' in updateObj && updateObj.$set && typeof updateObj.$set === 'object' && !Array.isArray(updateObj.$set)) {
       const set = updateObj.$set as Record<string, unknown>;
-      if (set.publicId === null || set.publicId === undefined || set.publicId === '') {
-        delete set.publicId;
-        console.warn('[User Model] Blocked attempt to set publicId to null/undefined/empty');
+      
+      // Protect publicId: prevent deletion or changes
+      if ('publicId' in set) {
+        if (set.publicId === null || set.publicId === undefined || set.publicId === '') {
+          // Block deletion
+          delete set.publicId;
+          console.warn('[User Model] Blocked attempt to set publicId to null/undefined/empty');
+        } else if (typeof set.publicId === 'string' && Object.keys(query).length > 0) {
+          // Block changes: fetch existing publicId and restore if different
+          try {
+            const UserModel = (models.User || mongoose.model('User')) as Model<IUser>;
+            const existingDoc = await UserModel.findOne(query).select('publicId').lean() as { publicId?: string } | null;
+            if (existingDoc && existingDoc.publicId && set.publicId !== existingDoc.publicId) {
+              // Store attempted value for logging
+              const attemptedValue = set.publicId;
+              // Restore original publicId
+              set.publicId = existingDoc.publicId;
+              console.warn(`[User Model] Blocked attempt to change publicId from "${existingDoc.publicId}" to "${attemptedValue}", restored original`);
+            }
+          } catch (err) {
+            // If query fails, still block the change as a safety measure
+            delete set.publicId;
+            console.warn('[User Model] Error checking existing publicId, blocked change:', err);
+          }
+        }
       }
-      if (set.qrCode === null || set.qrCode === undefined || set.qrCode === '') {
-        delete set.qrCode;
-        console.warn('[User Model] Blocked attempt to set qrCode to null/undefined/empty');
+      
+      // Protect qrCode: prevent deletion or changes
+      if ('qrCode' in set) {
+        if (set.qrCode === null || set.qrCode === undefined || set.qrCode === '') {
+          // Block deletion
+          delete set.qrCode;
+          console.warn('[User Model] Blocked attempt to set qrCode to null/undefined/empty');
+        } else if (typeof set.qrCode === 'string' && Object.keys(query).length > 0) {
+          // Block changes: fetch existing qrCode and restore if different
+          try {
+            const UserModel = (models.User || mongoose.model('User')) as Model<IUser>;
+            const existingDoc = await UserModel.findOne(query).select('qrCode').lean() as { qrCode?: string } | null;
+            if (existingDoc && existingDoc.qrCode && set.qrCode !== existingDoc.qrCode) {
+              // Restore original qrCode
+              set.qrCode = existingDoc.qrCode;
+              console.warn(`[User Model] Blocked attempt to change qrCode, restored original`);
+            }
+          } catch (err) {
+            // If query fails, still block the change as a safety measure
+            delete set.qrCode;
+            console.warn('[User Model] Error checking existing qrCode, blocked change:', err);
+          }
+        }
       }
     }
     
     // Check for direct assignment (non-$set updates)
-    if ('publicId' in updateObj && (updateObj.publicId === null || updateObj.publicId === undefined || updateObj.publicId === '')) {
-      delete updateObj.publicId;
-      console.warn('[User Model] Blocked direct assignment of publicId to null/undefined/empty');
+    if ('publicId' in updateObj) {
+      if (updateObj.publicId === null || updateObj.publicId === undefined || updateObj.publicId === '') {
+        // Block deletion
+        delete updateObj.publicId;
+        console.warn('[User Model] Blocked direct assignment of publicId to null/undefined/empty');
+      } else if (typeof updateObj.publicId === 'string' && Object.keys(query).length > 0) {
+        // Block changes: fetch existing publicId and restore if different
+        try {
+          const UserModel = (models.User || mongoose.model('User')) as Model<IUser>;
+          const existingDoc = await UserModel.findOne(query).select('publicId').lean() as { publicId?: string } | null;
+          if (existingDoc && existingDoc.publicId && updateObj.publicId !== existingDoc.publicId) {
+            // Restore original publicId
+            updateObj.publicId = existingDoc.publicId;
+            console.warn(`[User Model] Blocked direct assignment change of publicId, restored original`);
+          }
+        } catch (err) {
+          // If query fails, still block the change as a safety measure
+          delete updateObj.publicId;
+          console.warn('[User Model] Error checking existing publicId for direct assignment, blocked change:', err);
+        }
+      }
     }
-    if ('qrCode' in updateObj && (updateObj.qrCode === null || updateObj.qrCode === undefined || updateObj.qrCode === '')) {
-      delete updateObj.qrCode;
-      console.warn('[User Model] Blocked direct assignment of qrCode to null/undefined/empty');
+    
+    if ('qrCode' in updateObj) {
+      if (updateObj.qrCode === null || updateObj.qrCode === undefined || updateObj.qrCode === '') {
+        // Block deletion
+        delete updateObj.qrCode;
+        console.warn('[User Model] Blocked direct assignment of qrCode to null/undefined/empty');
+      } else if (typeof updateObj.qrCode === 'string' && Object.keys(query).length > 0) {
+        // Block changes: fetch existing qrCode and restore if different
+        try {
+          const UserModel = (models.User || mongoose.model('User')) as Model<IUser>;
+          const existingDoc = await UserModel.findOne(query).select('qrCode').lean() as { qrCode?: string } | null;
+          if (existingDoc && existingDoc.qrCode && updateObj.qrCode !== existingDoc.qrCode) {
+            // Restore original qrCode
+            updateObj.qrCode = existingDoc.qrCode;
+            console.warn(`[User Model] Blocked direct assignment change of qrCode, restored original`);
+          }
+        } catch (err) {
+          // If query fails, still block the change as a safety measure
+          delete updateObj.qrCode;
+          console.warn('[User Model] Error checking existing qrCode for direct assignment, blocked change:', err);
+        }
+      }
     }
   }
   

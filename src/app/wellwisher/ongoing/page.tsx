@@ -52,7 +52,7 @@ export default function OngoingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set());
+  const [_updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set());
   const [taskImages, setTaskImages] = useState<Record<string, File[]>>({});
   const [_previewUpdateTrigger, setPreviewUpdateTrigger] = useState(0);
   const previewUrlsRef = useRef<Record<string, string>>({});
@@ -159,7 +159,7 @@ export default function OngoingPage() {
     }
   };
 
-  const handleStatusChange = async (taskId: string, orderId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
+  const _handleStatusChange = async (taskId: string, orderId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
     const taskToUpdate = tasks.find(t => t.id === taskId);
     if (!taskToUpdate) return;
 

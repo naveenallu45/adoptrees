@@ -76,14 +76,13 @@ export default function WellWisherProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, session?.user?.name, session?.user?.email, session?.user?.image]);
 
   // Sync profile image with session image
   useEffect(() => {
     if (!sessionUpdateRef.current && session?.user?.image && !profileImage) {
       setProfileImage(session.user.image);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.image, profileImage]);
 
   const validateImageFile = (file: File): string | null => {
