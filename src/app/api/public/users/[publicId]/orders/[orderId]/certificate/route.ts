@@ -126,13 +126,19 @@ export async function GET(
         
         // Update stored QR code asynchronously if it's different (don't block certificate generation)
         // This ensures future certificates also use the correct URL
+        // Note: QR code updates are protected by User model hooks, but we only update if different
+        // so it should be allowed. If blocked, we silently continue - certificate generation is not affected.
         if (user.qrCode !== qrDataUrl && user._id) {
           // Use findByIdAndUpdate since user is a lean document (plain object)
+          // This is async and non-blocking - certificate generation continues regardless
           User.findByIdAndUpdate(
             user._id,
-            { qrCode: qrDataUrl },
+            { $set: { qrCode: qrDataUrl } },
             { new: false } // Don't need to return the updated document
-          ).catch((err: Error) => console.error('Error saving QR code:', err));
+          ).catch((err: Error) => {
+            // Log but don't fail certificate generation - QR code update is optional
+            console.warn('[PublicCertificate] QR code update failed (non-critical):', err.message);
+          });
         }
       } catch (qrError) {
         console.error('[PublicCertificate] Error generating QR code:', qrError);
@@ -261,6 +267,12 @@ export async function GET(
     } catch (certError) {
       console.error('[PublicCertificate] Error generating certificate:', certError);
       const errorMessage = certError instanceof Error ? certError.message : 'Unknown error';
+      console.error('[PublicCertificate] Certificate generation error details:', {
+        message: errorMessage,
+        stack: certError instanceof Error ? certError.stack : undefined,
+        orderId: orderIdParam,
+        publicId: rawPublicId
+      });
       return NextResponse.json(
         { success: false, error: `Failed to generate certificate: ${errorMessage}` },
         { status: 500 }
@@ -268,8 +280,15 @@ export async function GET(
     }
   } catch (error) {
     console.error('[PublicCertificate] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[PublicCertificate] Request error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      orderId: orderIdParam,
+      publicId: rawPublicId
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to download certificate' },
+      { success: false, error: `Failed to download certificate: ${errorMessage}` },
       { status: 500 }
     );
   }

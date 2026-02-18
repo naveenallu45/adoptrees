@@ -11,6 +11,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
+  // Extract orderId early so it's available in error handlers
+  const { orderId } = await params;
+  
   try {
     const session = await auth();
     
@@ -22,8 +25,6 @@ export async function GET(
     }
 
     await connectDB();
-
-    const { orderId } = await params;
 
     // Check if user is admin
     const adminCheck = await requireAdmin();
@@ -286,7 +287,11 @@ export async function GET(
     } catch (certError) {
       console.error('[CERTIFICATE] Error generating certificate on demand:', certError);
       const errorMessage = certError instanceof Error ? certError.message : 'Unknown error';
-      console.error('[CERTIFICATE] Full error details:', certError);
+      console.error('[CERTIFICATE] Full error details:', {
+        message: errorMessage,
+        stack: certError instanceof Error ? certError.stack : undefined,
+        orderId
+      });
       return NextResponse.json(
         { success: false, error: `Failed to generate certificate: ${errorMessage}` },
         { status: 500 }
@@ -295,8 +300,14 @@ export async function GET(
 
   } catch (error) {
     console.error('Error downloading certificate:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Certificate download error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      orderId
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to download certificate' },
+      { success: false, error: `Failed to download certificate: ${errorMessage}` },
       { status: 500 }
     );
   }

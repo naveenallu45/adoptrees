@@ -607,13 +607,42 @@ useEffect(() => {
       const response = await fetch(endpoint);
       
       if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || 'Failed to download certificate');
+        // Check if response is JSON (error) or PDF (unexpected)
+        const contentType = response.headers.get('content-type') || '';
+        let errorMessage = 'Failed to download certificate';
+        
+        if (contentType.includes('application/json')) {
+          try {
+            const error = await response.json();
+            errorMessage = error.error || errorMessage;
+          } catch (jsonError) {
+            console.error('Failed to parse error response:', jsonError);
+            errorMessage = `Server error (${response.status}): ${response.statusText}`;
+          }
+        } else {
+          errorMessage = `Server error (${response.status}): ${response.statusText}`;
+        }
+        
+        alert(errorMessage);
+        return;
+      }
+
+      // Verify we got a PDF
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/pdf')) {
+        console.error('Unexpected content type:', contentType);
+        alert('Server returned unexpected content type. Please try again.');
         return;
       }
 
       // Get the PDF blob
       const blob = await response.blob();
+      
+      // Verify blob is not empty
+      if (blob.size === 0) {
+        alert('Certificate file is empty. Please try again.');
+        return;
+      }
       
       // Create a download link
       const url = window.URL.createObjectURL(blob);
@@ -628,7 +657,8 @@ useEffect(() => {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading certificate:', error);
-      alert('Failed to download certificate');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to download certificate: ${errorMessage}`);
     } finally {
       setDownloadingCertificate(null);
     }
