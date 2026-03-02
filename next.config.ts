@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['@heroicons/react', 'framer-motion', '@tanstack/react-table'],
   },
   
-  // Output configuration for better caching
-  output: 'standalone',
+  // Output configuration - removed 'standalone' as Vercel handles deployment differently
+  // output: 'standalone', // Commented out for Vercel compatibility
   
   // Reduce filesystem operations during build
   generateBuildId: async () => {
