@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/lib/auth-server';
 import { uploadToCloudinary } from '@/lib/upload';
 import { z } from 'zod';
 import { sendPlantingConfirmationEmail } from '@/lib/email';

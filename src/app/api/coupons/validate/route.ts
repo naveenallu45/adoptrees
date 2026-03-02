@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Coupon from '@/models/Coupon';
 import Order from '@/models/Order';
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/lib/auth-server';
 
 // POST - Validate and get coupon details
 export async function POST(request: NextRequest) {

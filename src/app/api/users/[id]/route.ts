@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/lib/auth-server';
 import connectDB from '@/lib/mongodb';
 import User, { IUser } from '@/models/User';
 import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/upload';

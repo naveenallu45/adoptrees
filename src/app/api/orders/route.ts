@@ -3,7 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Order, { IOrder } from '@/models/Order';
 import Tree from '@/models/Tree';
 import User from '@/models/User';
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/lib/auth-server';
 import { sendWellWisherTaskAssignmentEmail } from '@/lib/email';
 import { logPaymentEvent } from '@/lib/logger';
 

@@ -81,11 +81,11 @@ const nextConfig: NextConfig = {
   
   // Bundle optimization
   webpack: (config, { dev, isServer }) => {
-    // Optimize filesystem access
+    // Optimize filesystem access - use simpler cache config to avoid compiled.js warning
     config.cache = {
       type: 'filesystem',
       buildDependencies: {
-        config: [__filename],
+        config: [],
       },
       // Reduce cache operations
       compression: 'gzip',
