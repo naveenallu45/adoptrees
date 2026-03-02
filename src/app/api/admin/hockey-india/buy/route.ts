@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { purchaseType, treeId, quantity } = body; // purchaseType: 'pc' | 'field-goal'
+    const { purchaseType, treeId } = body; // purchaseType: 'pc' | 'field-goal'
 
     // Validate purchase type
     if (!purchaseType || !['pc', 'field-goal'].includes(purchaseType)) {

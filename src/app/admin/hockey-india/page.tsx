@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrophyIcon, MapPinIcon, CameraIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
