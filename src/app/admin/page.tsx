@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { UserIcon, BuildingOfficeIcon, CurrencyRupeeIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
+import { TrophyIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
@@ -125,7 +126,19 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div className="mt-12">
           <h2 className="mb-6 text-2xl font-bold text-gray-900">Quick Actions</h2>
-          <div className="grid gap-6 md:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+            <Link href="/admin/hockey-india">
+              <motion.div
+                className="flex h-full min-h-[180px] cursor-pointer flex-col rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg transition-all hover:shadow-xl"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <TrophyIcon className="mb-4 h-10 w-10" />
+                <h3 className="text-xl font-bold">Hockey India</h3>
+                <p className="mt-2 text-blue-100">Plant trees for Hockey India orders</p>
+              </motion.div>
+            </Link>
+
             <Link href="/admin/trees">
               <motion.div
                 className="flex h-full min-h-[180px] cursor-pointer flex-col rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-lg transition-all hover:shadow-xl"

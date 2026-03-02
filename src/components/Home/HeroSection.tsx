@@ -63,6 +63,13 @@ export default function HeroSection() {
             <Link href="/individuals" className="w-full sm:w-auto border-2 border-white/80 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold backdrop-blur-sm hover:bg-white/20 transition-all duration-300 shadow-lg hover:scale-105 text-center">
               Gift a Tree
             </Link>
+            <Link 
+              href="/hockey-india"
+              className="w-full sm:w-auto border-2 border-white/80 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold backdrop-blur-sm hover:bg-white/20 transition-all duration-300 shadow-lg hover:scale-105 text-center inline-flex items-center justify-center gap-2"
+            >
+              <span className="text-lg sm:text-xl">🏑</span>
+              <span>Hockey India</span>
+            </Link>
           </div>
         </div>
       </div>

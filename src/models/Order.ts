@@ -5,7 +5,7 @@ export interface IOrder extends Document {
   userId: string;
   userEmail: string;
   userName: string;
-  userType: 'individual' | 'company' | 'dealer';
+  userType: 'individual' | 'company' | 'dealer' | 'hockey-india';
   // Customer user ID for dealer orders (links order to customer account)
   customerUserId?: string;
   items: {
@@ -131,7 +131,7 @@ const OrderSchema: Schema = new Schema({
   },
   userType: {
     type: String,
-    enum: ['individual', 'company', 'dealer'],
+    enum: ['individual', 'company', 'dealer', 'hockey-india'],
     required: [true, 'User type is required']
   },
   // Customer user ID for dealer orders (links order to customer account)
