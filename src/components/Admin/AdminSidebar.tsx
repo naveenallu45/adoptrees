@@ -16,7 +16,6 @@ import {
   TruckIcon,
 } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
-import { TrophyIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
 interface NavItem {
@@ -32,7 +31,6 @@ const navItems: NavItem[] = [
   { name: 'CSR Adoptions', href: '/admin/csr-adoptions', icon: ClipboardDocumentListIcon },
   { name: 'Forest Adoptions', href: '/admin/forest-adoptions', icon: GlobeAltIcon },
   { name: 'Dealer Adoptions', href: '/admin/dealer-adoptions', icon: TruckIcon },
-  { name: 'Hockey India', href: '/admin/hockey-india', icon: TrophyIcon },
   { name: 'Individual Users', href: '/admin/users/individuals', icon: UserIcon },
   { name: 'Company Users', href: '/admin/users/companies', icon: BuildingOfficeIcon },
   { name: 'Dealer Users', href: '/admin/users/dealers', icon: TruckIcon },
