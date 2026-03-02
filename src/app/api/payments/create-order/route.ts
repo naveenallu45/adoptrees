@@ -11,7 +11,7 @@ import { createOrUpdateCustomerAccount } from '@/lib/customer-account';
 
 // Lazy initialization of Razorpay to avoid module load errors
 // userType: 'company' uses company account, others use regular account
-function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer') {
+function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer' | 'hockey-india') {
   // For company users, use company Razorpay account if configured
   if (userType === 'company') {
     const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
@@ -37,7 +37,7 @@ function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer') {
 }
 
 // Get the appropriate Razorpay Key ID based on user type
-function getRazorpayKeyId(userType?: 'individual' | 'company' | 'dealer'): string {
+function getRazorpayKeyId(userType?: 'individual' | 'company' | 'dealer' | 'hockey-india'): string {
   if (userType === 'company') {
     const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
     if (companyKeyId) {
