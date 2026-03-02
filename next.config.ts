@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   // Performance optimizations
@@ -11,7 +10,8 @@ const nextConfig: NextConfig = {
   // output: 'standalone', // Commented out for Vercel compatibility
   
   // Explicitly set workspace root to avoid lockfile detection issues
-  outputFileTracingRoot: path.join(__dirname),
+  // Using process.cwd() which works reliably in both local and Vercel environments
+  outputFileTracingRoot: process.cwd(),
   
   // generateBuildId removed - let Vercel handle build IDs automatically
   
