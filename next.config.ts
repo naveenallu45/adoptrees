@@ -9,17 +9,7 @@ const nextConfig: NextConfig = {
   // Output configuration - removed 'standalone' as Vercel handles deployment differently
   // output: 'standalone', // Commented out for Vercel compatibility
   
-  // Reduce filesystem operations during build
-  generateBuildId: async () => {
-    // Use a simple build ID to reduce filesystem checks
-    return `build-${Date.now()}`;
-  },
-  
-  // allowedDevOrigins removed for Vercel compatibility
-  // Vercel handles CORS automatically
-  
-  // Turbopack configuration removed for Vercel compatibility
-  // Vercel handles build optimization automatically
+  // generateBuildId removed - let Vercel handle build IDs automatically
   
   // Image optimization
   images: {
@@ -63,53 +53,9 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   
-  // Simplified webpack config for Vercel compatibility
-  webpack: (config, { dev, isServer }) => {
-    // Minimal webpack configuration - Vercel handles most optimizations
-    return config;
-  },
+  // Webpack config removed - Vercel handles optimization automatically
   
-  // Headers for performance and security
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-        ],
-      },
-      {
-        // Exclude admin routes from caching
-        source: '/api/admin/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          },
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-          {
-            key: 'Expires',
-            value: '0',
-          },
-        ],
-      },
-      {
-        source: '/api/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=60, s-maxage=60',
-          },
-        ],
-      },
-    ];
-  },
+  // Headers removed - using vercel.json for header configuration to avoid conflicts
 };
 
 export default nextConfig;
