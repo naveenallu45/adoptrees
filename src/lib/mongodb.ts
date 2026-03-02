@@ -33,15 +33,17 @@ async function connectDB() {
   }
 
   if (!cached.promise) {
+    // Reduce timeout during build time to prevent hanging
+    const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || !process.env.MONGODB_URI;
     const opts = {
       bufferCommands: false,
       // Production optimizations
       maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 10000, // Increased to 10 seconds for better reliability
+      serverSelectionTimeoutMS: isBuildTime ? 5000 : 10000, // Shorter timeout during build
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
       family: 4, // Use IPv4, skip trying IPv6
       // Connection options
-      connectTimeoutMS: 15000, // Increased to 15 seconds
+      connectTimeoutMS: isBuildTime ? 5000 : 15000, // Shorter timeout during build
       heartbeatFrequencyMS: 10000,
       // Retry options
       retryWrites: true,

@@ -23,11 +23,15 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ publicId: string; orderId: string }> }
 ) {
+  let orderIdParam: string | undefined;
+  let rawPublicId: string | undefined;
+  
   try {
     await connectDB();
 
-    const { publicId: publicIdParam, orderId: orderIdParam } = await params;
-    const rawPublicId = (publicIdParam || '').trim();
+    const { publicId: publicIdParam, orderId } = await params;
+    orderIdParam = orderId;
+    rawPublicId = (publicIdParam || '').trim();
     
     if (!rawPublicId) {
       return NextResponse.json({ success: false, error: 'Invalid public ID' }, { status: 400 });

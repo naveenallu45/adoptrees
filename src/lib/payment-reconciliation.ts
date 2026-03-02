@@ -5,7 +5,7 @@ import { processOrderCompletion } from './order-processing';
 
 // Lazy initialization of Razorpay
 // userType: 'company' uses company account, others use regular account
-function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer') {
+function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer' | 'hockey-india') {
   // For company users, use company Razorpay account if configured
   if (userType === 'company') {
     const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
@@ -37,7 +37,7 @@ function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer') {
  */
 export async function verifyPaymentStatusWithRazorpay(
   paymentId: string,
-  userType?: 'individual' | 'company' | 'dealer'
+  userType?: 'individual' | 'company' | 'dealer' | 'hockey-india'
 ): Promise<{
   status: 'authorized' | 'captured' | 'refunded' | 'failed' | 'pending';
   amount: number;

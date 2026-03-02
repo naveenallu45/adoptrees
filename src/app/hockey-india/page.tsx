@@ -29,10 +29,22 @@ interface Adoption {
 }
 
 async function getHockeyIndiaAdoptions(): Promise<Adoption[]> {
+  // Skip database connection during build if MONGODB_URI is not available
+  if (!process.env.MONGODB_URI) {
+    console.warn('MONGODB_URI not available during build, returning empty adoptions');
+    return [];
+  }
+
   try {
-    await connectDB();
+    // Add timeout for build-time database connections
+    const connectPromise = connectDB();
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Database connection timeout')), 3000)
+    );
+    
+    await Promise.race([connectPromise, timeoutPromise]);
+    
     // Fetch orders that are marked as Hockey India adoptions
-    // We'll use a special identifier or tag in the order
     const orders = await Order.find({ 
       userType: 'hockey-india',
       paymentStatus: 'paid'
@@ -53,7 +65,9 @@ async function getHockeyIndiaAdoptions(): Promise<Adoption[]> {
         quantity: item.quantity
       }))
     }));
-  } catch (_error) {
+  } catch (error) {
+    // During build, if DB is not available, return empty array
+    console.warn('Failed to fetch Hockey India adoptions during build:', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
