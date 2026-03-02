@@ -15,27 +15,11 @@ const nextConfig: NextConfig = {
     return `build-${Date.now()}`;
   },
   
-  // Allow cross-origin requests from local network devices
-  allowedDevOrigins: [
-    '192.168.43.134', // Your current IP
-    '192.168.1.0/24',  // Common home network range
-    '192.168.0.0/24',  // Common home network range
-    '10.0.0.0/24',     // Common home network range
-    '172.16.0.0/24',   // Common home network range
-  ],
+  // allowedDevOrigins removed for Vercel compatibility
+  // Vercel handles CORS automatically
   
-  // Turbopack configuration (replaces deprecated turbo)
-  // Explicitly set root to avoid lockfile detection issues
-  turbopack: {
-    root: process.cwd(),
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
-  
+  // Turbopack configuration removed for Vercel compatibility
+  // Vercel handles build optimization automatically
   
   // Image optimization
   images: {
@@ -79,38 +63,9 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   
-  // Bundle optimization
+  // Simplified webpack config for Vercel compatibility
   webpack: (config, { dev, isServer }) => {
-    // Optimize filesystem access - use simpler cache config to avoid compiled.js warning
-    config.cache = {
-      type: 'filesystem',
-      buildDependencies: {
-        config: [],
-      },
-      // Reduce cache operations
-      compression: 'gzip',
-    };
-    
-    // Production optimizations
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-          common: {
-            name: 'common',
-            minChunks: 2,
-            chunks: 'all',
-            enforce: true,
-          },
-        },
-      };
-    }
-    
+    // Minimal webpack configuration - Vercel handles most optimizations
     return config;
   },
   
