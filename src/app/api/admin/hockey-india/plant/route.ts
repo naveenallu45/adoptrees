@@ -5,8 +5,8 @@ import Order from '@/models/Order';
 import User from '@/models/User';
 import { uploadToCloudinary } from '@/lib/upload';
 import { assignWellWisherEqually } from '@/lib/utils/wellwisher-assignment';
-import { sendWellWisherTaskAssignmentEmail, sendPlantingConfirmationEmail } from '@/lib/email';
-import { logPaymentEvent, logError } from '@/lib/logger';
+import { sendWellWisherTaskAssignmentEmail } from '@/lib/email';
+import { logPaymentEvent } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {

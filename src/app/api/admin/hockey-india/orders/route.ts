@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: orders.map(order => ({
+      data: orders.map((order: any) => ({
         _id: String(order._id),
         orderId: order.orderId,
         userName: order.userName || 'Anonymous',
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
           status: task.status,
           plantingDetails: task.plantingDetails || undefined,
         })) : undefined,
-        plantingDetails: order.plantingDetails || undefined,
+        plantingDetails: (order as any).plantingDetails || undefined,
       })),
     });
   } catch (error) {
