@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Performance optimizations
@@ -8,6 +9,9 @@ const nextConfig: NextConfig = {
   
   // Output configuration - removed 'standalone' as Vercel handles deployment differently
   // output: 'standalone', // Commented out for Vercel compatibility
+  
+  // Explicitly set workspace root to avoid lockfile detection issues
+  outputFileTracingRoot: path.join(__dirname),
   
   // generateBuildId removed - let Vercel handle build IDs automatically
   
