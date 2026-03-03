@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import AdminShell from "@/components/AdminShell";
 import AuthProvider from "@/components/Auth/AuthProvider";
@@ -89,6 +90,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {/* Google tag (gtag.js) */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-FBZ0BSQLN4"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-FBZ0BSQLN4');
+        `}
+      </Script>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} ${workSans.variable} ${nunitoSans.variable} antialiased`}
       >
