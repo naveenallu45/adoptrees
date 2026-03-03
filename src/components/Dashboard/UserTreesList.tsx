@@ -712,7 +712,7 @@ useEffect(() => {
     ? '/create-forest' 
     : (userType === 'individual' 
       ? '/individuals' 
-      : (session?.user?.userType === 'dealer' ? '/dealers' : '/companies'));
+      : '/companies');
   const emptyTitle = isForestView ? 'No forests created yet' : 'No trees adopted yet';
   const emptySubtitle = isForestView
     ? 'Start a forest for a special moment and watch it grow over time.'
