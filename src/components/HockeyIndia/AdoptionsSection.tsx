@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrophyIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { TrophyIcon } from '@heroicons/react/24/solid';
 
 interface Adoption {
   _id: string;
@@ -21,7 +21,7 @@ interface AdoptionsSectionProps {
   totalTrees: number;
 }
 
-export default function AdoptionsSection({ initialAdoptions, totalTrees }: AdoptionsSectionProps) {
+export default function AdoptionsSection({ initialAdoptions, totalTrees: _totalTrees }: AdoptionsSectionProps) {
   const [adoptions] = useState(initialAdoptions);
 
   return (
@@ -43,54 +43,8 @@ export default function AdoptionsSection({ initialAdoptions, totalTrees }: Adopt
             className="inline-block mb-4"
           >
             <span className="text-sm font-bold text-blue-600 uppercase tracking-wider bg-blue-100 px-5 py-2.5 rounded-full shadow-sm">
-              Our Impact
+        
             </span>
-          </motion.div>
-          
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-8 sm:mb-10 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"
-          >
-            Growing Together
-          </motion.h2>
-          
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
-            className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-8 sm:p-10 mb-10 max-w-2xl mx-auto shadow-2xl border-2 border-blue-400/30 relative overflow-hidden"
-          >
-            {/* Animated Background */}
-            <div className="absolute inset-0 opacity-20">
-              <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full blur-[100px]"></div>
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-white rounded-full blur-[100px]"></div>
-            </div>
-            
-            <div className="relative z-10 text-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ type: "spring", delay: 0.4 }}
-                className="flex items-center justify-center gap-3 mb-4"
-              >
-                <SparklesIcon className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-300" />
-                <p className="text-5xl sm:text-6xl md:text-7xl font-black text-white">
-                  {totalTrees.toLocaleString()}
-                </p>
-                <SparklesIcon className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-300" />
-              </motion.div>
-              <p className="text-xl sm:text-2xl text-blue-100 font-bold mb-3">
-                Trees Planted
-              </p>
-              <p className="text-white/90 text-base sm:text-lg font-medium">
-                Every tree represents a goal towards a greener future
-              </p>
-            </div>
           </motion.div>
         </div>
 
@@ -143,7 +97,7 @@ export default function AdoptionsSection({ initialAdoptions, totalTrees }: Adopt
                         {adoption.treesCount}
                       </motion.p>
                       <p className="text-sm sm:text-base text-gray-600 font-bold">
-                        {adoption.treesCount === 1 ? 'Tree' : 'Trees'} Planted
+                        {adoption.treesCount === 1 ? 'Tree' : 'Trees'} 
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -196,10 +150,10 @@ export default function AdoptionsSection({ initialAdoptions, totalTrees }: Adopt
               <TrophyIcon className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600" />
             </motion.div>
             <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Be the First!
+              
             </h3>
             <p className="text-gray-600 max-w-md mx-auto text-lg sm:text-xl font-medium">
-              No adoptions yet. Help us plant the first trees for Hockey India!
+          
             </p>
           </motion.div>
         )}

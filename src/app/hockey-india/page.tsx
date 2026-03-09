@@ -1,7 +1,7 @@
 import HeroSection from '../../components/HockeyIndia/HeroSection';
 import FeaturesSection from '../../components/HockeyIndia/FeaturesSection';
-import AdoptionsSection from '../../components/HockeyIndia/AdoptionsSection';
 import LocationsSection from '../../components/HockeyIndia/LocationsSection';
+import MatchesSection from '../../components/HockeyIndia/MatchesSection';
 import Banner from '../../components/HockeyIndia/Banner';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
@@ -80,7 +80,7 @@ export default async function HockeyIndia() {
   return (
     <main className="bg-white">
       <HeroSection />
-      <AdoptionsSection initialAdoptions={adoptions} totalTrees={totalTrees} />
+      <MatchesSection totalTreesOverall={totalTrees} />
       <FeaturesSection />
       <LocationsSection />
       <Banner />

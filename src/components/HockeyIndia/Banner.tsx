@@ -4,6 +4,15 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/solid';
 
+const FLOATING_ICONS = [
+  { left: '10%', top: '20%', duration: 4, delay: 0 },
+  { left: '25%', top: '65%', duration: 5, delay: 0.8 },
+  { left: '40%', top: '35%', duration: 4.5, delay: 1.2 },
+  { left: '60%', top: '15%', duration: 5.5, delay: 0.4 },
+  { left: '75%', top: '55%', duration: 4.2, delay: 1.5 },
+  { left: '90%', top: '30%', duration: 5.2, delay: 0.6 },
+] as const;
+
 export default function Banner() {
   return (
     <section className="py-16 sm:py-20 md:py-24 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-700 relative overflow-hidden">
@@ -14,13 +23,13 @@ export default function Banner() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-[140px] opacity-20 animate-pulse" style={{ animationDelay: '1.5s' }}></div>
         
         {/* Floating Icons */}
-        {[...Array(6)].map((_, i) => (
+        {FLOATING_ICONS.map((icon, i) => (
           <motion.div
             key={i}
             className="absolute"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: icon.left,
+              top: icon.top,
             }}
             animate={{
               y: [0, -30, 0],
@@ -28,9 +37,9 @@ export default function Banner() {
               opacity: [0.2, 0.5, 0.2],
             }}
             transition={{
-              duration: Math.random() * 3 + 3,
+              duration: icon.duration,
               repeat: Infinity,
-              delay: Math.random() * 2
+              delay: icon.delay,
             }}
           >
             <SparklesIcon className="w-8 h-8 text-white/30" />

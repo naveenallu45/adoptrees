@@ -72,7 +72,7 @@ export default function HeroSection() {
                 />
                 <div className="relative w-full h-full rounded-full bg-white/15 backdrop-blur-xl p-4 border-2 border-white/30 shadow-2xl">
                   <Image
-                    src="https://instagram.fhyd11-3.fna.fbcdn.net/v/t51.2885-19/470938704_486487727313090_1713076704747062031_n.jpg?efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby42MjcuYzIifQ&_nc_ht=instagram.fhyd11-3.fna.fbcdn.net&_nc_cat=106&_nc_oc=Q6cZ2QEgKIQHWrKpT2ulWCg4fdOszz3IV9NvqAYa6kOEY9ZINC_fl3pl7cIRDCea8KoteXgFEeQOeMBjJNJqoPSuc5nF&_nc_ohc=ZcelX1wbcfEQ7kNvwFYwd8S&_nc_gid=d0I5SyuUQHbFEvsFNx0FRg&edm=APoiHPcBAAAA&ccb=7-5&oh=00_Afugje9MrKVRRP7mEH1gLh9JnNU-dpJ5_-6tCq-h7ml_3Q&oe=69A783A0&_nc_sid=22de04"
+                    src="https://res.cloudinary.com/diw4nxv3k/image/upload/v1773024081/hockey_india_logo_pjbaoh.jpg"
                     alt="Hockey India Logo"
                     fill
                     className="rounded-full object-cover"
@@ -214,26 +214,6 @@ export default function HeroSection() {
               transition={{ duration: 0.8, delay: 0.9 }}
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link 
-                  href="/hockey-india#adoptions"
-                  className="group inline-flex items-center gap-3 bg-gradient-to-r from-white to-blue-50 text-blue-900 px-8 sm:px-10 py-4 sm:py-5 rounded-full text-base sm:text-lg font-bold shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 relative overflow-hidden"
-                >
-                  <span className="relative z-10">View Our Impact</span>
-                  <motion.svg 
-                    className="w-5 h-5 sm:w-6 sm:h-6 relative z-10" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </motion.svg>
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </Link>
-              </motion.div>
-              
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Link 
                   href="/about"

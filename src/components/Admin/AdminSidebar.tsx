@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { name: 'CSR Adoptions', href: '/admin/csr-adoptions', icon: ClipboardDocumentListIcon },
   { name: 'Forest Adoptions', href: '/admin/forest-adoptions', icon: GlobeAltIcon },
   { name: 'Dealer Adoptions', href: '/admin/dealer-adoptions', icon: TruckIcon },
+  { name: 'Hockey India Matches', href: '/admin/hockey-india/matches', icon: GlobeAltIcon },
   { name: 'Individual Users', href: '/admin/users/individuals', icon: UserIcon },
   { name: 'Company Users', href: '/admin/users/companies', icon: BuildingOfficeIcon },
   { name: 'Dealer Users', href: '/admin/users/dealers', icon: TruckIcon },
