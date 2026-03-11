@@ -30,11 +30,6 @@ interface HockeyMatch {
 interface MatchesResponse {
   success: boolean;
   data: HockeyMatch[];
-  metrics: {
-    totalMatches: number;
-    totalTreesPlanted: number;
-    totalTreesEstimated: number;
-  };
 }
 
 function formatDate(dateStr: string) {
@@ -52,7 +47,6 @@ function computeEstimatedTrees(m: HockeyMatch) {
 
 export default function MatchesSection({ totalTreesOverall }: { totalTreesOverall: number }) {
   const [matches, setMatches] = useState<HockeyMatch[]>([]);
-  const [metrics, setMetrics] = useState<MatchesResponse['metrics'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +58,6 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
         const json: MatchesResponse = await res.json();
         if (!json.success) throw new Error('Failed to load matches');
         setMatches(json.data);
-        setMetrics(json.metrics);
       } catch (err) {
         console.error(err);
         setError('Unable to load match impact right now.');
@@ -155,41 +148,6 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
           </div>
         </motion.div>
 
-        {metrics && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="grid gap-4 sm:gap-6 md:grid-cols-3 mb-10 sm:mb-12"
-          >
-            <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 sm:p-5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                Matches Tracked
-              </div>
-              <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-white">
-                {metrics.totalMatches}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-emerald-700 bg-emerald-900/30 p-4 sm:p-5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-200">
-                Trees Planted
-              </div>
-              <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-emerald-100">
-                {metrics.totalTreesPlanted.toLocaleString('en-IN')}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-amber-700 bg-amber-900/20 p-4 sm:p-5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-200">
-                Trees From Goals (Potential)
-              </div>
-              <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-amber-100">
-                {metrics.totalTreesEstimated.toLocaleString('en-IN')}
-              </div>
-            </div>
-          </motion.div>
-        )}
-
         {loading ? (
           <div className="flex h-40 items-center justify-center text-sm text-slate-300">
             Loading match impact...
@@ -207,7 +165,7 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-6 sm:gap-7 lg:grid-cols-4 px-2 sm:px-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-7 px-4 sm:px-0">
             {matches.map((match, index) => {
               const treesToShow =
                 match.treesPlanted && match.treesPlanted > 0
@@ -221,7 +179,7 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
                 transition={{ duration: 0.5, delay: index * 0.03 }}
-                className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/40 p-5 sm:p-6 shadow-lg"
+                className="relative overflow-hidden rounded-3xl border border-slate-700/70 bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-slate-900/50 p-5 sm:p-6 shadow-lg"
               >
                 <div className="absolute inset-0 opacity-40 pointer-events-none">
                   <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-500/20 blur-2xl" />
@@ -240,7 +198,7 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
 
                 <div className="relative z-10 mb-4 flex items-center justify-between gap-3">
                   <div className="flex flex-1 items-center gap-3">
-                <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-800/80 ring-2 ring-slate-600/80">
+                    <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-800/80 ring-2 ring-slate-600/80">
                       {match.homeTeam.flagUrl ? (
                         <Image
                           src={match.homeTeam.flagUrl}
