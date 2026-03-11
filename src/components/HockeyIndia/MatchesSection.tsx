@@ -155,7 +155,7 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
           </div>
         </motion.div>
 
-        {false && metrics && (
+        {metrics && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}

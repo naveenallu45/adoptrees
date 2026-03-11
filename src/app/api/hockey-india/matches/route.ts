@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import HockeyMatch, { IHockeyMatch } from '@/models/HockeyMatch';
+import HockeyMatch, { HockeyMatchFields } from '@/models/HockeyMatch';
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,10 +9,10 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const limit = parseInt(url.searchParams.get('limit') || '12', 10);
 
-    const matches = await HockeyMatch.find()
+    const matches: HockeyMatchFields[] = await HockeyMatch.find()
       .sort({ matchDate: -1 })
       .limit(Number.isNaN(limit) ? 12 : limit)
-      .lean<IHockeyMatch>();
+      .lean();
 
     const totalTreesPlanted = matches.reduce((sum, m) => sum + (m.treesPlanted || 0), 0);
     const totalTreesEstimated = matches.reduce(

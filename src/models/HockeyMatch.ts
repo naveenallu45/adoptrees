@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IHockeyMatch extends Document {
+export interface HockeyMatchFields {
   matchId: string;
   tournament: string;
   venue: string;
@@ -25,7 +25,9 @@ export interface IHockeyMatch extends Document {
   updatedAt: Date;
 }
 
-const HockeyMatchSchema = new Schema<IHockeyMatch>(
+export type IHockeyMatch = HockeyMatchFields & Document;
+
+const HockeyMatchSchema = new Schema<HockeyMatchFields>(
   {
     matchId: {
       type: String,
@@ -102,5 +104,5 @@ HockeyMatchSchema.virtual('totalTreesEstimated').get(function (this: IHockeyMatc
 });
 
 export default (mongoose.models?.HockeyMatch ||
-  mongoose.model<IHockeyMatch>('HockeyMatch', HockeyMatchSchema)) as mongoose.Model<IHockeyMatch>;
+  mongoose.model<HockeyMatchFields>('HockeyMatch', HockeyMatchSchema)) as mongoose.Model<HockeyMatchFields>;
 
