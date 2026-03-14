@@ -108,10 +108,10 @@ export default function HockeyIndiaMatchesAdminPage() {
       ...prev,
       [name]:
         name === 'penaltyCorners' ||
-        name === 'fieldGoals' ||
-        name === 'treesPerPenaltyCorner' ||
-        name === 'treesPerFieldGoal' ||
-        name === 'treesPlanted'
+          name === 'fieldGoals' ||
+          name === 'treesPerPenaltyCorner' ||
+          name === 'treesPerFieldGoal' ||
+          name === 'treesPlanted'
           ? Number(value || 0)
           : value,
     }));
@@ -237,11 +237,11 @@ export default function HockeyIndiaMatchesAdminPage() {
         location:
           form.locationLatitude !== undefined && form.locationLongitude !== undefined
             ? {
-                latitude: form.locationLatitude,
-                longitude: form.locationLongitude,
-                radiusMeters: 300,
-              }
-            : undefined,
+              latitude: form.locationLatitude,
+              longitude: form.locationLongitude,
+              radiusMeters: 300,
+            }
+            : null,
       };
 
       const res = await fetch('/api/admin/hockey-india/matches', {
@@ -271,6 +271,23 @@ export default function HockeyIndiaMatchesAdminPage() {
       setError('Failed to save match');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (matchId: string) => {
+    if (!confirm('Are you sure you want to delete this match? This cannot be undone.')) return;
+
+    try {
+      const res = await fetch(`/api/admin/hockey-india/matches?matchId=${matchId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message || 'Delete failed');
+
+      setMatches((prev) => prev.filter((m) => m.matchId !== matchId));
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete match');
     }
   };
 
@@ -362,116 +379,125 @@ export default function HockeyIndiaMatchesAdminPage() {
                 : computeEstimatedTrees(match);
 
             return (
-            <motion.div
-              key={match._id}
-              whileHover={{ y: -4, scale: 1.01 }}
-              className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase text-gray-500">
-                    {match.tournament}
-                  </div>
-                  <div className="mt-1 text-sm text-gray-700">{match.venue}</div>
-                  <div className="mt-1 text-xs text-gray-500">{formatDate(match.matchDate)}</div>
-                </div>
-                <button
-                  onClick={() => openEditForm(match)}
-                  className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Edit
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="flex flex-1 items-center gap-3">
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full bg-gray-100 border border-gray-200">
-                    {match.homeTeam.flagUrl ? (
-                      <Image
-                        src={match.homeTeam.flagUrl}
-                        alt={match.homeTeam.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                        {match.homeTeam.code}
-                      </div>
-                    )}
-                  </div>
+              <motion.div
+                key={match._id}
+                whileHover={{ y: -4, scale: 1.01 }}
+                className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3 mb-4">
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">{match.homeTeam.name}</div>
-                    <div className="text-xs text-gray-500">{match.homeTeam.code}</div>
+                    <div className="text-xs font-semibold uppercase text-gray-500">
+                      {match.tournament}
+                    </div>
+                    <div className="mt-1 text-sm text-gray-700">{match.venue}</div>
+                    <div className="mt-1 text-xs text-gray-500">{formatDate(match.matchDate)}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditForm(match)}
+                      className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(match.matchId)}
+                      className="rounded-full border border-red-100 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
 
-                <div className="text-xs font-semibold uppercase text-gray-400">vs</div>
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div className="flex flex-1 items-center gap-3">
+                    <div className="relative h-10 w-10 overflow-hidden rounded-full bg-gray-100 border border-gray-200">
+                      {match.homeTeam.flagUrl ? (
+                        <Image
+                          src={match.homeTeam.flagUrl}
+                          alt={match.homeTeam.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                          {match.homeTeam.code}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{match.homeTeam.name}</div>
+                      <div className="text-xs text-gray-500">{match.homeTeam.code}</div>
+                    </div>
+                  </div>
 
-                <div className="flex flex-1 items-center justify-end gap-3">
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-gray-900">{match.awayTeam.name}</div>
-                    <div className="text-xs text-gray-500">{match.awayTeam.code}</div>
-                  </div>
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full bg-gray-100 border border-gray-200">
-                    {match.awayTeam.flagUrl ? (
-                      <Image
-                        src={match.awayTeam.flagUrl}
-                        alt={match.awayTeam.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                        {match.awayTeam.code}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                  <div className="text-xs font-semibold uppercase text-gray-400">vs</div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs mb-4">
-                <div className="rounded-xl bg-blue-50 p-3">
-                  <div className="font-semibold text-blue-900">Penalty Corners</div>
-                  <div className="mt-1 text-2xl font-bold text-blue-700">
-                    {match.penaltyCorners}
-                  </div>
-                  <div className="mt-1 text-[11px] text-blue-700/80">
-                    {match.treesPerPenaltyCorner} trees per PC
+                  <div className="flex flex-1 items-center justify-end gap-3">
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-gray-900">{match.awayTeam.name}</div>
+                      <div className="text-xs text-gray-500">{match.awayTeam.code}</div>
+                    </div>
+                    <div className="relative h-10 w-10 overflow-hidden rounded-full bg-gray-100 border border-gray-200">
+                      {match.awayTeam.flagUrl ? (
+                        <Image
+                          src={match.awayTeam.flagUrl}
+                          alt={match.awayTeam.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                          {match.awayTeam.code}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="rounded-xl bg-indigo-50 p-3">
-                  <div className="font-semibold text-indigo-900">Field Goals</div>
-                  <div className="mt-1 text-2xl font-bold text-indigo-700">
-                    {match.fieldGoals}
-                  </div>
-                  <div className="mt-1 text-[11px] text-indigo-700/80">
-                    {match.treesPerFieldGoal} trees per goal
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase text-green-700">
-                    Trees Planted
+                <div className="grid grid-cols-2 gap-3 text-xs mb-4">
+                  <div className="rounded-xl bg-blue-50 p-3">
+                    <div className="font-semibold text-blue-900">Penalty Corners</div>
+                    <div className="mt-1 text-2xl font-bold text-blue-700">
+                      {match.penaltyCorners}
+                    </div>
+                    <div className="mt-1 text-[11px] text-blue-700/80">
+                      {match.treesPerPenaltyCorner} trees per PC
+                    </div>
                   </div>
-                  <div className="mt-1 text-xl font-extrabold text-green-800">
-                    {treesToShow.toLocaleString('en-IN')}
-                  </div>
-                  <div className="text-[11px] text-green-700/80">
-                    {match.treesPlanted && match.treesPlanted > 0
-                      ? `of ${computeEstimatedTrees(match).toLocaleString('en-IN')} estimated`
-                      : 'Auto-calculated from PCs & goals'}
+                  <div className="rounded-xl bg-indigo-50 p-3">
+                    <div className="font-semibold text-indigo-900">Field Goals</div>
+                    <div className="mt-1 text-2xl font-bold text-indigo-700">
+                      {match.fieldGoals}
+                    </div>
+                    <div className="mt-1 text-[11px] text-indigo-700/80">
+                      {match.treesPerFieldGoal} trees per goal
+                    </div>
                   </div>
                 </div>
-                {match.notes && (
-                  <div className="flex-1 rounded-lg bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
-                    {match.notes}
+
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase text-green-700">
+                      Trees Planted
+                    </div>
+                    <div className="mt-1 text-xl font-extrabold text-green-800">
+                      {treesToShow.toLocaleString('en-IN')}
+                    </div>
+                    <div className="text-[11px] text-green-700/80">
+                      {match.treesPlanted && match.treesPlanted > 0
+                        ? `of ${computeEstimatedTrees(match).toLocaleString('en-IN')} estimated`
+                        : 'Auto-calculated from PCs & goals'}
+                    </div>
                   </div>
-                )}
-              </div>
-            </motion.div>
-          )})}
+                  {match.notes && (
+                    <div className="flex-1 rounded-lg bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+                      {match.notes}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
         </div>
       )}
 
@@ -744,8 +770,23 @@ export default function HockeyIndiaMatchesAdminPage() {
                         📍
                       </span>
                       <div>
-                        <div className="font-semibold">
-                          Location selected for this match&apos;s trees
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="font-semibold">
+                            Location selected for this match&apos;s trees
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForm((prev) => ({
+                                ...prev,
+                                locationLatitude: undefined,
+                                locationLongitude: undefined,
+                              }));
+                            }}
+                            className="text-[10px] font-bold text-red-600 hover:text-red-700 hover:underline"
+                          >
+                            Remove
+                          </button>
                         </div>
                         <div className="font-mono text-[10px] mt-0.5">
                           Lat: {form.locationLatitude.toFixed(5)}, Lng:{' '}

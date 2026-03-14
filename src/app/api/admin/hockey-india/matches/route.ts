@@ -108,3 +108,35 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+    const url = new URL(req.url);
+    const matchId = url.searchParams.get('matchId');
+
+    if (!matchId) {
+      return NextResponse.json(
+        { success: false, message: 'matchId is required' },
+        { status: 400 }
+      );
+    }
+
+    const result = await HockeyMatch.findOneAndDelete({ matchId });
+
+    if (!result) {
+      return NextResponse.json(
+        { success: false, message: 'Match not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: 'Match deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting Hockey India match:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to delete match' },
+      { status: 500 }
+    );
+  }
+}
+
