@@ -7,15 +7,38 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const url = new URL(req.url);
-    const limit = parseInt(url.searchParams.get('limit') || '12', 10);
+    const limitParam = url.searchParams.get('limit');
 
-    const matches: HockeyMatchFields[] = await HockeyMatch.find()
+    // Build base query for matches, optionally limiting if a limit is explicitly provided
+    let matchesQuery = HockeyMatch.find().sort({ matchDate: -1 });
+    if (limitParam) {
+      const limit = parseInt(limitParam, 10);
+      if (!Number.isNaN(limit) && limit > 0) {
+        matchesQuery = matchesQuery.limit(limit);
+      }
+    }
+
+    // Fetch matches for display (no limit by default)
+    const matches: HockeyMatchFields[] = await matchesQuery.lean();
+
+    // Fetch ALL matches for accurate total calculation (matching admin logic)
+    const allMatches: HockeyMatchFields[] = await HockeyMatch.find()
       .sort({ matchDate: -1 })
-      .limit(Number.isNaN(limit) ? 12 : limit)
       .lean();
 
-    const totalTreesPlanted = matches.reduce((sum, m) => sum + (m.treesPlanted || 0), 0);
-    const totalTreesEstimated = matches.reduce(
+    // Calculate totals using same logic as admin: use treesPlanted if > 0, otherwise use estimated
+    const totalTreesPlanted = allMatches.reduce((sum, m) => {
+      const estimated =
+        (m.penaltyCorners || 0) * (m.treesPerPenaltyCorner || 0) +
+        (m.fieldGoals || 0) * (m.treesPerFieldGoal || 0);
+      const trees =
+        m.treesPlanted && m.treesPlanted > 0
+          ? m.treesPlanted
+          : estimated;
+      return sum + trees;
+    }, 0);
+
+    const totalTreesEstimated = allMatches.reduce(
       (sum, m) =>
         sum +
         (m.penaltyCorners || 0) * (m.treesPerPenaltyCorner || 0) +
@@ -27,7 +50,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data: matches,
       metrics: {
-        totalMatches: matches.length,
+        totalMatches: allMatches.length,
         totalTreesPlanted,
         totalTreesEstimated,
       },

@@ -30,6 +30,11 @@ interface HockeyMatch {
 interface MatchesResponse {
   success: boolean;
   data: HockeyMatch[];
+  metrics?: {
+    totalMatches: number;
+    totalTreesPlanted: number;
+    totalTreesEstimated: number;
+  };
 }
 
 function formatDate(dateStr: string) {
@@ -47,6 +52,7 @@ function computeEstimatedTrees(m: HockeyMatch) {
 
 export default function MatchesSection({ totalTreesOverall }: { totalTreesOverall: number }) {
   const [matches, setMatches] = useState<HockeyMatch[]>([]);
+  const [totalTreesPlanted, setTotalTreesPlanted] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,10 +60,14 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/hockey-india/matches?limit=12', { cache: 'no-store' });
+        const res = await fetch('/api/hockey-india/matches', { cache: 'no-store' });
         const json: MatchesResponse = await res.json();
         if (!json.success) throw new Error('Failed to load matches');
         setMatches(json.data);
+        // Use totalTreesPlanted from API metrics (calculated from all matches)
+        if (json.metrics?.totalTreesPlanted !== undefined) {
+          setTotalTreesPlanted(json.metrics.totalTreesPlanted);
+        }
       } catch (err) {
         console.error(err);
         setError('Unable to load match impact right now.');
@@ -68,16 +78,8 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
     load();
   }, []);
 
-  const totalTreesFromMatches =
-    matches.length > 0
-      ? matches.reduce((sum, m) => {
-          const trees =
-            m.treesPlanted && m.treesPlanted > 0
-              ? m.treesPlanted
-              : computeEstimatedTrees(m);
-          return sum + trees;
-        }, 0)
-      : totalTreesOverall;
+  // Use totalTreesPlanted from API if available, otherwise fallback to totalTreesOverall
+  const totalTreesFromMatches = totalTreesPlanted !== null ? totalTreesPlanted : totalTreesOverall;
 
   return (
     <section className="py-16 sm:py-20 md:py-24 bg-slate-950 relative overflow-hidden">
