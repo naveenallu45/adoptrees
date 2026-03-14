@@ -324,9 +324,9 @@ export default function LocationPicker({
         </div>
 
         {/* Map and Search Area */}
-        <div className="p-4 flex-1 min-h-0 relative flex flex-col gap-3">
+        <div className="p-4 flex-1 min-h-0 overflow-y-auto relative flex flex-col gap-4">
           {/* Search Bar */}
-          <div className="relative group">
+          <div className="relative group sticky top-0 z-10">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
             </div>
@@ -339,15 +339,15 @@ export default function LocationPicker({
           </div>
 
           {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-            <div className="w-full h-[400px] bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
+            <div className="w-full h-[350px] bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
               <div className="text-center p-4">
                 <p className="text-sm font-semibold text-gray-600 mb-2">Google Maps API key not configured</p>
                 <p className="text-xs text-gray-500">Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local</p>
               </div>
             </div>
           ) : (
-            <div className="relative flex-1">
-              <div ref={mapRef} className="w-full h-[400px] rounded-xl border border-gray-200 overflow-hidden shadow-inner" />
+            <div className="relative w-full h-[350px] shrink-0">
+              <div ref={mapRef} className="w-full h-full rounded-xl border border-gray-200 overflow-hidden shadow-inner" />
               {!mapLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded-lg">
                   <div className="text-center">
@@ -360,21 +360,21 @@ export default function LocationPicker({
           )}
 
           {/* Instructions */}
-          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800">
-              <strong>Instructions:</strong> Click on the map to select the planting location, or use the &ldquo;Use Current Location&rdquo; button below. You can also drag the marker to adjust the position.
-            </p>
+          <div className="p-2.5 bg-blue-50/50 rounded-xl border border-blue-100 text-[11px] text-blue-800 flex items-center gap-2">
+            <span className="flex-shrink-0 bg-blue-600 text-white w-4 h-4 rounded-full flex items-center justify-center font-bold text-[10px]">!</span>
+            <p>Click map or search above to pin location. Marker is draggable.</p>
           </div>
 
           {/* Selected coordinates */}
           {selectedLocation && (
-            <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-sm font-medium text-green-800">
-                Selected Location:
-              </p>
-              <p className="text-xs text-green-700 font-mono mt-1">
-                Latitude: {selectedLocation.lat.toFixed(6)}, Longitude: {selectedLocation.lng.toFixed(6)}
-              </p>
+            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Identified</span>
+              </div>
+              <div className="text-[10px] text-emerald-700 font-mono bg-white px-2 py-1 rounded-lg border border-emerald-100 shadow-xs">
+                {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
+              </div>
             </div>
           )}
         </div>
