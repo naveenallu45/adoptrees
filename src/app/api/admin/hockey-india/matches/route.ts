@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       treesPerFieldGoal,
       treesPlanted,
       notes,
+      location,
     } = body;
 
     if (!matchId || !homeTeam?.name || !awayTeam?.name || !matchDate) {
@@ -92,6 +93,7 @@ export async function POST(req: NextRequest) {
         treesPerFieldGoal,
         treesPlanted,
         notes,
+        location,
       },
       { new: true, upsert: true, runValidators: true }
     );

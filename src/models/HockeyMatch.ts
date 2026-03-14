@@ -21,6 +21,11 @@ export interface HockeyMatchFields {
   treesPerFieldGoal: number;
   treesPlanted: number;
   notes?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    radiusMeters?: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,6 +93,22 @@ const HockeyMatchSchema = new Schema<HockeyMatchFields>(
       required: true,
       min: 0,
       default: 0,
+    },
+    location: {
+      latitude: {
+        type: Number,
+        required: false,
+      },
+      longitude: {
+        type: Number,
+        required: false,
+      },
+      radiusMeters: {
+        type: Number,
+        required: false,
+        default: 300,
+        min: 10,
+      },
     },
     notes: {
       type: String,

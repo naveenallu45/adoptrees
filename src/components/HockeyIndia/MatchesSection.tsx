@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { SparklesIcon } from '@heroicons/react/24/solid';
+import MatchLocationMap from './MatchLocationMap';
 
 interface TeamInfo {
   name: string;
@@ -25,6 +26,11 @@ interface HockeyMatch {
   treesPerFieldGoal: number;
   treesPlanted: number;
   notes?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    radiusMeters?: number;
+  };
 }
 
 interface MatchesResponse {
@@ -55,6 +61,7 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
   const [totalTreesPlanted, setTotalTreesPlanted] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openLocationMatchId, setOpenLocationMatchId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -276,19 +283,69 @@ export default function MatchesSection({ totalTreesOverall }: { totalTreesOveral
                 </div>
 
                 <div className="relative z-10 flex flex-col gap-2 rounded-xl bg-slate-900/80 border border-emerald-600/70 px-3 py-3">
-                  <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
-                      Trees Planted
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+                        Trees Planted
+                      </div>
+                      <div className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-50">
+                        {treesToShow.toLocaleString('en-IN')}
+                      </div>
                     </div>
-                    <div className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-50">
-                      {treesToShow.toLocaleString('en-IN')}
-                    </div>
+                    {match.location?.latitude !== undefined &&
+                      match.location?.longitude !== undefined && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenLocationMatchId((current) =>
+                              current === match._id ? null : match._id
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/20"
+                        >
+                          <span className="text-xs">📍</span>
+                          <span>
+                            {openLocationMatchId === match._id ? 'Hide Location' : 'View Location'}
+                          </span>
+                        </button>
+                      )}
                   </div>
+
                   {match.notes && (
                     <div className="rounded-lg bg-slate-900/80 px-3 py-2 text-[11px] text-slate-200">
                       {match.notes}
                     </div>
                   )}
+
+                  {/* Location dropdown / map area */}
+                  {openLocationMatchId === match._id &&
+                    match.location?.latitude !== undefined &&
+                    match.location?.longitude !== undefined && (
+                      <div className="mt-2 rounded-xl border border-emerald-500/40 bg-slate-950/70 overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-500/30">
+                          <div className="text-[11px] font-semibold text-emerald-100 truncate">
+                            Trees planted for{' '}
+                            <span className="text-emerald-300">
+                              {match.homeTeam.name} vs {match.awayTeam.name}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setOpenLocationMatchId(null)}
+                            className="text-[10px] text-emerald-200 hover:text-emerald-100"
+                          >
+                            Close
+                          </button>
+                        </div>
+                        <MatchLocationMap
+                          latitude={match.location.latitude}
+                          longitude={match.location.longitude}
+                          radiusMeters={match.location.radiusMeters}
+                          matchLabel={`${match.homeTeam.name} vs ${match.awayTeam.name}`}
+                          className="w-full h-44"
+                        />
+                      </div>
+                    )}
                 </div>
               </motion.article>
             )})}

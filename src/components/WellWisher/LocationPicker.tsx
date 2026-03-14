@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MapPinIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon, XMarkIcon, CheckIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface LocationPickerProps {
   isOpen: boolean;
@@ -20,12 +20,16 @@ interface GoogleMapsWindow extends Window {
       Point: new (x: number, y: number) => unknown;
       LatLng: new (lat: number, lng: number) => unknown;
       MapTypeId: { SATELLITE: string };
+      places: {
+        Autocomplete: new (input: HTMLInputElement, options?: unknown) => GoogleAutocomplete;
+      };
     };
   };
 }
 
 interface GoogleMap {
   setCenter: (location: { lat: number; lng: number }) => void;
+  setZoom: (zoom: number) => void;
   addListener: (event: string, callback: (e: { latLng: { lat: () => number; lng: () => number } }) => void) => void;
 }
 
@@ -33,6 +37,19 @@ interface GoogleMarker {
   setPosition: (location: { lat: number; lng: number }) => void;
   setMap: (map: GoogleMap | null) => void;
   addListener: (event: string, callback: (e: { latLng: { lat: () => number; lng: () => number } }) => void) => void;
+}
+
+interface GoogleAutocomplete {
+  addListener: (event: string, callback: () => void) => void;
+  getPlace: () => {
+    geometry?: {
+      location?: {
+        lat: () => number;
+        lng: () => number;
+      };
+      viewport?: unknown;
+    };
+  };
 }
 
 export default function LocationPicker({
@@ -43,8 +60,10 @@ export default function LocationPicker({
   initialLongitude
 }: LocationPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const mapInstanceRef = useRef<GoogleMap | null>(null);
   const markerRef = useRef<GoogleMarker | null>(null);
+  const autocompleteRef = useRef<GoogleAutocomplete | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
 
@@ -69,7 +88,7 @@ export default function LocationPicker({
 
     function checkAndInit() {
       const googleMapsWindow = window as unknown as GoogleMapsWindow;
-      if (googleMapsWindow.google && googleMapsWindow.google.maps) {
+      if (googleMapsWindow.google && googleMapsWindow.google.maps && googleMapsWindow.google.maps.places) {
         initializeMap();
       }
     }
@@ -79,7 +98,7 @@ export default function LocationPicker({
       if (!mapRef.current || !googleMapsWindow.google?.maps) return;
 
       const maps = googleMapsWindow.google.maps;
-      
+
       // Use initial location or default to a center point (India)
       const defaultCenter = initialLatitude && initialLongitude
         ? { lat: initialLatitude, lng: initialLongitude }
@@ -97,13 +116,33 @@ export default function LocationPicker({
           zoomControl: true,
         } as never);
 
-        // Add click listener to select location
-        mapInstanceRef.current.addListener('click', (e: { latLng: { lat: () => number; lng: () => number } }) => {
-          const lat = e.latLng.lat();
-          const lng = e.latLng.lng();
-          setSelectedLocation({ lat, lng });
+        // Initialize Search Autocomplete
+        if (searchInputRef.current && maps.places) {
+          autocompleteRef.current = new maps.places.Autocomplete(searchInputRef.current, {
+            fields: ['geometry', 'name'],
+          });
 
-          // Update or create marker
+          autocompleteRef.current.addListener('place_changed', () => {
+            const place = autocompleteRef.current?.getPlace();
+            if (place?.geometry?.location) {
+              const lat = place.geometry.location.lat();
+              const lng = place.geometry.location.lng();
+
+              setSelectedLocation({ lat, lng });
+
+              if (mapInstanceRef.current) {
+                mapInstanceRef.current.setCenter({ lat, lng });
+                mapInstanceRef.current.setZoom(17);
+              }
+
+              updateMarker(lat, lng);
+            }
+          });
+        }
+
+        const updateMarker = (lat: number, lng: number) => {
+          if (!mapInstanceRef.current) return;
+
           if (!markerRef.current) {
             markerRef.current = new maps.Marker({
               position: { lat, lng },
@@ -112,16 +151,11 @@ export default function LocationPicker({
               icon: {
                 url: 'data:image/svg+xml;base64,' + btoa(`
                   <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Pin shadow -->
                     <ellipse cx="20" cy="44" rx="6" ry="2" fill="#000" opacity="0.2"/>
-                    <!-- Pin base -->
                     <path d="M20 0C12.268 0 6 6.268 6 14C6 24.5 20 48 20 48C20 48 34 24.5 34 14C34 6.268 27.732 0 20 0Z" fill="#22c55e"/>
-                    <!-- Tree trunk -->
                     <rect x="18" y="28" width="4" height="8" fill="#8b4513"/>
-                    <!-- Tree leaves/crown -->
                     <path d="M20 12C16 12 12 16 12 20C12 24 16 28 20 28C24 28 28 24 28 20C28 16 24 12 20 12Z" fill="#16a34a"/>
                     <path d="M20 8C18 8 16 10 16 12C16 14 18 16 20 16C22 16 24 14 24 12C24 10 22 8 20 8Z" fill="#15803d"/>
-                    <!-- Small decorative leaves -->
                     <circle cx="16" cy="18" r="2" fill="#22c55e"/>
                     <circle cx="24" cy="18" r="2" fill="#22c55e"/>
                     <circle cx="20" cy="14" r="1.5" fill="#16a34a"/>
@@ -132,7 +166,6 @@ export default function LocationPicker({
               }
             } as never);
 
-            // Update marker position when dragged
             markerRef.current.addListener('dragend', (e: { latLng: { lat: () => number; lng: () => number } }) => {
               const lat = e.latLng.lat();
               const lng = e.latLng.lng();
@@ -141,42 +174,19 @@ export default function LocationPicker({
           } else {
             markerRef.current.setPosition({ lat, lng });
           }
+        };
+
+        // Add click listener to select location
+        mapInstanceRef.current.addListener('click', (e: { latLng: { lat: () => number; lng: () => number } }) => {
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+          setSelectedLocation({ lat, lng });
+          updateMarker(lat, lng);
         });
 
         // If initial location provided, add marker
         if (initialLatitude && initialLongitude) {
-          markerRef.current = new maps.Marker({
-            position: { lat: initialLatitude, lng: initialLongitude },
-            map: mapInstanceRef.current,
-            draggable: true,
-            icon: {
-              url: 'data:image/svg+xml;base64,' + btoa(`
-                <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <!-- Pin shadow -->
-                  <ellipse cx="20" cy="44" rx="6" ry="2" fill="#000" opacity="0.2"/>
-                  <!-- Pin base -->
-                  <path d="M20 0C12.268 0 6 6.268 6 14C6 24.5 20 48 20 48C20 48 34 24.5 34 14C34 6.268 27.732 0 20 0Z" fill="#22c55e"/>
-                  <!-- Tree trunk -->
-                  <rect x="18" y="28" width="4" height="8" fill="#8b4513"/>
-                  <!-- Tree leaves/crown -->
-                  <path d="M20 12C16 12 12 16 12 20C12 24 16 28 20 28C24 28 28 24 28 20C28 16 24 12 20 12Z" fill="#16a34a"/>
-                  <path d="M20 8C18 8 16 10 16 12C16 14 18 16 20 16C22 16 24 14 24 12C24 10 22 8 20 8Z" fill="#15803d"/>
-                  <!-- Small decorative leaves -->
-                  <circle cx="16" cy="18" r="2" fill="#22c55e"/>
-                  <circle cx="24" cy="18" r="2" fill="#22c55e"/>
-                  <circle cx="20" cy="14" r="1.5" fill="#16a34a"/>
-                </svg>
-              `),
-              scaledSize: new maps.Size(40, 48),
-              anchor: new maps.Point(20, 48)
-            }
-          } as never);
-
-          markerRef.current.addListener('dragend', (e: { latLng: { lat: () => number; lng: () => number } }) => {
-            const lat = e.latLng.lat();
-            const lng = e.latLng.lng();
-            setSelectedLocation({ lat, lng });
-          });
+          updateMarker(initialLatitude, initialLongitude);
         }
 
         setMapLoaded(true);
@@ -197,11 +207,11 @@ export default function LocationPicker({
       document.head.appendChild(script);
     } else {
       const googleMapsWindow = window as unknown as GoogleMapsWindow;
-      if (googleMapsWindow.google?.maps) {
+      if (googleMapsWindow.google?.maps?.places) {
         checkAndInit();
       } else {
         checkInterval = setInterval(() => {
-          if (googleMapsWindow.google?.maps) {
+          if (googleMapsWindow.google?.maps?.places) {
             if (checkInterval) clearInterval(checkInterval);
             checkAndInit();
           }
@@ -213,7 +223,10 @@ export default function LocationPicker({
       if (checkInterval) clearInterval(checkInterval);
       if (markerRef.current) {
         markerRef.current.setMap(null);
+        markerRef.current = null;
       }
+      mapInstanceRef.current = null;
+      autocompleteRef.current = null;
     };
   }, [isOpen, initialLatitude, initialLongitude]);
 
@@ -224,11 +237,11 @@ export default function LocationPicker({
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           setSelectedLocation({ lat, lng });
-          
+
           // Update map center and marker
           if (mapInstanceRef.current) {
             mapInstanceRef.current.setCenter({ lat, lng });
-            
+
             const googleMapsWindow = window as unknown as GoogleMapsWindow;
             const maps = googleMapsWindow.google?.maps;
             if (maps && markerRef.current) {
@@ -289,7 +302,7 @@ export default function LocationPicker({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -309,19 +322,32 @@ export default function LocationPicker({
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
-        
-        {/* Map */}
-        <div className="p-4 flex-1 min-h-0 relative">
+
+        {/* Map and Search Area */}
+        <div className="p-4 flex-1 min-h-0 relative flex flex-col gap-3">
+          {/* Search Bar */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search for a location (e.g. Hyderabad, Gachibowli Stadium...)"
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm transition-all shadow-sm group-hover:shadow-md"
+            />
+          </div>
+
           {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-            <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="w-full h-[400px] bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
               <div className="text-center p-4">
-                <p className="text-sm text-gray-600 mb-2">Google Maps API key not configured</p>
+                <p className="text-sm font-semibold text-gray-600 mb-2">Google Maps API key not configured</p>
                 <p className="text-xs text-gray-500">Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local</p>
               </div>
             </div>
           ) : (
-            <>
-              <div ref={mapRef} className="w-full h-96 rounded-lg border border-gray-200" />
+            <div className="relative flex-1">
+              <div ref={mapRef} className="w-full h-[400px] rounded-xl border border-gray-200 overflow-hidden shadow-inner" />
               {!mapLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded-lg">
                   <div className="text-center">
@@ -330,9 +356,9 @@ export default function LocationPicker({
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
-          
+
           {/* Instructions */}
           <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800">
@@ -352,7 +378,7 @@ export default function LocationPicker({
             </div>
           )}
         </div>
-        
+
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
           <button
@@ -363,7 +389,7 @@ export default function LocationPicker({
             <MapPinIcon className="h-5 w-5" />
             <span>Use Current Location</span>
           </button>
-          
+
           <div className="flex gap-3">
             <button
               onClick={onClose}

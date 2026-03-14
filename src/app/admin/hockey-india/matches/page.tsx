@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { SparklesIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, PlusIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import LocationPicker from '@/components/WellWisher/LocationPicker';
 
 interface TeamInfo {
   name: string;
@@ -25,6 +26,11 @@ interface HockeyMatch {
   treesPerFieldGoal: number;
   treesPlanted: number;
   notes?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    radiusMeters?: number;
+  };
 }
 
 interface MatchesResponse {
@@ -51,6 +57,7 @@ export default function HockeyIndiaMatchesAdminPage() {
   const [_uploadingHomeFlag, setUploadingHomeFlag] = useState(false);
   const [_uploadingAwayFlag, setUploadingAwayFlag] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
 
   const [form, setForm] = useState({
     matchId: '',
@@ -69,6 +76,8 @@ export default function HockeyIndiaMatchesAdminPage() {
     treesPerFieldGoal: DEFAULT_TREES_FG,
     treesPlanted: 0,
     notes: '',
+    locationLatitude: undefined as number | undefined,
+    locationLongitude: undefined as number | undefined,
   });
 
   useEffect(() => {
@@ -167,6 +176,8 @@ export default function HockeyIndiaMatchesAdminPage() {
       treesPerFieldGoal: DEFAULT_TREES_FG,
       treesPlanted: 0,
       notes: '',
+      locationLatitude: undefined,
+      locationLongitude: undefined,
     });
     setFormOpen(true);
   };
@@ -190,6 +201,8 @@ export default function HockeyIndiaMatchesAdminPage() {
       treesPerFieldGoal: match.treesPerFieldGoal,
       treesPlanted: match.treesPlanted,
       notes: match.notes || '',
+      locationLatitude: match.location?.latitude,
+      locationLongitude: match.location?.longitude,
     });
     setFormOpen(true);
   };
@@ -221,6 +234,14 @@ export default function HockeyIndiaMatchesAdminPage() {
         treesPerFieldGoal: form.treesPerFieldGoal,
         treesPlanted: form.treesPlanted,
         notes: form.notes || undefined,
+        location:
+          form.locationLatitude !== undefined && form.locationLongitude !== undefined
+            ? {
+                latitude: form.locationLatitude,
+                longitude: form.locationLongitude,
+                radiusMeters: 300,
+              }
+            : undefined,
       };
 
       const res = await fetch('/api/admin/hockey-india/matches', {
@@ -694,6 +715,47 @@ export default function HockeyIndiaMatchesAdminPage() {
                 </div>
               </div>
 
+              {/* Planting location selector */}
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700">
+                      Planting Location (optional)
+                    </label>
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Choose where trees for this match are planted. This will power the public
+                      &ldquo;View location&rdquo; button on the Hockey India page.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLocationPickerOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-green-500 px-3 py-1.5 text-[11px] font-semibold text-green-700 hover:bg-green-50"
+                  >
+                    <MapPinIcon className="h-4 w-4" />
+                    {form.locationLatitude && form.locationLongitude ? 'Edit Location' : 'Set Location'}
+                  </button>
+                </div>
+
+                {form.locationLatitude !== undefined &&
+                  form.locationLongitude !== undefined && (
+                    <div className="mt-2 inline-flex items-center gap-3 rounded-lg bg-green-50 px-3 py-2 border border-green-200 text-[11px] text-green-800">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-600 text-white text-xs font-bold">
+                        📍
+                      </span>
+                      <div>
+                        <div className="font-semibold">
+                          Location selected for this match&apos;s trees
+                        </div>
+                        <div className="font-mono text-[10px] mt-0.5">
+                          Lat: {form.locationLatitude.toFixed(5)}, Lng:{' '}
+                          {form.locationLongitude.toFixed(5)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700">
@@ -767,6 +829,21 @@ export default function HockeyIndiaMatchesAdminPage() {
           </div>
         </div>
       )}
+
+      {/* Location picker modal (shared Google Maps selector) */}
+      <LocationPicker
+        isOpen={locationPickerOpen}
+        onClose={() => setLocationPickerOpen(false)}
+        onSelect={(lat, lng) =>
+          setForm((prev) => ({
+            ...prev,
+            locationLatitude: lat,
+            locationLongitude: lng,
+          }))
+        }
+        initialLatitude={form.locationLatitude}
+        initialLongitude={form.locationLongitude}
+      />
     </div>
   );
 }
