@@ -88,11 +88,43 @@ export async function GET(
       // Get user details including publicId, qrCode, profile image, name, companyName, and userType
       // Always fetch latest profile data to ensure certificate shows current profile
       const user = await User.findById(userIdToUse).select('publicId qrCode image name companyName userType');
-      if (!user || !user.publicId) {
+      if (!user) {
         return NextResponse.json(
-          { success: false, error: 'User publicId not found. Cannot generate certificate.' },
+          { success: false, error: 'User not found. Cannot generate certificate.' },
           { status: 400 }
         );
+      }
+
+      // Permanent safety net for legacy users:
+      // if publicId is missing, generate + persist a unique one so certificate download never fails.
+      if (!user.publicId) {
+        console.log(`[CERTIFICATE] Generating missing publicId for legacy user ${userIdToUse}`);
+        let attempts = 0;
+        let newPublicId = '';
+        let isUnique = false;
+
+        while (attempts < 10) {
+          const random = Math.random().toString(36).slice(2, 8);
+          const timestamp = Date.now().toString(36).slice(-4);
+          newPublicId = `${random}${timestamp}`.toLowerCase();
+
+          const existing = await User.findOne({ publicId: newPublicId }).lean();
+          if (!existing) {
+            isUnique = true;
+            break;
+          }
+          attempts++;
+        }
+
+        if (isUnique) {
+          await User.findByIdAndUpdate(userIdToUse, { $set: { publicId: newPublicId } });
+          user.publicId = newPublicId;
+        } else {
+          return NextResponse.json(
+            { success: false, error: 'Failed to generate unique publicId. Cannot generate certificate.' },
+            { status: 500 }
+          );
+        }
       }
 
       // QR codes in certificates must ALWAYS use production URL (not localhost)

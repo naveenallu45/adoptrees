@@ -103,10 +103,33 @@ export async function GET(
     // When user downloads, we want to show their current profile
     try {
       if (!user.publicId) {
-        return NextResponse.json(
-          { success: false, error: 'User publicId not found. Cannot generate certificate.' },
-          { status: 400 }
-        );
+        console.log(`[PublicCertificate] Generating missing publicId for legacy user ${user._id}`);
+        let attempts = 0;
+        let newPublicId = '';
+        let isUnique = false;
+
+        while (attempts < 10) {
+          const random = Math.random().toString(36).slice(2, 8);
+          const timestamp = Date.now().toString(36).slice(-4);
+          newPublicId = `${random}${timestamp}`.toLowerCase();
+
+          const existing = await User.findOne({ publicId: newPublicId }).lean();
+          if (!existing) {
+            isUnique = true;
+            break;
+          }
+          attempts++;
+        }
+
+        if (isUnique) {
+          await User.findByIdAndUpdate(user._id, { $set: { publicId: newPublicId } });
+          user.publicId = newPublicId;
+        } else {
+          return NextResponse.json(
+            { success: false, error: 'Failed to generate unique publicId. Cannot generate certificate.' },
+            { status: 500 }
+          );
+        }
       }
 
       // QR codes in certificates must ALWAYS use production URL (not localhost)

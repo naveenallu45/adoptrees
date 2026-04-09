@@ -64,6 +64,7 @@ const UserSchema = new Schema<IUser>(
     role: { type: String, enum: ['user', 'admin', 'wellwisher'], default: 'user', required: true },
     publicId: { 
       type: String,
+      required: true,
       immutable: true, // Once generated, publicId should never change
       // Note: unique sparse index created via database-optimization script, not in schema to avoid duplicate warnings
     },
@@ -86,6 +87,33 @@ const UserSchema = new Schema<IUser>(
 // in Next.js multi-process environment. Schema-level index definitions removed.
 
 // Ensure email is lowercase, publicId exists, and QR code is generated before saving
+function generatePublicId(): string {
+  const random = Math.random().toString(36).slice(2, 8);
+  const timestamp = Date.now().toString(36).slice(-4);
+  return `${random}${timestamp}`.toLowerCase();
+}
+
+async function generateUniquePublicId(model: Model<IUser>, ignoreId?: string): Promise<string> {
+  let publicId = generatePublicId();
+  let attempts = 0;
+
+  while (attempts < 10) {
+    const existing = await model.findOne({ publicId }).select('_id').lean();
+
+    if (!existing) return publicId;
+
+    // If we found the same doc (during save), allow re-using.
+    if (ignoreId && existing._id?.toString && existing._id.toString() === ignoreId) {
+      return publicId;
+    }
+
+    publicId = generatePublicId();
+    attempts++;
+  }
+
+  throw new Error('Failed to generate unique publicId');
+}
+
 UserSchema.pre('save', async function(next) {
   if (this.email) {
     this.email = this.email.toLowerCase();
@@ -116,34 +144,9 @@ UserSchema.pre('save', async function(next) {
   
   // Generate publicId only if it doesn't exist (for new documents)
   if (!this.publicId) {
-    const generatePublicId = () => {
-      const random = Math.random().toString(36).slice(2, 8);
-      const timestamp = Date.now().toString(36).slice(-4);
-      return `${random}${timestamp}`.toLowerCase();
-    };
-    
-    // Generate publicId and ensure uniqueness (safety net for edge cases)
-    let publicId = generatePublicId();
-    let attempts = 0;
-    while (attempts < 10) {
-      // Check if this publicId already exists
-      // For new documents, check if any other document has this publicId
-      // For existing documents, check if any OTHER document has this publicId
-      // Use this.model() to get the model instance
-      const Model = this.model('User');
-      const existing = await Model.findOne({ publicId });
-      if (!existing || (existing._id.toString() === this._id.toString())) {
-        break;
-      }
-      publicId = generatePublicId();
-      attempts++;
-    }
-    
-    if (attempts >= 10) {
-      return next(new Error('Failed to generate unique publicId'));
-    }
-    
-    this.publicId = publicId;
+    const Model = this.model('User') as Model<IUser>;
+    const ignoreId = this._id?.toString?.();
+    this.publicId = await generateUniquePublicId(Model, ignoreId);
   }
   
   // CRITICAL: Ensure QR code and publicId are always in sync
@@ -174,6 +177,54 @@ UserSchema.pre('save', async function(next) {
   // to avoid requiring QRCode library in the model file
   next();
 });
+
+// Permanent safety net:
+// - If insertMany is used (instead of `save`/`create`), make sure publicId exists.
+UserSchema.pre('insertMany', async function(next, docs: Array<Partial<IUser>>) {
+  const Model = (models.User || mongoose.model('User')) as Model<IUser>;
+
+  try {
+    for (const doc of docs) {
+      if (!doc.publicId) {
+        doc.publicId = await generateUniquePublicId(Model);
+      }
+    }
+    next();
+  } catch (err) {
+    next(err as Error);
+  }
+});
+
+// If an upsert creates a new user without publicId, generate it on the insert path.
+// Uses $setOnInsert so existing docs won't be modified.
+const ensurePublicIdOnUpsert = async function(this: Query<unknown, IUser>, next: () => void) {
+  const options = this.getOptions?.() as Record<string, unknown> | undefined;
+  if (!options || options.upsert !== true) return next();
+
+  const update = this.getUpdate() as Record<string, unknown> | null | undefined;
+  if (!update || typeof update !== 'object' || Array.isArray(update)) return next();
+
+  // If caller already provides publicId (in any supported place), don't override it.
+  const isNonEmptyString = (value: unknown): boolean => typeof value === 'string' && value.trim() !== '';
+
+  const hasPublicId =
+    isNonEmptyString((update as { publicId?: unknown }).publicId) ||
+    isNonEmptyString((update as { $set?: { publicId?: unknown } }).$set?.publicId) ||
+    isNonEmptyString((update as { $setOnInsert?: { publicId?: unknown } }).$setOnInsert?.publicId);
+
+  if (hasPublicId) return next();
+
+  const Model = (models.User || mongoose.model('User')) as Model<IUser>;
+  const newPublicId = await generateUniquePublicId(Model);
+
+  const updateObj = update as Record<string, unknown> & { $setOnInsert?: Record<string, unknown> };
+  if (typeof updateObj.$setOnInsert !== 'object' || updateObj.$setOnInsert === null) {
+    updateObj.$setOnInsert = {};
+  }
+  updateObj.$setOnInsert.publicId = newPublicId;
+
+  next();
+};
 
 // CRITICAL: Prevent $unset operations on publicId and qrCode
 // This hook catches update operations (findByIdAndUpdate, updateOne, updateMany, etc.)
@@ -304,6 +355,11 @@ const protectImmutableFields = async function(this: Query<unknown, IUser>, next:
   
   next();
 };
+
+// Register upsert helper BEFORE protection so it can inject publicId for the insert path.
+UserSchema.pre('updateOne', ensurePublicIdOnUpsert);
+UserSchema.pre('updateMany', ensurePublicIdOnUpsert);
+UserSchema.pre('findOneAndUpdate', ensurePublicIdOnUpsert);
 
 // Register the hook for each update operation
 // Note: findByIdAndUpdate is an alias for findOneAndUpdate, so it uses the same hook
