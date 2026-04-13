@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { SparklesIcon, PlusIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import LocationPicker from '@/components/WellWisher/LocationPicker';
+import LocationPicker from '../../../../components/WellWisher/LocationPicker';
 
 interface TeamInfo {
   name: string;

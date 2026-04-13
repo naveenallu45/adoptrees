@@ -4,11 +4,11 @@ import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { ColumnDef } from '@tanstack/react-table';
-import { DataTable } from '@/components/Admin/DataTable';
+import { DataTable } from '../../../components/Admin/DataTable';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useQuery } from '@tanstack/react-query';
-import { useCouponMutations } from '@/hooks/useAdminMutations';
+import { useCouponMutations } from '../../../hooks/useAdminMutations';
 
 interface Coupon {
   _id: string;
