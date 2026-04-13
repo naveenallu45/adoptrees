@@ -10,23 +10,20 @@ import { logPaymentEvent, logError } from '@/lib/logger';
 import { createOrUpdateCustomerAccount } from '@/lib/customer-account';
 
 // Lazy initialization of Razorpay to avoid module load errors
-// userType: 'company' uses company account, others use regular account
-function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer' | 'hockey-india') {
-  // For company users, use company Razorpay account if configured
-  if (userType === 'company') {
-    const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
-    const companyKeySecret = process.env.RAZORPAY_COMPANY_KEY_SECRET;
-    
-    if (companyKeyId && companyKeySecret) {
-      return new Razorpay({
-        key_id: companyKeyId,
-        key_secret: companyKeySecret,
-      });
-    }
-    // Fallback to regular account if company account not configured
+// Always uses company account if configured, otherwise falls back to regular
+function getRazorpayInstance(_userType?: 'individual' | 'company' | 'dealer' | 'hockey-india') {
+  // Always use company Razorpay account if configured
+  const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
+  const companyKeySecret = process.env.RAZORPAY_COMPANY_KEY_SECRET;
+  
+  if (companyKeyId && companyKeySecret) {
+    return new Razorpay({
+      key_id: companyKeyId,
+      key_secret: companyKeySecret,
+    });
   }
   
-  // Default: use regular Razorpay account for individual/dealer users
+  // Default: use regular Razorpay account if company account not configured
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     throw new Error('Razorpay credentials not configured');
   }
@@ -36,13 +33,11 @@ function getRazorpayInstance(userType?: 'individual' | 'company' | 'dealer' | 'h
   });
 }
 
-// Get the appropriate Razorpay Key ID based on user type
-function getRazorpayKeyId(userType?: 'individual' | 'company' | 'dealer' | 'hockey-india'): string {
-  if (userType === 'company') {
-    const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
-    if (companyKeyId) {
-      return companyKeyId;
-    }
+// Get the appropriate Razorpay Key ID
+function getRazorpayKeyId(_userType?: 'individual' | 'company' | 'dealer' | 'hockey-india'): string {
+  const companyKeyId = process.env.RAZORPAY_COMPANY_KEY_ID;
+  if (companyKeyId) {
+    return companyKeyId;
   }
   return process.env.RAZORPAY_KEY_ID!;
 }

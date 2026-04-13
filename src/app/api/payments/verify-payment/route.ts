@@ -93,11 +93,8 @@ export async function POST(request: NextRequest) {
     }
 
     // PRODUCTION: Validate Razorpay secret is configured
-    // Use company account secret for company users, regular secret for others
-    let razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (order.userType === 'company' && process.env.RAZORPAY_COMPANY_KEY_SECRET) {
-      razorpaySecret = process.env.RAZORPAY_COMPANY_KEY_SECRET;
-    }
+    // Use company account secret for all users, fallback to regular secret
+    const razorpaySecret = process.env.RAZORPAY_COMPANY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
     
     if (!razorpaySecret) {
       logError('Razorpay key secret not configured', new Error('RAZORPAY_KEY_SECRET is missing'));
