@@ -1,19 +1,13 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'framer-motion', '@tanstack/react-table'],
   },
   
-  // Output configuration - removed 'standalone' as Vercel handles deployment differently
-  // output: 'standalone', // Commented out for Vercel compatibility
-  
   // Explicitly set workspace root to avoid lockfile detection issues
   // Using process.cwd() which works reliably in both local and Vercel environments
   outputFileTracingRoot: process.cwd(),
-  
-  // generateBuildId removed - let Vercel handle build IDs automatically
   
   // Image optimization
   images: {
@@ -62,10 +56,6 @@ const nextConfig: NextConfig = {
   // Compression and optimization
   compress: true,
   poweredByHeader: false,
-  
-  // Webpack config removed - Vercel handles optimization automatically
-  
-  // Headers removed - using vercel.json for header configuration to avoid conflicts
 };
 
 export default nextConfig;
