@@ -1,10 +1,23 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'framer-motion', '@tanstack/react-table'],
   },
-  
+
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src'),
+    };
+    return config;
+  },
+
   // Explicitly set workspace root to avoid lockfile detection issues
   // Using process.cwd() which works reliably in both local and Vercel environments
   outputFileTracingRoot: process.cwd(),
