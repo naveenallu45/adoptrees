@@ -30,10 +30,10 @@ import {
   DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '../../../components/ui/toggle-group';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useAdoptionMutations } from '@/hooks/useAdminMutations';
+import { useAdoptionMutations } from '../../../hooks/useAdminMutations';
 
 interface Adoption {
   _id: string;

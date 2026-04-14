@@ -6,7 +6,7 @@ import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { fetchAdminStats, type AdminStats } from '@/hooks/useAdminData';
+import { fetchAdminStats, type AdminStats } from '../../hooks/useAdminData';
 
 
 export default function AdminDashboard() {

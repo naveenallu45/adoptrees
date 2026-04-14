@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
-import AdminSidebar from '@/components/Admin/AdminSidebar';
-import AuthGuard from '@/components/Admin/AuthGuard';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
+import AuthGuard from '../../components/Admin/AuthGuard';
 
 export default function AdminLayout({
   children,
