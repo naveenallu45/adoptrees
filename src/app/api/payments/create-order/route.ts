@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     }
     
     const trees = await Tree.find({ _id: { $in: treeIds }, isActive: true })
-      .select('_id name imageUrl price oxygenKgs co2 treeType')
+      .select('_id name imageUrl price oxygenKgs co2 treeType packagePrice')
       .lean(); // Use lean() for faster queries - returns plain JS objects
     
     if (trees.length !== treeIds.length) {
@@ -191,12 +191,19 @@ export async function POST(request: NextRequest) {
       const resolvedTreeType = item.treeTypeOverride || tree.treeType || 'individual';
       const finalTreeType = resolvedTreeType === 'dealer' ? 'individual' : resolvedTreeType;
 
+      const effectivePrice = ((finalTreeType === 'company' || finalTreeType === 'forest') &&
+        tree.packagePrice !== undefined &&
+        tree.packagePrice !== null &&
+        tree.packagePrice > 0)
+        ? tree.packagePrice
+        : tree.price;
+
       return {
         treeId: String(tree._id),
         treeName: tree.name,
         treeImageUrl: tree.imageUrl,
         quantity: item.quantity,
-        price: tree.price,
+        price: effectivePrice,
         oxygenKgs: tree.oxygenKgs,
         co2Kgs: (tree.co2 !== undefined && tree.co2 !== null) ? tree.co2 : undefined,
         treeType: finalTreeType,

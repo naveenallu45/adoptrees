@@ -57,15 +57,23 @@ export async function POST(request: NextRequest) {
         throw new Error(`Tree not found: ${item.treeId}`);
       }
 
+      const resolvedTreeType = item.treeTypeOverride || tree.treeType || 'individual';
+      const effectivePrice = ((resolvedTreeType === 'company' || resolvedTreeType === 'forest') &&
+        tree.packagePrice !== undefined &&
+        tree.packagePrice !== null &&
+        tree.packagePrice > 0)
+        ? tree.packagePrice
+        : tree.price;
+
       return {
         treeId: String(tree._id),
         treeName: tree.name,
         treeImageUrl: tree.imageUrl,
         quantity: item.quantity,
-        price: tree.price,
+        price: effectivePrice,
         oxygenKgs: tree.oxygenKgs,
         co2Kgs: (tree.co2 !== undefined && tree.co2 !== null) ? tree.co2 : undefined,
-        treeType: item.treeTypeOverride || tree.treeType || 'individual',
+        treeType: resolvedTreeType,
         adoptionType: item.adoptionType || 'self',
         recipientName: item.recipientName,
         recipientEmail: item.recipientEmail,
