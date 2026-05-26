@@ -11,7 +11,10 @@ import {
   requireIndividualSession,
   serializeEcoUser,
 } from '@/lib/eco-community';
-import { sendEcoFriendRequestEmail } from '@/lib/email';
+import {
+  sendEcoFriendAddedConfirmationEmail,
+  sendEcoFriendRequestEmail,
+} from '@/lib/email';
 
 type PopulatedFriendship = {
   _id: unknown;
@@ -200,10 +203,10 @@ export async function POST(request: NextRequest) {
 
     if (authResult.session.user.email) {
       emailTasks.push(
-        sendEcoFriendRequestEmail({
+        sendEcoFriendAddedConfirmationEmail({
           to: authResult.session.user.email,
-          receiverName: requesterName,
-          requesterName: friendName,
+          userName: requesterName,
+          friendName,
           communityUrl,
         })
       );

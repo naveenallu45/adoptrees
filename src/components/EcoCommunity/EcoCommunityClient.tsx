@@ -474,17 +474,17 @@ export default function EcoCommunityClient() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className={`space-y-6 ${mobileTab === 'profiles' ? 'block' : 'hidden'} xl:block`}>
-            <section className="rounded-3xl border border-white/20 bg-white p-5 shadow-2xl sm:p-6">
+          <div className={`min-w-0 space-y-6 ${mobileTab === 'profiles' ? 'block' : 'hidden'} xl:block`}>
+            <section className="w-full max-w-full overflow-hidden rounded-3xl border border-white/20 bg-white p-4 shadow-2xl sm:p-6">
               <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="flex items-center gap-2 text-2xl font-black text-gray-900">
-                    <UserGroupIcon className="h-7 w-7 text-green-600" />
-                    Explore Profiles
+                <div className="min-w-0">
+                  <h2 className="flex min-w-0 items-center gap-2 text-xl font-black text-gray-900 sm:text-2xl">
+                    <UserGroupIcon className="h-6 w-6 shrink-0 text-green-600 sm:h-7 sm:w-7" />
+                    <span className="truncate">Explore Profiles</span>
                   </h2>
                   <p className="text-sm text-gray-500">Find individual users and add them as Eco Friends.</p>
                 </div>
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                   <input
                     value={search}
@@ -506,11 +506,11 @@ export default function EcoCommunityClient() {
                   No Eco Community profiles found.
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid min-w-0 gap-4 md:grid-cols-2">
                   {visibleProfiles.map((profile) => (
                     <article
                       key={profile.id}
-                      className="rounded-2xl border border-green-100 bg-gradient-to-br from-white to-emerald-50 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                      className="min-w-0 rounded-2xl border border-green-100 bg-gradient-to-br from-white to-emerald-50 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                     >
                       <div className="flex items-start gap-4">
                         <Avatar user={profile} size="md" />
