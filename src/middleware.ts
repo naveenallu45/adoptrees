@@ -62,6 +62,35 @@ export async function middleware(request: NextRequest) {
       "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com https://api.razorpay.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: https://api.razorpay.com https://checkout.razorpay.com https://maps.googleapis.com; frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com; frame-ancestors 'none';"
     );
   }
+
+  // Protect Eco Community route for individual users only
+  if (pathname.startsWith('/eco-community')) {
+    const session = await auth();
+
+    if (!session?.user) {
+      const url = new URL('/login', request.url);
+      url.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    const userType = (session.user as { userType?: string }).userType;
+    const userRole = (session.user as { role?: string }).role;
+
+    if (userRole === 'admin') {
+      const url = new URL('/admin', request.url);
+      return NextResponse.redirect(url);
+    }
+
+    if (userRole === 'wellwisher') {
+      const url = new URL('/wellwisher', request.url);
+      return NextResponse.redirect(url);
+    }
+
+    if (userType !== 'individual') {
+      const url = new URL('/dashboard/company/trees', request.url);
+      return NextResponse.redirect(url);
+    }
+  }
   
   // Protect admin routes
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
@@ -175,7 +204,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Prevent admin and wellwisher users from accessing user routes
-  const userRoutes = ['/', '/individuals', '/companies', '/about', '/cart', '/u'];
+  const userRoutes = ['/', '/individuals', '/companies', '/about', '/cart', '/eco-community', '/u'];
   const isUserRoute = userRoutes.some(route => 
     pathname === route || pathname.startsWith(route + '/')
   );

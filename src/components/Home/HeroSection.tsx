@@ -52,7 +52,7 @@ export default function HeroSection() {
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white max-w-2xl sm:max-w-3xl mx-auto mb-6 sm:mb-8 drop-shadow-lg font-medium px-4">
-            Adopt a tree or gift one to someone you care for. Every tree you plant brings India one step closer to a greener future.
+            Adopt a tree, gift one to someone you care for, and connect with Eco Friends in our community. Every tree brings India one step closer to a greener future.
           </p>
 
           {/* CTA Buttons */}
@@ -62,6 +62,9 @@ export default function HeroSection() {
             </Link>
             <Link href="/individuals" className="w-full sm:w-auto border-2 border-white/80 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold backdrop-blur-sm hover:bg-white/20 transition-all duration-300 shadow-lg hover:scale-105 text-center">
               Gift a Tree
+            </Link>
+            <Link href="/eco-community" className="w-full sm:w-auto border-2 border-emerald-300/90 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold backdrop-blur-sm hover:bg-emerald-500/25 transition-all duration-300 shadow-lg hover:scale-105 text-center">
+              Eco Community
             </Link>
             <Link 
               href="/hockey-india"

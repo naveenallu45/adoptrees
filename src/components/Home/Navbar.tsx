@@ -17,7 +17,7 @@ export default function Navbar() {
   const { getTotalItems } = useCart();
 
   // Pages that should always have white navbar background
-  const fixedWhitePages = ['/individuals', '/companies', '/hockey-india', '/about', '/eco-pavilion', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies', '/create-forest'];
+  const fixedWhitePages = ['/individuals', '/companies', '/hockey-india', '/about', '/eco-pavilion', '/eco-community', '/login', '/register', '/terms', '/privacy', '/refund', '/shipping', '/contact', '/cookies', '/create-forest'];
   
   // Check if current path starts with /trees (for tree info pages)
   const isTreeInfoPage = pathname?.startsWith('/trees/');
@@ -56,6 +56,7 @@ export default function Navbar() {
     { name: 'For Hockey India', href: '/hockey-india' },
     { name: 'Create Forest', href: '/create-forest' },
     { name: 'Eco Pavilion', href: '/eco-pavilion' },
+    ...(session?.user?.userType === 'individual' ? [{ name: 'Eco Community', href: '/eco-community' }] : []),
     { name: 'About Us', href: '/about' }
   ];
 
@@ -94,12 +95,12 @@ export default function Navbar() {
             </div>
 
             {/* Desktop Navigation Items */}
-            <div className="hidden lg:flex items-center space-x-[1.848rem] xl:space-x-[2.31rem] 2xl:space-x-[2.772rem]">
+            <div className="hidden lg:flex items-center space-x-3 xl:space-x-5 2xl:space-x-7">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`transition-all duration-300 font-bold text-[17.6px] xl:text-[19.8px] 2xl:text-[22px] tracking-tight relative group whitespace-nowrap ${
+                  className={`transition-all duration-300 font-bold text-[13.2px] xl:text-[15px] 2xl:text-[16.8px] tracking-tight relative group whitespace-nowrap ${
                     shouldUseWhiteBg 
                       ? 'text-gray-900 hover:text-green-600' 
                       : 'text-white hover:text-green-200 drop-shadow-lg'
@@ -116,7 +117,7 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Action Buttons */}
-          <div className="hidden md:flex items-center gap-2 lg:gap-3 xl:gap-4" style={{ transform: 'translateX(2vw)' }}>
+          <div className="hidden md:flex items-center gap-2 lg:gap-3 xl:gap-4">
             {/* Auth Buttons */}
             {session ? (
               <Link 
@@ -130,7 +131,7 @@ export default function Navbar() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <span className="hidden lg:inline">Profile</span>
+                <span className="hidden xl:inline">Profile</span>
               </Link>
             ) : (
               <Link href="/login" className={`flex items-center gap-1.5 text-white border border-white px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-lg font-black text-sm lg:text-base transition-all duration-200 ${
@@ -141,7 +142,7 @@ export default function Navbar() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <span className="hidden lg:inline">Login</span>
+                <span className="hidden xl:inline">Login</span>
               </Link>
             )}
 
@@ -155,7 +156,7 @@ export default function Navbar() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9" />
               </svg>
-              <span className="hidden lg:inline">Cart</span>
+              <span className="hidden xl:inline">Cart</span>
               <span className="absolute -top-2 -right-2 bg-white text-green-600 text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">{getTotalItems()}</span>
             </Link>
           </div>

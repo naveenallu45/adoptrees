@@ -80,6 +80,11 @@ async function handleRequest(request) {
     return cacheFirst(request, STATIC_CACHE);
   }
   
+  // Eco Community responses are user-specific and should not be cached.
+  if (url.pathname.startsWith('/api/eco-community')) {
+    return fetch(request);
+  }
+
   // API calls - Network First with fallback
   if (isApiCall(url)) {
     return networkFirst(request, API_CACHE);
@@ -184,12 +189,13 @@ self.addEventListener('push', (event) => {
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),
-        primaryKey: data.primaryKey
+        primaryKey: data.primaryKey,
+        url: data.url || '/'
       },
       actions: [
         {
           action: 'explore',
-          title: 'View Details',
+          title: data.actionTitle || 'Open Chat',
           icon: 'https://res.cloudinary.com/dmhdhzr6y/image/upload/w_192,h_192,c_fill,r_max/v1763716774/WhatsApp_Image_2025-11-21_at_10.35.39_AM_wvwvdy_e_background_removal_f_png.jpg_szp33f.png'
         },
         {
@@ -209,10 +215,20 @@ self.addEventListener('push', (event) => {
 // Notification click handling
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
-  }
+
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client && client.url.includes(targetUrl)) {
+          return client.focus();
+        }
+      }
+
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
 });

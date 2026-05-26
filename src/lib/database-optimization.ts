@@ -6,6 +6,11 @@ import connectDB from './mongodb';
 import User from '@/models/User';
 import Order from '@/models/Order';
 import Tree from '@/models/Tree';
+import EcoFriendRequest from '@/models/EcoFriendRequest';
+import EcoFriendship from '@/models/EcoFriendship';
+import EcoConversation from '@/models/EcoConversation';
+import EcoMessage from '@/models/EcoMessage';
+import PushSubscription from '@/models/PushSubscription';
 
 /**
  * Create database indexes for optimal performance
@@ -50,6 +55,23 @@ export async function createDatabaseIndexes() {
       treeType: 1, 
       isActive: 1 
     }); // Compound index for filtering
+
+    // Eco Community indexes
+    await EcoFriendRequest.collection.createIndex({ requester: 1, receiver: 1, status: 1 });
+    await EcoFriendRequest.collection.createIndex(
+      { pairKey: 1 },
+      { unique: true, partialFilterExpression: { status: 'pending' } }
+    );
+    await EcoFriendRequest.collection.createIndex({ receiver: 1, status: 1, createdAt: -1 });
+    await EcoFriendship.collection.createIndex({ pairKey: 1 }, { unique: true });
+    await EcoFriendship.collection.createIndex({ userA: 1, createdAt: -1 });
+    await EcoFriendship.collection.createIndex({ userB: 1, createdAt: -1 });
+    await EcoConversation.collection.createIndex({ friendship: 1 }, { unique: true });
+    await EcoConversation.collection.createIndex({ participants: 1, lastMessageAt: -1 });
+    await EcoMessage.collection.createIndex({ conversation: 1, createdAt: -1 });
+    await EcoMessage.collection.createIndex({ receiver: 1, readAt: 1 });
+    await PushSubscription.collection.createIndex({ endpoint: 1 }, { unique: true });
+    await PushSubscription.collection.createIndex({ user: 1, updatedAt: -1 });
     
     
   } catch (_error) {

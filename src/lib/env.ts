@@ -43,6 +43,11 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM_EMAIL: z.string().email().optional(),
   SMTP_FROM_NAME: z.string().optional(),
+
+  // Eco Community browser push notifications
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
   
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -78,6 +83,9 @@ function validateEnv(): Env {
       SMTP_PASSWORD: process.env.SMTP_PASSWORD,
       SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL,
       SMTP_FROM_NAME: process.env.SMTP_FROM_NAME,
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+      VAPID_SUBJECT: process.env.VAPID_SUBJECT,
       NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
     };
   }
@@ -108,6 +116,9 @@ function validateEnv(): Env {
       SMTP_PASSWORD: process.env.SMTP_PASSWORD,
       SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL,
       SMTP_FROM_NAME: process.env.SMTP_FROM_NAME,
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+      VAPID_SUBJECT: process.env.VAPID_SUBJECT,
       NODE_ENV: process.env.NODE_ENV,
     });
   } catch (_error) {

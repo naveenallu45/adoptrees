@@ -10,6 +10,7 @@ import {
   CreditCardIcon,
   GlobeAltIcon,
   SparklesIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -22,6 +23,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Your Trees', href: '/dashboard/individual/trees', icon: SparklesIcon },
   { name: 'Your Forest', href: '/dashboard/individual/forest', icon: GlobeAltIcon },
+  { name: 'Eco Community', href: '/eco-community', icon: ChatBubbleLeftRightIcon },
   { name: 'Profile', href: '/dashboard/individual/profile', icon: UserIcon },
   { name: 'Transactions', href: '/dashboard/individual/transactions', icon: CreditCardIcon },
   { name: 'Support', href: '/dashboard/individual/support', icon: QuestionMarkCircleIcon },

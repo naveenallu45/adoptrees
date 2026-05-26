@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION,
+    google: process.env.GOOGLE_SITE_VERIFICATION || "rcSN8kqwW0PGs-q_zP0oAWcX3eWVcnUMF2AuORLRnxg",
   },
   manifest: '/manifest.json',
   appleWebApp: {

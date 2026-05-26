@@ -1840,3 +1840,56 @@ export async function sendGiftRecipientGreetingEmail(
   });
 }
 
+export async function sendEcoFriendRequestEmail({
+  to,
+  receiverName,
+  requesterName,
+  communityUrl,
+}: {
+  to: string;
+  receiverName: string;
+  requesterName: string;
+  communityUrl: string;
+}): Promise<boolean> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Eco Friend</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(to right, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 26px;">Eco Community</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1f2937; margin-top: 0;">Hello ${receiverName},</h2>
+          <p style="font-size: 16px; color: #374151;">
+            ${requesterName} added you as an Eco Friend on Adoptrees.
+          </p>
+          <p style="font-size: 16px; color: #374151;">
+            You can now find them in your Eco Friends list and start chatting about your green journey.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${communityUrl}"
+               style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600;">
+              View Eco Community
+            </a>
+          </div>
+          <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
+            If you do not recognize this update, you can simply ignore this email.
+          </p>
+          <p style="color: #6b7280; font-size: 13px; margin-top: 20px;">Best regards,<br>The Adoptrees Team</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `${requesterName} added you as an Eco Friend`,
+    html,
+  });
+}
+
