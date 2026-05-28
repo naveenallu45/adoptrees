@@ -14,7 +14,7 @@ A modern, animated web application built with Next.js, TypeScript, Tailwind CSS,
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Prerequisits
 
 - Node.js 18+ 
 - npm, yarn, or pnpm
