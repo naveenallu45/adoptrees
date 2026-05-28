@@ -4,14 +4,14 @@ import { auth } from '@/lib/auth-server';
 import connectDB from '@/lib/mongodb';
 import EcoConversation from '@/models/EcoConversation';
 import EcoMessage from '@/models/EcoMessage';
-import PushSubscription from '@/models/PushSubscription';
+import User from '@/models/User';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import {
   getDisplayName,
   requireIndividualSession,
   sanitizeMessageBody,
 } from '@/lib/eco-community';
-import { sendChatPushNotification } from '@/lib/web-push';
+import { sendEcoChatMessageEmail } from '@/lib/email';
 
 type LeanConversation = {
   _id: unknown;
@@ -186,20 +186,20 @@ export async function POST(
     );
 
     const serializedMessage = serializeMessage(message.toObject() as LeanMessage);
-    const subscriptions = await PushSubscription.find({ user: receiverId })
-      .select('endpoint keys')
-      .lean<Array<{ endpoint: string; keys: { p256dh: string; auth: string } }>>();
 
-    const pushResult = await sendChatPushNotification(subscriptions, {
-      title: `New message from ${getDisplayName(authResult.session.user)}`,
-      body: messageBody,
-      conversationId: id,
-      url: `/eco-community?conversation=${id}`,
-    });
+    const receiver = await User.findById(receiverId)
+      .select('email name companyName')
+      .lean<{ email?: string; name?: string; companyName?: string } | null>();
 
-    if (pushResult.failedEndpoints.length > 0) {
-      await PushSubscription.deleteMany({
-        endpoint: { $in: pushResult.failedEndpoints },
+    if (receiver?.email) {
+      await sendEcoChatMessageEmail({
+        to: receiver.email,
+        receiverName: getDisplayName(receiver),
+        senderName: getDisplayName(authResult.session.user),
+        messageBody,
+        communityUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://adoptrees.com'}/eco-community?conversation=${id}`,
+      }).catch((emailError) => {
+        console.error('Failed to send Eco Community chat email:', emailError);
       });
     }
 

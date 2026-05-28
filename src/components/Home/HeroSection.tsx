@@ -64,7 +64,7 @@ export default function HeroSection() {
               Gift a Tree
             </Link>
             <Link href="/eco-community" className="w-full sm:w-auto border-2 border-emerald-300/90 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold backdrop-blur-sm hover:bg-emerald-500/25 transition-all duration-300 shadow-lg hover:scale-105 text-center">
-              Eco Community
+              Login to Connect with Your Eco Friend
             </Link>
             <Link 
               href="/hockey-india"

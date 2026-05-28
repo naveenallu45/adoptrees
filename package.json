@@ -36,7 +36,7 @@
     "@types/nodemailer": "^7.0.4",
     "@types/redis": "^4.0.10",
     "@types/web-push": "^3.6.4",
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^3.0.3",
     "canvas": "^3.2.0",
     "cashfree-pg-sdk-javascript": "^2.0.8",
     "class-variance-authority": "^0.7.1",

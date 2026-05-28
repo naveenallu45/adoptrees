@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
-  BellIcon,
   ChatBubbleLeftRightIcon,
   CheckIcon,
   MagnifyingGlassIcon,
@@ -103,13 +102,6 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
-}
-
 function Avatar({ user, size = 'md' }: { user: EcoUser; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClass = {
     sm: 'h-10 w-10',
@@ -145,7 +137,6 @@ export default function EcoCommunityClient() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [notificationStatus, setNotificationStatus] = useState<'checking' | 'unsupported' | 'disabled' | 'enabled'>('checking');
   const friendsSectionRef = useRef<HTMLElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -277,19 +268,6 @@ export default function EcoCommunityClient() {
     };
   }, [activeFriend?.conversationId, loadMessages]);
 
-  useEffect(() => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setNotificationStatus('unsupported');
-      return;
-    }
-
-    if (Notification.permission === 'granted') {
-      setNotificationStatus('enabled');
-    } else {
-      setNotificationStatus('disabled');
-    }
-  }, []);
-
   const addEcoFriend = async (profile: EcoProfile) => {
     setBusyId(profile.id);
     try {
@@ -356,55 +334,6 @@ export default function EcoCommunityClient() {
     }
   };
 
-  const enableNotifications = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setNotificationStatus('unsupported');
-      toast.error('Push notifications are not supported by this browser');
-      return;
-    }
-
-    try {
-      const config = await fetchJson<{ publicKey: string | null; enabled: boolean }>(
-        '/api/eco-community/push-subscriptions'
-      );
-
-      if (!config.enabled || !config.publicKey) {
-        toast.error('Chat push notifications are not configured yet');
-        return;
-      }
-
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        setNotificationStatus('disabled');
-        toast.error('Notification permission was not granted');
-        return;
-      }
-
-      const registration =
-        (await navigator.serviceWorker.getRegistration()) ||
-        (await navigator.serviceWorker.register('/sw.js'));
-      const subscription =
-        (await registration.pushManager.getSubscription()) ||
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(config.publicKey),
-        }));
-
-      await fetchJson('/api/eco-community/push-subscriptions', {
-        method: 'POST',
-        body: JSON.stringify({
-          subscription: subscription.toJSON(),
-          userAgent: navigator.userAgent,
-        }),
-      });
-
-      setNotificationStatus('enabled');
-      toast.success('Chat notifications enabled');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to enable notifications');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-950 via-emerald-900 to-green-800 pt-24 pb-16">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -413,35 +342,25 @@ export default function EcoCommunityClient() {
       </div>
 
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
-        <section className="mb-8 overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 p-6 text-white shadow-2xl backdrop-blur-md sm:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <section className="mb-4 overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 text-white shadow-2xl backdrop-blur-md sm:mb-8 sm:rounded-[2rem] sm:p-8">
+          <div className="flex flex-col gap-3 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200/40 bg-white/10 px-4 py-2 text-sm font-bold text-emerald-100">
-                <SparklesIcon className="h-5 w-5" />
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200/40 bg-white/10 px-3 py-1.5 text-xs font-bold text-emerald-100 sm:mb-4 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm">
+                <SparklesIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 Individual Eco Community
               </div>
-              <h1 className="text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="text-2xl font-black tracking-tight sm:text-5xl lg:text-6xl">
                 Meet Eco Friends. Grow greener together.
               </h1>
-              <p className="mt-4 max-w-2xl text-base text-emerald-50 sm:text-lg">
+              <p className="mt-2 max-w-2xl text-xs text-emerald-50 sm:mt-4 sm:text-lg">
                 Discover other Adoptrees individual users, add them directly as Eco Friends,
                 and start chatting about trees, forests, and climate action.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={enableNotifications}
-              disabled={notificationStatus === 'enabled' || notificationStatus === 'unsupported'}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-green-900 shadow-xl transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <BellIcon className="h-5 w-5" />
-              {notificationStatus === 'enabled'
-                ? 'Notifications Enabled'
-                : notificationStatus === 'unsupported'
-                  ? 'Notifications Unsupported'
-                  : 'Enable Chat Notifications'}
-            </button>
+            <div className="rounded-xl bg-white px-4 py-2 text-sm font-black text-green-900 shadow-xl sm:rounded-2xl sm:px-5 sm:py-3 sm:text-base">
+              Chat replies are sent by email
+            </div>
           </div>
         </section>
 
@@ -549,10 +468,10 @@ export default function EcoCommunityClient() {
 
           </div>
 
-          <aside className={`space-y-6 ${mobileTab === 'friends' ? 'block' : 'hidden'} xl:block`}>
-            <section ref={friendsSectionRef} className="rounded-3xl border border-white/20 bg-white p-5 shadow-2xl sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 text-2xl font-black text-gray-900">
-                <ChatBubbleLeftRightIcon className="h-7 w-7 text-green-600" />
+          <aside className={`min-w-0 space-y-6 ${mobileTab === 'friends' ? 'block' : 'hidden'} xl:block`}>
+            <section ref={friendsSectionRef} className="w-full max-w-full overflow-hidden rounded-3xl border border-white/20 bg-white p-4 shadow-2xl sm:p-6">
+              <h2 className="mb-4 flex min-w-0 items-center gap-2 text-xl font-black text-gray-900 sm:text-2xl">
+                <ChatBubbleLeftRightIcon className="h-6 w-6 shrink-0 text-green-600 sm:h-7 sm:w-7" />
                 {activeFriend ? 'Eco Friends Chat' : 'Eco Friends'}
               </h2>
 
@@ -563,13 +482,13 @@ export default function EcoCommunityClient() {
                   <p className="mt-1 text-sm text-green-700">Open Eco Profiles and add someone to start chatting.</p>
                 </div>
               ) : !activeFriend ? (
-                <div className="mb-5 space-y-3">
+                <div className="mb-5 min-w-0 space-y-3">
                   {friends.map((friend) => (
                     <div
                       key={friend.friendshipId}
-                      className="rounded-2xl border border-gray-100 bg-white p-3 transition hover:border-green-200 hover:bg-green-50/60"
+                      className="min-w-0 rounded-2xl border border-gray-100 bg-white p-2.5 transition hover:border-green-200 hover:bg-green-50/60 sm:p-3"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                         <Avatar user={friend.user} size="sm" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-black text-gray-900">{friend.user.name}</p>
@@ -580,12 +499,13 @@ export default function EcoCommunityClient() {
                         <button
                           type="button"
                           onClick={() => openChat(friend)}
-                          className="relative inline-flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-2 text-xs font-black text-white shadow transition hover:bg-green-700"
+                          className="relative inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-green-600 px-2.5 py-2 text-xs font-black text-white shadow transition hover:bg-green-700 sm:px-3"
+                          aria-label={`Chat with ${friend.user.name}`}
                         >
                           <ChatBubbleLeftRightIcon className="h-4 w-4" />
-                          Chat
+                          <span className="hidden sm:inline">Chat</span>
                           {friend.unreadCount > 0 && (
-                            <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-black text-white ring-2 ring-white">
+                            <span className="absolute -right-1 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-black text-white ring-2 ring-white">
                               {friend.unreadCount > 9 ? '9+' : friend.unreadCount}
                             </span>
                           )}
