@@ -19,7 +19,7 @@ A modern, animated web application built with Next.js, TypeScript, Tailwind CSS,
 - Node.js 18+ 
 - npm, yarn, or pnpm
 
-### Installation
+#### Installation
 
 1. Clone the repository:
 ```bash
