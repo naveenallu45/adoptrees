@@ -227,7 +227,8 @@ export async function GET(
       } else if (order.isGift && order.giftRecipientName) {
         // For gift orders, use gift recipient name
         currentUserName = order.giftRecipientName;
-        currentProfilePicUrl = user.image || undefined;
+        const firstGiftItem = order.items.find((item: { adoptionType?: string; recipientProfilePicture?: string }) => item.adoptionType === 'gift' && item.recipientProfilePicture) as { recipientProfilePicture?: string } | undefined;
+        currentProfilePicUrl = order.giftRecipientProfilePicture || firstGiftItem?.recipientProfilePicture || undefined;
       } else {
         // For regular orders, use the user's account info
         // Prefer userType-specific name: companyName for companies, name for individuals

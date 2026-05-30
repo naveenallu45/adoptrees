@@ -14,6 +14,7 @@ export interface CartItem {
   adoptionType?: 'self' | 'gift';
   recipientName?: string;
   recipientEmail?: string;
+  recipientProfilePicture?: string;
   giftMessage?: string;
   // Dealer customer fields
   customerName?: string;

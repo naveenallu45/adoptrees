@@ -164,16 +164,20 @@ export async function reconcileOrderPayment(orderId: string): Promise<{
 
     // Case 3: Payment succeeded but order not fully processed
     if (order.paymentStatus === 'paid' && razorpayPaymentStatus?.status === 'captured') {
-      // Check if order is missing critical data (certificate, wellwisher, etc.)
-      const needsProcessing = !order.certificate || 
-                              !order.assignedWellwisher || 
-                              !order.wellwisherTasks || 
+      // Check if order is missing critical post-payment work.
+      const needsProcessing = !order.thankYouEmailSentAt ||
+                              !order.wellwisherTaskEmailSentAt ||
+                              (order.isGift && !order.giftRecipientGreetingEmailSentAt) ||
+                              !order.assignedWellwisher ||
+                              !order.wellwisherTasks ||
                               order.wellwisherTasks.length === 0;
 
       if (needsProcessing) {
         logPaymentEvent('reconciliation_order_incomplete', {
           orderId: order.orderId,
-          missingCertificate: !order.certificate,
+          missingThankYouEmail: !order.thankYouEmailSentAt,
+          missingWellwisherEmail: !order.wellwisherTaskEmailSentAt,
+          missingGiftGreetingEmail: order.isGift && !order.giftRecipientGreetingEmailSentAt,
           missingWellwisher: !order.assignedWellwisher,
           missingTasks: !order.wellwisherTasks || order.wellwisherTasks.length === 0
         });
@@ -188,7 +192,9 @@ export async function reconcileOrderPayment(orderId: string): Promise<{
             message: 'Order payment succeeded but was incomplete. Order processing has been completed.',
             details: {
               whatWasFixed: {
-                certificate: !order.certificate,
+                thankYouEmail: !order.thankYouEmailSentAt,
+                wellwisherEmail: !order.wellwisherTaskEmailSentAt,
+                giftGreetingEmail: order.isGift && !order.giftRecipientGreetingEmailSentAt,
                 wellwisher: !order.assignedWellwisher,
                 tasks: !order.wellwisherTasks || order.wellwisherTasks.length === 0
               }
@@ -257,14 +263,28 @@ export async function reconcileAllInconsistentOrders(limit: number = 20): Promis
 
   try {
     // Find orders that might have inconsistencies
-    // 1. Paid orders without certificate/wellwisher (incomplete processing) - prioritize these
+    // 1. Paid orders missing email markers or well-wisher assignment - prioritize these
     // 2. Failed orders with payment IDs (might actually be paid) - check fewer to avoid API rate limits
     const incompletePaidOrders = await Order.find({
       paymentStatus: 'paid',
       $or: [
-        { certificate: { $exists: false } },
+        { thankYouEmailSentAt: { $exists: false } },
+        { thankYouEmailSentAt: null },
+        { wellwisherTaskEmailSentAt: { $exists: false } },
+        { wellwisherTaskEmailSentAt: null },
+        { isGift: true, giftRecipientGreetingEmailSentAt: { $exists: false } },
+        { isGift: true, giftRecipientGreetingEmailSentAt: null },
         { assignedWellwisher: { $exists: false } },
+        { assignedWellwisher: null },
         { 'wellwisherTasks.0': { $exists: false } }
+      ],
+      $and: [
+        {
+          $or: [
+            { emailAutoRetryAttemptedAt: { $exists: false } },
+            { emailAutoRetryAttemptedAt: null }
+          ]
+        }
       ]
     })
     .sort({ createdAt: -1 }) // Process newest first
@@ -290,11 +310,22 @@ export async function reconcileAllInconsistentOrders(limit: number = 20): Promis
       const batchPromises = batch.map(async (order) => {
         try {
           // For incomplete paid orders, skip Razorpay API check (faster)
-          if (order.paymentStatus === 'paid' && (!order.certificate || !order.assignedWellwisher)) {
+          const needsPostPaymentProcessing =
+            order.paymentStatus === 'paid' &&
+            (!order.thankYouEmailSentAt ||
+              !order.wellwisherTaskEmailSentAt ||
+              (order.isGift && !order.giftRecipientGreetingEmailSentAt) ||
+              !order.assignedWellwisher ||
+              !order.wellwisherTasks ||
+              order.wellwisherTasks.length === 0);
+
+          if (needsPostPaymentProcessing) {
             const { processOrderCompletion } = await import('@/lib/order-processing');
+            order.emailAutoRetryAttemptedAt = new Date();
+            await order.save();
             const processingResult = await processOrderCompletion(order);
             
-            if (processingResult.success && (processingResult.completed.certificate || processingResult.completed.wellwisher)) {
+            if (processingResult.success && (processingResult.completed.email || processingResult.completed.wellwisher)) {
               results.reconciled++;
               results.details.push({
                 orderId: order.orderId,

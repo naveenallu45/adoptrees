@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { CartItem } from '@/contexts/CartContext';
 
@@ -29,7 +30,10 @@ const OCCASION_OPTIONS = [
 export default function AdoptionDetails({ item, onUpdate }: AdoptionDetailsProps) {
   const [showGiftDetails, setShowGiftDetails] = useState(false);
   const [isOccasionDropdownOpen, setIsOccasionDropdownOpen] = useState(false);
+  const [isUploadingRecipientImage, setIsUploadingRecipientImage] = useState(false);
+  const [recipientImageError, setRecipientImageError] = useState<string | null>(null);
   const occasionDropdownRef = useRef<HTMLDivElement>(null);
+  const recipientImageInputRef = useRef<HTMLInputElement>(null);
 
   // Close occasion dropdown when clicking outside
   useEffect(() => {
@@ -118,6 +122,43 @@ export default function AdoptionDetails({ item, onUpdate }: AdoptionDetailsProps
     }
   };
 
+  const handleRecipientProfileUpload = async (file: File) => {
+    setRecipientImageError(null);
+
+    if (!file.type.startsWith('image/')) {
+      setRecipientImageError('Please upload a valid image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setRecipientImageError('Image size must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingRecipientImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/gift-recipient-profile/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to upload recipient profile picture');
+      }
+
+      onUpdate({ recipientProfilePicture: result.data.url });
+    } catch (error) {
+      setRecipientImageError(error instanceof Error ? error.message : 'Failed to upload recipient profile picture');
+    } finally {
+      setIsUploadingRecipientImage(false);
+    }
+  };
+
 
   return (
     <div className="mt-4 border-t border-gray-200 pt-4">
@@ -192,6 +233,73 @@ export default function AdoptionDetails({ item, onUpdate }: AdoptionDetailsProps
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">We&apos;ll send a greeting email to the recipient</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Recipient Profile Picture <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-3 rounded-lg border border-green-100 bg-green-50/60 p-3">
+                  {item.recipientProfilePicture ? (
+                    <Image
+                      src={item.recipientProfilePicture}
+                      alt="Recipient profile preview"
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 rounded-full object-cover ring-2 ring-white"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-xs font-bold text-green-700 ring-2 ring-green-100">
+                      Photo
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <input
+                      ref={recipientImageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          handleRecipientProfileUpload(file);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => recipientImageInputRef.current?.click()}
+                      disabled={isUploadingRecipientImage}
+                      className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isUploadingRecipientImage
+                        ? 'Uploading...'
+                        : item.recipientProfilePicture
+                          ? 'Change Photo'
+                          : 'Upload Photo'}
+                    </button>
+                    {item.recipientProfilePicture && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdate({ recipientProfilePicture: '' });
+                          if (recipientImageInputRef.current) {
+                            recipientImageInputRef.current.value = '';
+                          }
+                        }}
+                        className="ml-2 text-sm font-semibold text-gray-500 hover:text-red-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Required. This photo will be printed on the gift certificate.
+                    </p>
+                    {recipientImageError && (
+                      <p className="mt-1 text-xs font-semibold text-red-600">{recipientImageError}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>

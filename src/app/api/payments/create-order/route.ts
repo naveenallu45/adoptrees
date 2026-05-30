@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { items, isGift, giftRecipientName, giftRecipientEmail, giftMessage, couponCode, couponDiscount, creditsUsed, finalAmount } = body;
+    const { items, isGift, giftRecipientName, giftRecipientEmail, giftRecipientProfilePicture, giftMessage, couponCode, couponDiscount, creditsUsed, finalAmount } = body;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -121,10 +121,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate gift fields if it's a gift
-    if (isGift && (!giftRecipientName || !giftRecipientEmail)) {
+    if (isGift && (!giftRecipientName || !giftRecipientEmail || !giftRecipientProfilePicture)) {
       return NextResponse.json(
-        { success: false, error: 'Gift recipient name and email are required for gift orders' },
+        { success: false, error: 'Gift recipient name, email, and profile picture are required for gift orders' },
         { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    }
+
+    const giftItemMissingProfilePicture = items.find((item: { adoptionType?: string; recipientProfilePicture?: string }) =>
+      item.adoptionType === 'gift' && (!item.recipientProfilePicture || !item.recipientProfilePicture.trim())
+    );
+    if (giftItemMissingProfilePicture) {
+      return NextResponse.json(
+        { success: false, error: 'Recipient profile picture is required for every gift item' },
+        {
           status: 400,
           headers: {
             'Access-Control-Allow-Origin': '*',
@@ -180,7 +197,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order items with tree details
-    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; giftMessage?: string; forestName?: string; occasion?: string; treeTypeOverride?: 'individual' | 'company' | 'forest'; customerName?: string; customerEmail?: string; customerPhone?: string; vehicleName?: string; customerProfilePicture?: string; }) => {
+    const orderItems = items.map((item: { treeId: string; quantity: number; adoptionType?: string; recipientName?: string; recipientEmail?: string; recipientProfilePicture?: string; giftMessage?: string; forestName?: string; occasion?: string; treeTypeOverride?: 'individual' | 'company' | 'forest'; customerName?: string; customerEmail?: string; customerPhone?: string; vehicleName?: string; customerProfilePicture?: string; }) => {
       const tree = trees.find(t => String(t._id) === item.treeId);
       if (!tree) {
         throw new Error(`Tree not found: ${item.treeId}`);
@@ -210,6 +227,7 @@ export async function POST(request: NextRequest) {
         adoptionType: item.adoptionType || 'self',
         recipientName: item.recipientName,
         recipientEmail: item.recipientEmail,
+        recipientProfilePicture: item.recipientProfilePicture,
         giftMessage: item.giftMessage,
         forestName: item.forestName,
         occasion: item.occasion,
@@ -604,6 +622,7 @@ export async function POST(request: NextRequest) {
       isGift,
       giftRecipientName,
       giftRecipientEmail,
+      giftRecipientProfilePicture,
       giftMessage,
       status: 'pending',
       paymentStatus: 'pending',

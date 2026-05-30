@@ -5,8 +5,16 @@ import { env } from './env';
 const createTransporter = () => {
   // If SMTP is not configured, return null (for development)
   if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASSWORD) {
+    const missingKeys = [
+      !env.SMTP_HOST ? 'SMTP_HOST' : null,
+      !env.SMTP_USER ? 'SMTP_USER' : null,
+      !env.SMTP_PASSWORD ? 'SMTP_PASSWORD' : null,
+    ].filter(Boolean);
+
     if (process.env.NODE_ENV === 'development') {
-      console.warn('SMTP not configured. Email sending will be disabled.');
+      console.warn(`SMTP not configured. Missing: ${missingKeys.join(', ')}. Email sending will be disabled.`);
+    } else {
+      console.error(`[EMAIL] SMTP is not configured. Missing: ${missingKeys.join(', ')}. No email will be sent.`);
     }
     return null;
   }
@@ -47,6 +55,10 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       });
       return true; // Return true in dev to allow testing
     }
+    console.error('[EMAIL] Email not sent because SMTP transporter is unavailable:', {
+      to: options.to,
+      subject: options.subject,
+    });
     return false;
   }
 

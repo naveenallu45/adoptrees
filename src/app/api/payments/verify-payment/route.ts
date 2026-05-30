@@ -3,11 +3,9 @@ import crypto from 'crypto';
 import { auth } from '@/lib/auth-server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
-import User from '@/models/User';
 import { checkRateLimit } from '@/lib/redis-rate-limit';
 import { logPaymentEvent, logError } from '@/lib/logger';
 import { processOrderCompletion } from '@/lib/order-processing';
-import { generateCertificate } from '@/lib/certificate';
 // Removed Cloudinary upload - certificates stored only in database
 
 // Handle CORS preflight requests
@@ -151,114 +149,24 @@ export async function POST(request: NextRequest) {
 
     // Check if order already processed
     if (order.paymentStatus === 'paid') {
-      // Generate certificate if it doesn't exist
-      if (!order.certificate) {
-        try {
-          // Fetch latest user profile picture and name from database
-          // Users frequently change their profile picture, so we always fetch the latest one
-          // This ensures certificate always shows the most up-to-date profile
-          // For dealer orders, use customer's account (customerUserId) instead of dealer's account
-          // This ensures we use the customer's existing QR code and public ID
-          const userIdToUse = (order.userType === 'dealer' && order.customerUserId) 
-            ? order.customerUserId 
-            : order.userId;
-          const user = await User.findById(userIdToUse).select('publicId qrCode image name companyName userType');
-          if (user && user.publicId) {
-            const treesCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-            const oxygenKgs = order.items.reduce((sum, item) => sum + (item.oxygenKgs * item.quantity), 0);
-            // Calculate CO2 from order items - use actual tree CO2 value (can be negative), only fallback if not provided
-            const co2Kgs = order.items.reduce((sum, item) => {
-              // Use item.co2Kgs if it's defined (including 0 or negative values), otherwise calculate from oxygen
-              const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
-                ? item.co2Kgs * item.quantity
-                : (item.oxygenKgs * 0.715) * item.quantity;
-              return sum + itemCo2;
-            }, 0);
-            
-            // Collect unique tree names from order items
-            const treeNames: string[] = [];
-            order.items.forEach(item => {
-              if (!treeNames.includes(item.treeName)) {
-                treeNames.push(item.treeName);
-              }
-            });
-            
-            // For dealer orders, always use customer's account info (not dealer's)
-            // We already fetched the customer's account via customerUserId, so use that
-            let certificateUserName: string;
-            let profilePicUrl: string | undefined;
-            
-            if (order.userType === 'dealer' && order.customerUserId) {
-              // For dealer orders, use customer's account name and profile picture
-              // Never use dealer's info - always use customer's account data
-              certificateUserName = user.name || 'Customer';
-              profilePicUrl = user.image || undefined;
-            } else if (order.isGift && order.giftRecipientName) {
-              // For gift orders, use gift recipient name
-              certificateUserName = order.giftRecipientName;
-              profilePicUrl = user.image || undefined;
-            } else {
-              // For regular orders, use the user's account info
-              if (user.userType === 'company' || user.userType === 'dealer') {
-                certificateUserName = user.companyName || user.name || order.userName || (user.userType === 'dealer' ? 'Dealer' : 'Company');
-              } else {
-                certificateUserName = user.name || order.userName || 'User';
-              }
-              // Always fetch fresh from database to ensure certificate uses current profile picture
-              profilePicUrl = user.image || undefined;
-            }
-            
-            // Get dealer and vehicle info for dealer orders
-            let dealerName: string | undefined;
-            let vehicleName: string | undefined;
-            let dealerImageUrl: string | undefined;
-            if (order.userType === 'dealer' && order.items.length > 0) {
-              dealerName = order.dealerName || order.showroomName || order.userName;
-              const firstItem = order.items[0] as { vehicleName?: string };
-              vehicleName = firstItem.vehicleName;
-              
-              // Fetch dealer profile information
-              try {
-                const dealer = await User.findById(order.userId).select('name companyName image').lean();
-                if (dealer) {
-                  // Use companyName for dealers if available, otherwise name
-                  if (!dealerName) {
-                    dealerName = dealer.companyName || dealer.name || order.userName;
-                  }
-                  dealerImageUrl = dealer.image || undefined;
-                }
-              } catch (dealerError) {
-                console.warn('[VERIFY-PAYMENT] Error fetching dealer profile:', dealerError);
-              }
-            }
+      const needsEmailRetry =
+        !order.thankYouEmailSentAt ||
+        !order.wellwisherTaskEmailSentAt ||
+        (order.isGift && !order.giftRecipientGreetingEmailSentAt) ||
+        !order.assignedWellwisher ||
+        !order.wellwisherTasks ||
+        order.wellwisherTasks.length === 0;
 
-            const certificateBuffer = await generateCertificate({
-              userName: certificateUserName,
-              profilePicUrl: profilePicUrl,
-              treesCount,
-              oxygenKgs,
-              co2Kgs: co2Kgs, // Always pass CO2 (calculated from items or oxygen)
-              treeNames: treeNames.length > 0 ? treeNames : undefined,
-              publicId: user.publicId,
-              orderId: order.orderId,
-              qrCode: user.qrCode, // Use stored QR code from user
-              dealerName, // Dealer name for dealer orders
-              vehicleName, // Vehicle name for dealer orders
-              dealerImageUrl, // Dealer profile image for dealer orders
-            });
-            
-            // Don't store certificate - generate on-demand when needed
-            // Certificate generation logged but not stored
-            logPaymentEvent('certificate_generated_for_existing_order', {
-              orderId: order.orderId,
-              certificateSize: certificateBuffer.length
-            });
-          }
-        } catch (certError) {
-          logError('Error generating certificate for existing order', certError as Error);
+      if (needsEmailRetry) {
+        const processingResult = await processOrderCompletion(order);
+        if (!processingResult.success || !processingResult.completed.email) {
+          logError('Retry processing for already-paid order did not fully complete', new Error(processingResult.error || 'Email not sent'), {
+            orderId: order.orderId,
+            completed: processingResult.completed
+          });
         }
       }
-      
+
       logPaymentEvent('payment_verification_already_processed', { 
         orderId,
         paymentStatus: order.paymentStatus 
@@ -290,33 +198,19 @@ export async function POST(request: NextRequest) {
     order.status = 'confirmed';
     await order.save();
 
-    // OPTIMIZED: Return success immediately for better UX
-    // Process heavy tasks (certificate, emails) in background
-    // This ensures payment verification is fast (< 1 second)
-    
-    // Fire-and-forget: Process order completion asynchronously
-    // This doesn't block the payment response
-    processOrderCompletion(order).then((processingResult) => {
-      // Log the processing result to track email completion
-      if (!processingResult.success || !processingResult.completed.email) {
-        logError('Order processing completed but email may have failed', new Error(processingResult.error || 'Email not sent'), {
-          orderId: order.orderId,
-          paymentId: razorpay_payment_id,
-          completed: processingResult.completed
-        });
-      } else {
-        logPaymentEvent('order_processing_completed_successfully', {
-          orderId: order.orderId,
-          completed: processingResult.completed
-        });
-      }
-    }).catch((processingError) => {
-      logError('Error in background order processing', processingError as Error, {
+    const processingResult = await processOrderCompletion(order);
+    if (!processingResult.success || !processingResult.completed.email) {
+      logError('Order processing completed but email may have failed', new Error(processingResult.error || 'Email not sent'), {
         orderId: order.orderId,
-        paymentId: razorpay_payment_id
+        paymentId: razorpay_payment_id,
+        completed: processingResult.completed
       });
-      // Order is already marked as paid - reconciliation cron will retry if needed
-    });
+    } else {
+      logPaymentEvent('order_processing_completed_successfully', {
+        orderId: order.orderId,
+        completed: processingResult.completed
+      });
+    }
 
     // Log payment verification
     logPaymentEvent('payment_verification_successful', {
@@ -324,7 +218,8 @@ export async function POST(request: NextRequest) {
       paymentId: razorpay_payment_id,
       totalAmount: order.totalAmount,
       itemsCount: order.items.length,
-      backgroundProcessing: true
+      emailSent: processingResult.completed.email,
+      wellwisherProcessed: processingResult.completed.wellwisher
     });
     
     // Return success immediately - user gets instant feedback
@@ -496,7 +391,8 @@ export async function POST(request: NextRequest) {
             } else if (order.isGift && order.giftRecipientName) {
               // For gift orders, use gift recipient name
               certificateUserName = order.giftRecipientName;
-              profilePicUrl = (user.status === 'fulfilled' && user.value) ? user.value.image : undefined;
+              const firstGiftItem = order.items.find((item: { adoptionType?: string; recipientProfilePicture?: string }) => item.adoptionType === 'gift' && item.recipientProfilePicture) as { recipientProfilePicture?: string } | undefined;
+              profilePicUrl = order.giftRecipientProfilePicture || firstGiftItem?.recipientProfilePicture || undefined;
             } else {
               // For regular orders, use the user's account info
               if (user.status === 'fulfilled' && user.value) {

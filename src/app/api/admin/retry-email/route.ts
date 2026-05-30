@@ -3,9 +3,8 @@ import { auth } from '@/lib/auth-server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import User from '@/models/User';
-import { sendThankYouEmailWithCertificate } from '@/lib/email';
-import { generateCertificate } from '@/lib/certificate';
-import { logPaymentEvent, logError } from '@/lib/logger';
+import { processOrderCompletion } from '@/lib/order-processing';
+import { logError } from '@/lib/logger';
 
 /**
  * API endpoint to retry sending thank you emails with certificates
@@ -23,6 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await connectDB();
+
     // Check if user is admin
     const user = await User.findById(session.user.id);
     if (!user || user.role !== 'admin') {
@@ -32,8 +33,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
-
     const body = await request.json();
     const { orderIds } = body;
 
@@ -42,12 +41,11 @@ export async function POST(request: NextRequest) {
     if (orderIds && Array.isArray(orderIds) && orderIds.length > 0) {
       // Find specific orders
       orders = await Order.find({
-        orderId: { $in: orderIds }
-      })
-        .select('orderId userId userEmail userName userType items isGift giftRecipientEmail giftRecipientName certificateUrl certificate status paymentStatus createdAt')
-        .lean();
+        orderId: { $in: orderIds },
+        paymentStatus: 'paid'
+      });
     } else {
-      // Find recent paid orders with certificates (last 7 days)
+      // Find recent paid orders that still need one or more emails/assignment actions.
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -55,15 +53,20 @@ export async function POST(request: NextRequest) {
         paymentStatus: 'paid',
         status: { $in: ['confirmed', 'planted', 'completed'] },
         $or: [
-          { certificateUrl: { $exists: true, $ne: null } },
-          { certificate: { $exists: true } }
+          { thankYouEmailSentAt: { $exists: false } },
+          { thankYouEmailSentAt: null },
+          { wellwisherTaskEmailSentAt: { $exists: false } },
+          { wellwisherTaskEmailSentAt: null },
+          { assignedWellwisher: { $exists: false } },
+          { assignedWellwisher: null },
+          { 'wellwisherTasks.0': { $exists: false } },
+          { isGift: true, giftRecipientGreetingEmailSentAt: { $exists: false } },
+          { isGift: true, giftRecipientGreetingEmailSentAt: null }
         ],
         createdAt: { $gte: sevenDaysAgo }
       })
         .sort({ createdAt: -1 })
-        .limit(20)
-        .select('orderId userId userEmail userName userType items isGift giftRecipientEmail giftRecipientName certificateUrl certificate status paymentStatus createdAt')
-        .lean();
+        .limit(20);
     }
 
     if (orders.length === 0) {
@@ -90,134 +93,15 @@ export async function POST(request: NextRequest) {
       try {
         results.processed++;
 
-        // Determine recipient
-        const recipientEmail = order.isGift && order.giftRecipientEmail
-          ? order.giftRecipientEmail
-          : order.userEmail;
-        const recipientName = order.isGift && order.giftRecipientName
-          ? order.giftRecipientName
-          : order.userName;
+        const completionResult = await processOrderCompletion(order);
 
-        if (!recipientEmail || !recipientEmail.includes('@')) {
-          results.failed++;
-          results.errors.push({
-            orderId: order.orderId,
-            error: `Invalid email address: ${recipientEmail}`
-          });
-          continue;
-        }
-
-        // Generate certificate on-demand (not stored)
-        const user = await User.findById(order.userId).select('publicId qrCode image name companyName userType');
-
-        if (!user || !user.publicId) {
-          results.failed++;
-          results.errors.push({
-            orderId: order.orderId,
-            error: 'User not found or missing publicId'
-          });
-          continue;
-        }
-
-        const treesCount = order.items.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0);
-        const oxygenKgs = order.items.reduce((sum: number, item: { oxygenKgs: number; quantity: number }) => sum + (item.oxygenKgs * item.quantity), 0);
-        const co2Kgs = order.items.reduce((sum: number, item: { oxygenKgs: number; co2Kgs?: number; quantity: number }) => {
-          const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null)
-            ? item.co2Kgs * item.quantity
-            : (item.oxygenKgs * 0.715) * item.quantity;
-          return sum + itemCo2;
-        }, 0);
-
-        const treeNames: string[] = [];
-        order.items.forEach((item: { treeName: string }) => {
-          if (!treeNames.includes(item.treeName)) {
-            treeNames.push(item.treeName);
-          }
-        });
-
-        let certificateUserName: string;
-        if (order.isGift && order.giftRecipientName) {
-          certificateUserName = order.giftRecipientName;
-        } else {
-          if (user.userType === 'company') {
-            certificateUserName = user.companyName || user.name || order.userName || 'Company';
-          } else {
-            certificateUserName = user.name || order.userName || 'User';
-          }
-        }
-
-        const profilePicUrl = user.image || undefined;
-
-        // Get dealer and vehicle info for dealer orders
-        let dealerName: string | undefined;
-        let vehicleName: string | undefined;
-        if (order.userType === 'dealer' && order.items.length > 0) {
-          dealerName = order.dealerName || order.showroomName || order.userName;
-          const firstItem = order.items[0] as { vehicleName?: string };
-          vehicleName = firstItem.vehicleName;
-        }
-
-        let certificateBuffer: Buffer;
-        try {
-          certificateBuffer = await generateCertificate({
-            userName: certificateUserName,
-            profilePicUrl: profilePicUrl,
-            treesCount,
-            oxygenKgs,
-            co2Kgs,
-            treeNames: treeNames.length > 0 ? treeNames : undefined,
-            publicId: user.publicId,
-            orderId: order.orderId,
-            qrCode: user.qrCode,
-            dealerName, // Dealer name for dealer orders
-            vehicleName, // Vehicle name for dealer orders
-          });
-        } catch (certError) {
-          results.failed++;
-          results.errors.push({
-            orderId: order.orderId,
-            error: `Failed to generate certificate: ${certError instanceof Error ? certError.message : String(certError)}`
-          });
-          continue;
-        }
-
-        // Prepare dealer information if this is a dealer order
-        let dealerInfo: { dealerName?: string; showroomName?: string; vehicleName?: string } | undefined;
-        if (order.userType === 'dealer' && order.items.length > 0) {
-          const firstItem = order.items[0] as { vehicleName?: string };
-          dealerInfo = {
-            dealerName: order.dealerName,
-            showroomName: order.showroomName,
-            vehicleName: firstItem.vehicleName
-          };
-        }
-        
-        // Send email
-        const emailSent = await sendThankYouEmailWithCertificate(
-          recipientEmail,
-          recipientName,
-          order.orderId,
-          treesCount,
-          certificateBuffer,
-          dealerInfo // Pass dealer info for dealer orders
-        );
-
-        if (emailSent) {
+        if (completionResult.success && completionResult.completed.email) {
           results.success++;
-          logPaymentEvent('thank_you_email_retry_success', {
-            orderId: order.orderId,
-            recipientEmail,
-            retriedBy: session.user.id
-          });
         } else {
           results.failed++;
           results.errors.push({
             orderId: order.orderId,
-            error: 'Email sending returned false'
-          });
-          logError('Thank you email retry failed', new Error('Email sending returned false'), {
-            orderId: order.orderId,
-            recipientEmail
+            error: completionResult.error || 'Order completion did not send all required emails'
           });
         }
 

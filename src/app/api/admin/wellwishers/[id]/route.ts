@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { sendWellWisherUpdateEmail } from '@/lib/email';
 import { assignWellWisherEqually } from '@/lib/utils/wellwisher-assignment';
+import { processOrderCompletion } from '@/lib/order-processing';
 
 export async function GET(
   request: NextRequest,
@@ -288,7 +289,10 @@ export async function DELETE(
       updatePromises.push(
         Order.findByIdAndUpdate(
           order._id,
-          { $set: { assignedWellwisher: newWellWisherId } }
+          {
+            $set: { assignedWellwisher: newWellWisherId },
+            $unset: { wellwisherTaskEmailSentAt: '' }
+          }
         )
       );
 
@@ -304,6 +308,18 @@ export async function DELETE(
     // No delays - all reassignments happen immediately
     await Promise.all(updatePromises);
     await User.findByIdAndDelete(id);
+
+    const reassignedOrderIds = reassignmentUpdates.map(update => update.orderId);
+    const reassignedOrders = await Order.find({ orderId: { $in: reassignedOrderIds } });
+    await Promise.all(
+      reassignedOrders.map(async (order) => {
+        try {
+          await processOrderCompletion(order);
+        } catch (emailError) {
+          console.error(`[WELLWISHER_DELETE] Error notifying reassigned well-wisher for order ${order.orderId}:`, emailError);
+        }
+      })
+    );
 
     // Calculate statistics for response
     const totalTasks = reassignmentUpdates.reduce((sum, update) => sum + update.tasksCount, 0);

@@ -7,6 +7,27 @@ import { sendWellWisherTaskAssignmentEmail, sendThankYouEmailWithCertificate, se
 import { generateCertificate } from '@/lib/certificate';
 // Removed Cloudinary upload - certificates stored only in database
 
+async function ensureUserPublicId(user: { _id: unknown; publicId?: string; save: () => Promise<unknown> }): Promise<string | null> {
+  if (user.publicId) {
+    return user.publicId;
+  }
+
+  for (let attempts = 0; attempts < 5; attempts++) {
+    const random = Math.random().toString(36).slice(2, 8);
+    const timestamp = Date.now().toString(36).slice(-4);
+    const publicId = `${random}${timestamp}`.toLowerCase();
+    const existing = await User.findOne({ publicId }).select('_id').lean();
+
+    if (!existing) {
+      user.publicId = publicId;
+      await user.save();
+      return publicId;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Complete order processing after payment
  * This is idempotent - safe to call multiple times
@@ -116,48 +137,6 @@ export async function processOrderCompletion(order: IOrder): Promise<{
           tasksCount: wellwisherTasks.length
         });
 
-        // Send task assignment email and await completion
-        try {
-          const wellWisher = await User.findById(wellwisherId).select('email name');
-          if (wellWisher && wellWisher.email) {
-            const emailSent = await sendWellWisherTaskAssignmentEmail(
-              wellWisher.email,
-              wellWisher.name || '',
-              order.orderId,
-              wellwisherTasks,
-              {
-                totalTrees: treesCount,
-                customerName: order.userName,
-                isGift: order.isGift || false
-              }
-            );
-            
-            if (emailSent) {
-              logPaymentEvent('wellwisher_task_assignment_email_sent', {
-                orderId: order.orderId,
-                wellwisherId,
-                wellwisherEmail: wellWisher.email,
-                tasksCount: wellwisherTasks.length
-              });
-            } else {
-              logError('Well-wisher task assignment email failed to send', new Error('Email sending returned false'), {
-                orderId: order.orderId,
-                wellwisherId,
-                wellwisherEmail: wellWisher.email
-              });
-            }
-          } else {
-            logError('Well-wisher not found or missing email', new Error('Well-wisher not found'), {
-              orderId: order.orderId,
-              wellwisherId
-            });
-          }
-        } catch (emailError) {
-          logError('Error sending well-wisher email', emailError as Error, {
-            orderId: order.orderId,
-            wellwisherId
-          });
-        }
       } catch (assignmentError) {
         const errorMsg = `Error assigning well-wisher: ${assignmentError instanceof Error ? assignmentError.message : String(assignmentError)}`;
         logError('Error assigning well-wisher', assignmentError as Error, {
@@ -172,6 +151,54 @@ export async function processOrderCompletion(order: IOrder): Promise<{
       result.completed.wellwisher = true; // Already assigned
     }
 
+    if (order.assignedWellwisher && order.wellwisherTasks?.length && !order.wellwisherTaskEmailSentAt) {
+      const wellwisherId = order.assignedWellwisher.toString();
+
+      try {
+        const wellWisher = await User.findById(wellwisherId).select('email name');
+        if (wellWisher && wellWisher.email) {
+          const emailSent = await sendWellWisherTaskAssignmentEmail(
+            wellWisher.email,
+            wellWisher.name || '',
+            order.orderId,
+            order.wellwisherTasks,
+            {
+              totalTrees: treesCount,
+              customerName: order.userName,
+              isGift: order.isGift || false
+            }
+          );
+
+          if (emailSent) {
+            order.wellwisherTaskEmailSentAt = new Date();
+            await order.save();
+            logPaymentEvent('wellwisher_task_assignment_email_sent', {
+              orderId: order.orderId,
+              wellwisherId,
+              wellwisherEmail: wellWisher.email,
+              tasksCount: order.wellwisherTasks.length
+            });
+          } else {
+            logError('Well-wisher task assignment email failed to send', new Error('Email sending returned false'), {
+              orderId: order.orderId,
+              wellwisherId,
+              wellwisherEmail: wellWisher.email
+            });
+          }
+        } else {
+          logError('Well-wisher not found or missing email', new Error('Well-wisher not found'), {
+            orderId: order.orderId,
+            wellwisherId
+          });
+        }
+      } catch (emailError) {
+        logError('Error sending well-wisher email', emailError as Error, {
+          orderId: order.orderId,
+          wellwisherId
+        });
+      }
+    }
+
     // 2. Generate certificate for email (not stored - generated on-demand)
     // Always generate fresh certificate with latest user data
     if (true) { // Always generate for email
@@ -183,8 +210,28 @@ export async function processOrderCompletion(order: IOrder): Promise<{
           : order.userId;
         
         const user = await User.findById(userIdToUse).select('publicId qrCode image name companyName userType');
-        
-        if (user && user.publicId) {
+
+        if (!user) {
+          const errorMsg = 'User not found for certificate/email generation';
+          logError(errorMsg, new Error(errorMsg), {
+            orderId: order.orderId,
+            userIdToUse
+          });
+          result.success = false;
+          result.error = errorMsg;
+        } else {
+          const publicId = await ensureUserPublicId(user);
+          if (!publicId) {
+            const errorMsg = 'Unable to generate publicId for certificate/email generation';
+            logError(errorMsg, new Error(errorMsg), {
+              orderId: order.orderId,
+              userIdToUse
+            });
+            result.success = false;
+            result.error = errorMsg;
+            return result;
+          }
+
           const oxygenKgs = order.items.reduce((sum: number, item: { oxygenKgs: number; quantity: number; [key: string]: unknown }) => sum + (item.oxygenKgs * item.quantity), 0);
           const co2Kgs = order.items.reduce((sum: number, item: { oxygenKgs: number; co2Kgs?: number; quantity: number; [key: string]: unknown }) => {
             const itemCo2 = (item.co2Kgs !== undefined && item.co2Kgs !== null) 
@@ -213,7 +260,8 @@ export async function processOrderCompletion(order: IOrder): Promise<{
           } else if (order.isGift && order.giftRecipientName) {
             // For gift orders, use gift recipient name
             certificateUserName = order.giftRecipientName;
-            profilePicUrl = user.image || undefined;
+            const firstGiftItem = order.items.find((item: { adoptionType?: string; recipientProfilePicture?: string }) => item.adoptionType === 'gift' && item.recipientProfilePicture) as { recipientProfilePicture?: string } | undefined;
+            profilePicUrl = order.giftRecipientProfilePicture || firstGiftItem?.recipientProfilePicture || undefined;
           } else {
             // For regular orders, use the user's account info
             if (user.userType === 'company' || user.userType === 'dealer') {
@@ -255,7 +303,7 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             oxygenKgs,
             co2Kgs,
             treeNames: treeNames.length > 0 ? treeNames : undefined,
-            publicId: user.publicId, // Use customer's public ID for dealer orders
+            publicId, // Use customer's public ID for dealer orders
             orderId: order.orderId,
             qrCode: user.qrCode, // Use customer's QR code for dealer orders
             dealerName, // Dealer name for dealer orders
@@ -305,6 +353,8 @@ export async function processOrderCompletion(order: IOrder): Promise<{
               orderId: order.orderId
             });
             result.completed.email = false;
+          } else if (order.thankYouEmailSentAt) {
+            result.completed.email = true;
           } else {
             // Send email and await completion to ensure it's sent
             try {
@@ -319,6 +369,8 @@ export async function processOrderCompletion(order: IOrder): Promise<{
               
               if (emailSent) {
                 result.completed.email = true;
+                order.thankYouEmailSentAt = new Date();
+                await order.save();
                 logPaymentEvent('thank_you_email_sent', {
                   orderId: order.orderId,
                   recipientEmail,
@@ -341,26 +393,44 @@ export async function processOrderCompletion(order: IOrder): Promise<{
             }
           }
 
-          // Send gift recipient emails (non-blocking)
-          if (order.isGift && order.giftRecipientEmail) {
-            order.items.forEach((item: { adoptionType?: string; recipientEmail?: string; recipientName?: string; treeName: string; quantity: number; giftMessage?: string; occasion?: string; [key: string]: unknown }) => {
-              const isGiftItem = item.adoptionType === 'gift' || order.isGift;
-              const recipientEmail = item.recipientEmail || order.giftRecipientEmail;
-              
-              if (isGiftItem && recipientEmail) {
-                sendGiftRecipientGreetingEmail(
-                  recipientEmail,
-                  item.recipientName || order.giftRecipientName || 'Friend',
-                  order.userName,
-                  item.treeName,
-                  item.quantity,
-                  item.giftMessage || order.giftMessage,
-                  item.occasion
-                ).catch((emailError) => {
-                  logError('Error sending gift recipient email', emailError as Error);
-                });
-              }
-            });
+          if (order.isGift && order.giftRecipientEmail && !order.giftRecipientGreetingEmailSentAt) {
+            const giftEmailResults = await Promise.all(
+              order.items.map(async (item: { adoptionType?: string; recipientEmail?: string; recipientName?: string; treeName: string; quantity: number; giftMessage?: string; occasion?: string; [key: string]: unknown }) => {
+                const isGiftItem = item.adoptionType === 'gift' || order.isGift;
+                const giftRecipientEmail = item.recipientEmail || order.giftRecipientEmail;
+
+                if (!isGiftItem || !giftRecipientEmail) {
+                  return true;
+                }
+
+                try {
+                  return await sendGiftRecipientGreetingEmail(
+                    giftRecipientEmail,
+                    item.recipientName || order.giftRecipientName || 'Friend',
+                    order.userName,
+                    item.treeName,
+                    item.quantity,
+                    item.giftMessage || order.giftMessage,
+                    item.occasion
+                  );
+                } catch (emailError) {
+                  logError('Error sending gift recipient email', emailError as Error, {
+                    orderId: order.orderId,
+                    recipientEmail: giftRecipientEmail
+                  });
+                  return false;
+                }
+              })
+            );
+
+            if (giftEmailResults.every(Boolean)) {
+              order.giftRecipientGreetingEmailSentAt = new Date();
+              await order.save();
+              logPaymentEvent('gift_recipient_greeting_email_sent', {
+                orderId: order.orderId,
+                recipientEmail: order.giftRecipientEmail
+              });
+            }
           }
         }
       } catch (certError) {

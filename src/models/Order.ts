@@ -20,6 +20,7 @@ export interface IOrder extends Document {
     adoptionType: 'self' | 'gift';
     recipientName?: string;
     recipientEmail?: string;
+    recipientProfilePicture?: string;
     giftMessage?: string;
     forestName?: string;
     occasion?: string;
@@ -45,6 +46,7 @@ export interface IOrder extends Document {
   isGift: boolean;
   giftRecipientName?: string;
   giftRecipientEmail?: string;
+  giftRecipientProfilePicture?: string;
   giftMessage?: string;
   // Dealer/Showroom specific fields
   dealerName?: string;
@@ -104,6 +106,10 @@ export interface IOrder extends Document {
   certificate?: Buffer;
   // Certificate URL stored in Cloudinary (preferred)
   certificateUrl?: string;
+  thankYouEmailSentAt?: Date;
+  wellwisherTaskEmailSentAt?: Date;
+  giftRecipientGreetingEmailSentAt?: Date;
+  emailAutoRetryAttemptedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -188,6 +194,9 @@ const OrderSchema: Schema = new Schema({
       type: String
     },
     recipientEmail: {
+      type: String
+    },
+    recipientProfilePicture: {
       type: String
     },
     giftMessage: {
@@ -278,6 +287,9 @@ const OrderSchema: Schema = new Schema({
     type: String
   },
   giftRecipientEmail: {
+    type: String
+  },
+  giftRecipientProfilePicture: {
     type: String
   },
   giftMessage: {
@@ -429,6 +441,18 @@ const OrderSchema: Schema = new Schema({
   certificateUrl: {
     type: String,
     // Certificate URL from Cloudinary (preferred over Buffer)
+  },
+  thankYouEmailSentAt: {
+    type: Date
+  },
+  wellwisherTaskEmailSentAt: {
+    type: Date
+  },
+  giftRecipientGreetingEmailSentAt: {
+    type: Date
+  },
+  emailAutoRetryAttemptedAt: {
+    type: Date
   }
 }, {
   timestamps: true
@@ -441,5 +465,8 @@ OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ assignedWellwisher: 1 });
 OrderSchema.index({ 'items.treeId': 1 });
 OrderSchema.index({ 'wellwisherTasks.nextGrowthUpdateDue': 1 });
+OrderSchema.index({ paymentStatus: 1, thankYouEmailSentAt: 1 });
+OrderSchema.index({ assignedWellwisher: 1, wellwisherTaskEmailSentAt: 1 });
+OrderSchema.index({ paymentStatus: 1, emailAutoRetryAttemptedAt: 1 });
 
 export default (mongoose.models?.Order || mongoose.model<IOrder>('Order', OrderSchema)) as mongoose.Model<IOrder>;

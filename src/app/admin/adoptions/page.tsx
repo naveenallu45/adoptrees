@@ -28,6 +28,8 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   DocumentArrowDownIcon,
+  EnvelopeIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { ToggleGroup, ToggleGroupItem } from '../../../components/ui/toggle-group';
@@ -81,6 +83,10 @@ interface Adoption {
   createdAt: string;
   updatedAt: string;
   adminNotes?: string;
+  thankYouEmailSentAt?: string;
+  wellwisherTaskEmailSentAt?: string;
+  giftRecipientGreetingEmailSentAt?: string;
+  emailAutoRetryAttemptedAt?: string;
 }
 
 interface AdoptionFilters {
@@ -117,6 +123,29 @@ const paymentStatusColors = {
   refunded: 'bg-gray-100 text-gray-800',
 };
 
+const getEmailStatus = (adoption: Adoption) => {
+  if (adoption.paymentStatus !== 'paid') {
+    return {
+      sent: false,
+      required: false,
+      missing: [] as string[],
+      label: 'N/A',
+    };
+  }
+
+  const missing: string[] = [];
+  if (!adoption.thankYouEmailSentAt) missing.push('certificate email');
+  if (!adoption.wellwisherTaskEmailSentAt) missing.push('well-wisher email');
+  if (adoption.isGift && !adoption.giftRecipientGreetingEmailSentAt) missing.push('gift email');
+
+  return {
+    sent: missing.length === 0,
+    required: true,
+    missing,
+    label: missing.length === 0 ? 'Sent' : 'Not sent',
+  };
+};
+
 export default function AdminAdoptionsPage() {
   const pathname = usePathname();
   const isForestPage = pathname?.includes('/admin/forest-adoptions');
@@ -138,6 +167,7 @@ export default function AdminAdoptionsPage() {
     pageSize: 10,
   });
   const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
+  const [retryingEmailOrderId, setRetryingEmailOrderId] = useState<string | null>(null);
 
   const { updateAdoption, deleteAdoption } = useAdoptionMutations();
 
@@ -400,6 +430,38 @@ export default function AdminAdoptionsPage() {
     }
   }, [deleteAdoption]);
 
+  const handleRetryEmail = useCallback(async (orderId: string) => {
+    setRetryingEmailOrderId(orderId);
+    try {
+      const response = await fetch('/api/admin/retry-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderIds: [orderId] }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to retry email');
+      }
+
+      const retryResult = result.results;
+      if (retryResult?.success > 0) {
+        toast.success('Email retry completed successfully');
+      } else {
+        const errorMessage = retryResult?.errors?.[0]?.error || 'Email retry did not complete';
+        toast.error(errorMessage);
+      }
+
+      await refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to retry email');
+    } finally {
+      setRetryingEmailOrderId(null);
+    }
+  }, [refetch]);
+
   // Define columns
   const columns = useMemo(() => {
     const cols = [
@@ -633,6 +695,41 @@ export default function AdminAdoptionsPage() {
           );
         },
       }),
+      columnHelper.display({
+        id: 'emailStatus',
+        header: 'Email',
+        cell: (info) => {
+          const adoption = info.row.original;
+          const emailStatus = getEmailStatus(adoption);
+
+          if (!emailStatus.required) {
+            return <span className="text-xs text-gray-400">N/A</span>;
+          }
+
+          return (
+            <div className="flex flex-col gap-1">
+              <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                emailStatus.sent
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                <EnvelopeIcon className="mr-1 h-3 w-3" />
+                {emailStatus.label}
+              </span>
+              {!emailStatus.sent && (
+                <span className="max-w-[140px] text-xs text-gray-500">
+                  Missing: {emailStatus.missing.join(', ')}
+                </span>
+              )}
+              {adoption.emailAutoRetryAttemptedAt && !emailStatus.sent && (
+                <span className="text-xs text-amber-600">
+                  Auto retry tried
+                </span>
+              )}
+            </div>
+          );
+        },
+      }),
       columnHelper.accessor('createdAt', {
         header: 'Date',
         cell: (_info) => (
@@ -686,8 +783,21 @@ export default function AdminAdoptionsPage() {
         header: 'Actions',
         cell: (info) => {
           const adoption = info.row.original;
+          const emailStatus = getEmailStatus(adoption);
+          const isRetryingEmail = retryingEmailOrderId === adoption.orderId;
           return (
             <div className="flex items-center gap-2">
+              {emailStatus.required && !emailStatus.sent && (
+                <button
+                  onClick={() => handleRetryEmail(adoption.orderId)}
+                  disabled={isRetryingEmail}
+                  className="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Retry Email"
+                >
+                  <ArrowPathIcon className={`mr-1 h-3 w-3 ${isRetryingEmail ? 'animate-spin' : ''}`} />
+                  {isRetryingEmail ? 'Retrying' : 'Retry Email'}
+                </button>
+              )}
               <button
                 onClick={() => handleDelete(adoption._id, adoption.orderId)}
                 className="text-red-600 hover:text-red-700 transition-colors"
@@ -753,7 +863,7 @@ export default function AdminAdoptionsPage() {
     }
     
     return cols as ColumnDef<Adoption>[];
-  }, [handleDelete, handleDownloadCertificate, downloadingCertificate, updateAdoption, isDealerPage]);
+  }, [handleDelete, handleDownloadCertificate, handleRetryEmail, downloadingCertificate, retryingEmailOrderId, updateAdoption, isDealerPage]);
 
   const table = useReactTable({
     data: adoptions,

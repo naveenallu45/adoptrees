@@ -290,6 +290,8 @@ export async function POST(request: NextRequest) {
           );
           
           if (emailSent) {
+            order.wellwisherTaskEmailSentAt = new Date();
+            await order.save();
             console.log(`[ORDER_CREATE] Task assignment email sent successfully to well-wisher ${wellWisher.email} for order ${order.orderId}`);
           } else {
             console.error(`[ORDER_CREATE] Task assignment email failed to send to well-wisher ${wellWisher.email} for order ${order.orderId}`);

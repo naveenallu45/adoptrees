@@ -424,6 +424,14 @@ export default function CartContent() {
           }
           return;
         }
+        if (!item.recipientProfilePicture || !item.recipientProfilePicture.trim()) {
+          toast.error(`Recipient profile picture is required for "${item.name}" as it's a gift`);
+          const itemElement = document.getElementById(`cart-item-${item.id}`);
+          if (itemElement) {
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
       }
     }
 
@@ -523,6 +531,7 @@ export default function CartContent() {
           adoptionType: item.adoptionType || 'self',
           recipientName: item.recipientName,
           recipientEmail: item.recipientEmail,
+          recipientProfilePicture: item.recipientProfilePicture,
           giftMessage: item.giftMessage,
           forestName: item.forestName,
           occasion: item.occasion,
@@ -539,6 +548,7 @@ export default function CartContent() {
         isGift: cartItems.some(item => item.adoptionType === 'gift' && item.type !== 'dealer'),
         giftRecipientName: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.recipientName,
         giftRecipientEmail: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.recipientEmail,
+        giftRecipientProfilePicture: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.recipientProfilePicture,
         giftMessage: cartItems.find(item => item.adoptionType === 'gift' && item.type !== 'dealer')?.giftMessage,
         couponCode: appliedCoupon?.code || null,
         couponDiscount: appliedCoupon ? appliedCoupon.discountAmount : 0,

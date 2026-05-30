@@ -103,8 +103,14 @@ export async function GET(request: NextRequest) {
         {
           paymentStatus: 'paid',
           $or: [
-            { certificate: { $exists: false } },
+            { thankYouEmailSentAt: { $exists: false } },
+            { thankYouEmailSentAt: null },
+            { wellwisherTaskEmailSentAt: { $exists: false } },
+            { wellwisherTaskEmailSentAt: null },
+            { isGift: true, giftRecipientGreetingEmailSentAt: { $exists: false } },
+            { isGift: true, giftRecipientGreetingEmailSentAt: null },
             { assignedWellwisher: { $exists: false } },
+            { assignedWellwisher: null },
             { 'wellwisherTasks.0': { $exists: false } }
           ]
         },
@@ -114,7 +120,7 @@ export async function GET(request: NextRequest) {
         }
       ]
     })
-    .select('orderId paymentStatus status paymentId razorpayOrderId createdAt totalAmount userName')
+    .select('orderId paymentStatus status paymentId razorpayOrderId createdAt totalAmount userName thankYouEmailSentAt wellwisherTaskEmailSentAt giftRecipientGreetingEmailSentAt assignedWellwisher wellwisherTasks isGift')
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
@@ -131,7 +137,11 @@ export async function GET(request: NextRequest) {
           hasRazorpayOrderId: !!order.razorpayOrderId,
           createdAt: order.createdAt,
           totalAmount: order.totalAmount,
-          userName: order.userName
+          userName: order.userName,
+          needsThankYouEmail: !order.thankYouEmailSentAt,
+          needsWellwisherEmail: !order.wellwisherTaskEmailSentAt,
+          needsGiftGreetingEmail: order.isGift && !order.giftRecipientGreetingEmailSentAt,
+          needsWellwisherAssignment: !order.assignedWellwisher || !order.wellwisherTasks?.length
         }))
       }
     });
