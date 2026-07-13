@@ -8,6 +8,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ServiceWorkerRegistration from "@/components/PWA/ServiceWorkerRegistration";
 import PWAMetaTags from "@/components/PWA/PWAMetaTags";
+import MaintenanceGate from "@/components/MaintenanceGate";
 import { inter, jetbrainsMono, workSans, nunitoSans } from "@/lib/fonts";
 
 export const metadata: Metadata = {
@@ -112,7 +113,9 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               <ErrorBoundary>
-                <AdminShell>{children}</AdminShell>
+                <MaintenanceGate>
+                  <AdminShell>{children}</AdminShell>
+                </MaintenanceGate>
               </ErrorBoundary>
             </CartProvider>
           </AuthProvider>

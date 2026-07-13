@@ -2,6 +2,17 @@
 
 import { useEffect } from 'react';
 
+async function clearAdoptreesCaches() {
+  if (!('caches' in window)) return;
+
+  const keys = await caches.keys();
+  await Promise.all(
+    keys
+      .filter((key) => key.includes('adoptrees'))
+      .map((key) => caches.delete(key))
+  );
+}
+
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if (
@@ -9,27 +20,29 @@ export default function ServiceWorkerRegistration() {
       'serviceWorker' in navigator &&
       process.env.NODE_ENV === 'production'
     ) {
-      // Register service worker
+      // Drop old cached homepage/HTML that blocked maintenance mode on /
+      clearAdoptreesCaches().catch(() => {});
+
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('Service Worker registered successfully:', registration.scope);
+          registration.update().catch(() => {});
 
-          // Check for updates periodically
           setInterval(() => {
             registration.update();
-          }, 60 * 60 * 1000); // Check every hour
+          }, 5 * 60 * 1000);
 
-          // Handle updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New service worker available, prompt user to refresh
-                  if (confirm('A new version is available. Would you like to refresh?')) {
-                    window.location.reload();
-                  }
+                if (
+                  newWorker.state === 'installed' &&
+                  navigator.serviceWorker.controller
+                ) {
+                  // Activate immediately so home page stops using the old cache
+                  newWorker.postMessage?.({ type: 'SKIP_WAITING' });
+                  window.location.reload();
                 }
               });
             }
@@ -39,7 +52,6 @@ export default function ServiceWorkerRegistration() {
           console.error('Service Worker registration failed:', error);
         });
 
-      // Handle service worker controller change (page refresh after update)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         window.location.reload();
       });
@@ -48,4 +60,3 @@ export default function ServiceWorkerRegistration() {
 
   return null;
 }
-

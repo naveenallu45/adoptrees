@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth-edge';
 
+const MAINTENANCE_COOKIE = 'at_maintenance';
+
 function isMaintenanceExempt(pathname: string): boolean {
   return (
     pathname.startsWith('/admin') ||
@@ -12,37 +14,79 @@ function isMaintenanceExempt(pathname: string): boolean {
   );
 }
 
+function withPathnameHeader(request: NextRequest): Headers {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', request.nextUrl.pathname);
+  return requestHeaders;
+}
+
+function resolveSettingsBaseUrl(request: NextRequest): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, '');
+  }
+
+  const host = request.headers.get('host');
+  if (host) {
+    const protocol = request.headers.get('x-forwarded-proto') || 'https';
+    return `${protocol}://${host}`;
+  }
+
+  return request.nextUrl.origin;
+}
+
 async function isMaintenanceModeEnabled(request: NextRequest): Promise<boolean> {
+  const cookieValue = request.cookies.get(MAINTENANCE_COOKIE)?.value;
+
   try {
-    const settingsUrl = new URL('/api/settings/public', request.nextUrl.origin);
-    const response = await fetch(settingsUrl.toString(), {
+    const settingsUrl = `${resolveSettingsBaseUrl(request)}/api/settings/public`;
+    const response = await fetch(settingsUrl, {
       method: 'GET',
       cache: 'no-store',
       headers: {
         'x-maintenance-check': '1',
+        Accept: 'application/json',
       },
     });
 
     if (!response.ok) {
-      return false;
+      // Fall back to cookie only when the settings API is unreachable
+      return cookieValue === '1';
     }
 
     const payload = await response.json();
     return Boolean(payload?.data?.maintenanceMode);
   } catch {
-    return false;
+    return cookieValue === '1';
   }
+}
+
+function applyMaintenanceCookie(response: NextResponse, enabled: boolean) {
+  response.cookies.set({
+    name: MAINTENANCE_COOKIE,
+    value: enabled ? '1' : '0',
+    path: '/',
+    maxAge: 60 * 5, // short TTL — refreshed by settings API / admin toggle
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    ...(process.env.NODE_ENV === 'production'
+      ? { domain: '.adoptrees.com' }
+      : {}),
+  });
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestHeaders = withPathnameHeader(request);
 
   // Show maintenance page for public visitors when enabled (admin panel stays available)
   if (!isMaintenanceExempt(pathname)) {
     const maintenanceEnabled = await isMaintenanceModeEnabled(request);
     if (maintenanceEnabled) {
       const url = new URL('/maintenance', request.url);
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      applyMaintenanceCookie(redirectResponse, true);
+      return redirectResponse;
     }
   }
   
@@ -50,6 +94,7 @@ export async function middleware(request: NextRequest) {
   const allowedOrigins = [
     'http://localhost:5173',
     'https://adoptrees.com',
+    'https://www.adoptrees.com',
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   ].filter(Boolean) as string[];
@@ -60,7 +105,11 @@ export async function middleware(request: NextRequest) {
   );
   
   // Security headers for all responses
-  const response = NextResponse.next();
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
   
   // Add CORS headers to API routes (but don't handle OPTIONS - let route handlers do it)
   // This ensures POST/GET requests get CORS headers without interfering with OPTIONS handling
