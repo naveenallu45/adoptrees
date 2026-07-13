@@ -2,8 +2,49 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth-edge';
 
+function isMaintenanceExempt(pathname: string): boolean {
+  return (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/wellwisher') ||
+    pathname === '/maintenance'
+  );
+}
+
+async function isMaintenanceModeEnabled(request: NextRequest): Promise<boolean> {
+  try {
+    const settingsUrl = new URL('/api/settings/public', request.nextUrl.origin);
+    const response = await fetch(settingsUrl.toString(), {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        'x-maintenance-check': '1',
+      },
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const payload = await response.json();
+    return Boolean(payload?.data?.maintenanceMode);
+  } catch {
+    return false;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Show maintenance page for public visitors when enabled (admin panel stays available)
+  if (!isMaintenanceExempt(pathname)) {
+    const maintenanceEnabled = await isMaintenanceModeEnabled(request);
+    if (maintenanceEnabled) {
+      const url = new URL('/maintenance', request.url);
+      return NextResponse.redirect(url);
+    }
+  }
   
   // CORS configuration - only add headers, don't handle OPTIONS (let route handlers do it)
   const allowedOrigins = [

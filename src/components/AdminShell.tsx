@@ -16,9 +16,10 @@ export default function AdminShell({ children }: AdminShellProps) {
   const isWellWisherRoute = pathname?.startsWith('/wellwisher');
   const isPublicUserRoute = pathname?.startsWith('/u/');
   const isLoginPage = pathname === '/login' || pathname === '/register' || pathname?.startsWith('/admin/login');
+  const isMaintenancePage = pathname === '/maintenance';
 
-  // Hide navbar only on admin, dashboard, wellwisher, public user routes, and login pages
-  if (isAdminRoute || isDashboardRoute || isWellWisherRoute || isPublicUserRoute || isLoginPage) {
+  // Hide navbar only on admin, dashboard, wellwisher, public user routes, login, and maintenance
+  if (isAdminRoute || isDashboardRoute || isWellWisherRoute || isPublicUserRoute || isLoginPage || isMaintenancePage) {
     return <main className="pt-0 min-h-screen">{children}</main>;
   }
 

@@ -14,6 +14,7 @@ import {
   CalendarDaysIcon,
   EnvelopeIcon,
   TruckIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 import { SparklesIcon as TreeIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -39,8 +40,8 @@ const navItems: NavItem[] = [
   { name: 'Coupons', href: '/admin/coupons', icon: TicketIcon },
   { name: 'Marketing', href: '/admin/marketing', icon: EnvelopeIcon },
   { name: 'Demo Requests', href: '/admin/demo-requests', icon: CalendarDaysIcon },
+  { name: 'Settings', href: '/admin/settings', icon: Cog6ToothIcon },
 ];
-
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -59,7 +60,10 @@ export default function AdminSidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-4 py-6">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            item.href === '/admin'
+              ? pathname === '/admin'
+              : pathname === item.href || pathname?.startsWith(`${item.href}/`);
           const Icon = item.icon;
 
           return (
