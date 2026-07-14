@@ -202,33 +202,34 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const updates: Record<string, unknown> = {
+    const setFields: Record<string, unknown> = {
       updatedAt: new Date(),
     };
 
     if (status !== undefined) {
-      updates.status = status;
+      setFields.status = status;
     }
     if (notes !== undefined) {
-      updates.adminNotes = notes;
+      setFields.adminNotes = notes;
     }
     if (parsedCreatedAt) {
-      updates.createdAt = parsedCreatedAt;
+      setFields.createdAt = parsedCreatedAt;
     }
 
-    // timestamps: false so Mongoose allows overwriting createdAt
-    const order = await Order.findOneAndUpdate(
+    // Native driver update — Mongoose 8 timestamps silently ignore createdAt changes
+    const updateResult = await Order.collection.updateOne(
       { orderId },
-      { $set: updates },
-      { new: true, timestamps: false, runValidators: true }
+      { $set: setFields }
     );
 
-    if (!order) {
+    if (updateResult.matchedCount === 0) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
     }
+
+    const order = await Order.findOne({ orderId }).lean();
 
     return NextResponse.json({
       success: true,
@@ -236,6 +237,19 @@ export async function PUT(request: NextRequest) {
         ? 'Adoption date updated successfully'
         : 'Order status updated successfully',
       data: order
+        ? {
+            ...order,
+            _id: String(order._id),
+            createdAt:
+              order.createdAt instanceof Date
+                ? order.createdAt.toISOString()
+                : order.createdAt,
+            updatedAt:
+              order.updatedAt instanceof Date
+                ? order.updatedAt.toISOString()
+                : order.updatedAt,
+          }
+        : null,
     });
 
   } catch (_error) {

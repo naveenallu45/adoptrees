@@ -565,11 +565,19 @@ export function useAdoptionMutations() {
     },
     onSuccess: ({ adoption: updatedAdoption, updatedDate }) => {
       queryClient.setQueryData<{ success: boolean; data: Adoption[] }>(['admin-adoptions-all'], (old) => {
-        if (!old?.data) return old;
+        if (!old?.data || !updatedAdoption) return old;
         return {
           ...old,
           data: old.data.map((adoption) =>
-            adoption._id === updatedAdoption._id ? updatedAdoption : adoption
+            adoption.orderId === updatedAdoption.orderId
+              ? {
+                  ...adoption,
+                  ...updatedAdoption,
+                  _id: String(updatedAdoption._id || adoption._id),
+                  createdAt: updatedAdoption.createdAt || adoption.createdAt,
+                  status: (updatedAdoption.status || adoption.status) as Adoption['status'],
+                }
+              : adoption
           ),
         };
       });
