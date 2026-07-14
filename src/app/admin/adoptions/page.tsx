@@ -16,7 +16,6 @@ import {
   ColumnFiltersState,
   PaginationState,
 } from '@tanstack/react-table';
-import { parseISO } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -734,21 +733,28 @@ export default function AdminAdoptionsPage() {
         header: 'Date',
         cell: (_info) => {
           const adoption = _info.row.original;
-          const currentDate = parseISO(_info.getValue());
+          const rawDate = _info.getValue();
+          const currentDate = rawDate ? new Date(rawDate) : null;
+          const isValidDate =
+            currentDate instanceof Date && !Number.isNaN(currentDate.getTime());
 
           const handleDateChange = async (date: Date | null) => {
-            if (!date) return;
+            if (!date || Number.isNaN(date.getTime())) return;
 
             const nextDate = new Date(date);
-            nextDate.setHours(
-              currentDate.getHours(),
-              currentDate.getMinutes(),
-              currentDate.getSeconds(),
-              currentDate.getMilliseconds()
-            );
+            if (isValidDate) {
+              nextDate.setHours(
+                currentDate.getHours(),
+                currentDate.getMinutes(),
+                currentDate.getSeconds(),
+                currentDate.getMilliseconds()
+              );
 
-            if (nextDate.toDateString() === currentDate.toDateString()) {
-              return;
+              if (nextDate.toDateString() === currentDate.toDateString()) {
+                return;
+              }
+            } else {
+              nextDate.setHours(12, 0, 0, 0);
             }
 
             try {
@@ -763,15 +769,21 @@ export default function AdminAdoptionsPage() {
 
           return (
             <DatePicker
-              selected={currentDate}
+              selected={isValidDate ? currentDate : null}
               onChange={handleDateChange}
               dateFormat="MMM dd, yyyy"
               maxDate={new Date()}
               disabled={updateAdoption.isPending}
-              className={`w-[120px] rounded border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ${
-                updateAdoption.isPending ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              withPortal
+              portalId="adoption-date-portal"
+              popperClassName="z-[9999]"
+              className={`w-[130px] rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ${
+                updateAdoption.isPending
+                  ? 'cursor-not-allowed opacity-50'
+                  : 'cursor-pointer hover:border-green-400'
               }`}
-              title="Change adoption date"
+              title="Click to change adoption date"
+              placeholderText="Select date"
             />
           );
         },

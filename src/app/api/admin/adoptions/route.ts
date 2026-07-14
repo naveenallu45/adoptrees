@@ -202,27 +202,33 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const order = await Order.findOne({ orderId });
+    const updates: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    if (status !== undefined) {
+      updates.status = status;
+    }
+    if (notes !== undefined) {
+      updates.adminNotes = notes;
+    }
+    if (parsedCreatedAt) {
+      updates.createdAt = parsedCreatedAt;
+    }
+
+    // timestamps: false so Mongoose allows overwriting createdAt
+    const order = await Order.findOneAndUpdate(
+      { orderId },
+      { $set: updates },
+      { new: true, timestamps: false, runValidators: true }
+    );
+
     if (!order) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
     }
-
-    if (status !== undefined) {
-      order.status = status;
-    }
-    if (notes !== undefined) {
-      order.adminNotes = notes;
-    }
-    if (parsedCreatedAt) {
-      order.set('createdAt', parsedCreatedAt);
-      order.markModified('createdAt');
-    }
-    order.updatedAt = new Date();
-
-    await order.save();
 
     return NextResponse.json({
       success: true,
