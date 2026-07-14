@@ -175,13 +175,31 @@ export async function PUT(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { orderId, status, notes } = body;
+    const { orderId, status, notes, createdAt } = body;
 
-    if (!orderId || !status) {
+    if (!orderId) {
       return NextResponse.json(
-        { success: false, error: 'Order ID and status are required' },
+        { success: false, error: 'Order ID is required' },
         { status: 400 }
       );
+    }
+
+    if (status === undefined && notes === undefined && createdAt === undefined) {
+      return NextResponse.json(
+        { success: false, error: 'Provide status, notes, or createdAt to update' },
+        { status: 400 }
+      );
+    }
+
+    let parsedCreatedAt: Date | undefined;
+    if (createdAt !== undefined) {
+      parsedCreatedAt = new Date(createdAt);
+      if (Number.isNaN(parsedCreatedAt.getTime())) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid adoption date' },
+          { status: 400 }
+        );
+      }
     }
 
     const order = await Order.findOne({ orderId });
@@ -192,9 +210,15 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    order.status = status;
-    if (notes) {
+    if (status !== undefined) {
+      order.status = status;
+    }
+    if (notes !== undefined) {
       order.adminNotes = notes;
+    }
+    if (parsedCreatedAt) {
+      order.set('createdAt', parsedCreatedAt);
+      order.markModified('createdAt');
     }
     order.updatedAt = new Date();
 
@@ -202,7 +226,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Order status updated successfully',
+      message: parsedCreatedAt
+        ? 'Adoption date updated successfully'
+        : 'Order status updated successfully',
       data: order
     });
 

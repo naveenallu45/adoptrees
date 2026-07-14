@@ -16,7 +16,7 @@ import {
   ColumnFiltersState,
   PaginationState,
 } from '@tanstack/react-table';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -732,11 +732,49 @@ export default function AdminAdoptionsPage() {
       }),
       columnHelper.accessor('createdAt', {
         header: 'Date',
-        cell: (_info) => (
-          <div className="text-sm text-gray-900">
-            {format(parseISO(_info.getValue()), 'MMM dd, yyyy')}
-          </div>
-        ),
+        cell: (_info) => {
+          const adoption = _info.row.original;
+          const currentDate = parseISO(_info.getValue());
+
+          const handleDateChange = async (date: Date | null) => {
+            if (!date) return;
+
+            const nextDate = new Date(date);
+            nextDate.setHours(
+              currentDate.getHours(),
+              currentDate.getMinutes(),
+              currentDate.getSeconds(),
+              currentDate.getMilliseconds()
+            );
+
+            if (nextDate.toDateString() === currentDate.toDateString()) {
+              return;
+            }
+
+            try {
+              await updateAdoption.mutateAsync({
+                orderId: adoption.orderId,
+                createdAt: nextDate.toISOString(),
+              });
+            } catch (_error) {
+              // Error handling is done in the mutation hook
+            }
+          };
+
+          return (
+            <DatePicker
+              selected={currentDate}
+              onChange={handleDateChange}
+              dateFormat="MMM dd, yyyy"
+              maxDate={new Date()}
+              disabled={updateAdoption.isPending}
+              className={`w-[120px] rounded border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ${
+                updateAdoption.isPending ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              }`}
+              title="Change adoption date"
+            />
+          );
+        },
       }),
       columnHelper.display({
         id: 'certificate',

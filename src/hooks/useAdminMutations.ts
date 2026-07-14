@@ -519,35 +519,51 @@ export function useAdoptionMutations() {
   const queryClient = useQueryClient();
 
   const updateAdoption = useMutation({
-    mutationFn: async ({ orderId, status, notes }: { orderId: string; status: string; notes?: string }) => {
+    mutationFn: async ({
+      orderId,
+      status,
+      notes,
+      createdAt,
+    }: {
+      orderId: string;
+      status?: string;
+      notes?: string;
+      createdAt?: string;
+    }) => {
       const response = await fetch(`/api/admin/adoptions?t=${Date.now()}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, status, notes }),
+        body: JSON.stringify({ orderId, status, notes, createdAt }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to update adoption');
       }
-      return data.data as Adoption;
+      return { adoption: data.data as Adoption, updatedDate: Boolean(createdAt) };
     },
-    onMutate: async ({ orderId, status }) => {
+    onMutate: async ({ orderId, status, createdAt }) => {
       await queryClient.cancelQueries({ queryKey: ['admin-adoptions-all'] });
       const previousData = queryClient.getQueryData<{ success: boolean; data: Adoption[] }>([
         'admin-adoptions-all',
       ]);
-      // Optimistically update status in cache
+      // Optimistically update status/date in cache
       if (previousData?.data) {
         queryClient.setQueryData<{ success: boolean; data: Adoption[] }>(['admin-adoptions-all'], {
           ...previousData,
           data: previousData.data.map((adoption) =>
-            adoption.orderId === orderId ? { ...adoption, status: status as Adoption['status'] } : adoption
+            adoption.orderId === orderId
+              ? {
+                  ...adoption,
+                  ...(status ? { status: status as Adoption['status'] } : {}),
+                  ...(createdAt ? { createdAt } : {}),
+                }
+              : adoption
           ),
         });
       }
       return { previousData };
     },
-    onSuccess: (updatedAdoption) => {
+    onSuccess: ({ adoption: updatedAdoption, updatedDate }) => {
       queryClient.setQueryData<{ success: boolean; data: Adoption[] }>(['admin-adoptions-all'], (old) => {
         if (!old?.data) return old;
         return {
@@ -558,7 +574,11 @@ export function useAdoptionMutations() {
         };
       });
       queryClient.invalidateQueries({ queryKey: ['admin-adoptions-all'] });
-      toast.success('Adoption status updated successfully!');
+      toast.success(
+        updatedDate
+          ? 'Adoption date updated successfully!'
+          : 'Adoption status updated successfully!'
+      );
     },
     onError: (error, variables, context) => {
       if (context?.previousData) {
